@@ -22,6 +22,7 @@ const FSCal = require("../public/calendar.js");
 const FSTray = require("../public/tray.js");
 const FSRoutine = require("../public/routines.js");
 const FSActivity = require("../public/activity.js");
+const FSClimate = require("../public/climate.js");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -125,7 +126,7 @@ module.exports = handler(async (body, req) => {
     },
   };
   if (ctx && ctx.home) tools.check_weather = {
-    description: `The weather at home now and for the next 24 hours: temperature, humidity, heat. Rabbits handle heat badly (over about 25°C is a risk, over 28°C is dangerous) and cope with cold better. Use it for anything about heat, cold, outdoor time, water or a lethargic pet.`,
+    description: `The temperature by his tray (from the FurSight Tray's sensor) and the weather outside, now and for the next 24 hours. Rabbits handle heat badly (over about 25°C is a risk, over 28°C is dangerous) and cope with cold better. Use it for anything about heat, cold, outdoor time, water or a lethargic pet.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
     async run() {
       const { lat, lng } = ctx.home;
@@ -133,8 +134,9 @@ module.exports = handler(async (body, req) => {
       if (!r || !r.current) return { output: { error: "Couldn't get the weather just now." }, step: { tool: "weather", label: "Tried the weather: no answer" } };
       const t = r.hourly.temperature_2m, max = Math.max(...t), min = Math.min(...t);
       seen.set("weather", { kind: "weather" });
-      return { output: { id: "weather", now_c: r.current.temperature_2m, feels_like_c: r.current.apparent_temperature, humidity: r.current.relative_humidity_2m, next_24h_max_c: max, next_24h_min_c: min, note: "Outdoor weather; indoors is usually milder, a room in sun can be hotter." },
-        step: { tool: "weather", label: `Checked the weather at home: ${Math.round(r.current.temperature_2m)}°C now, up to ${Math.round(max)}°C` } };
+      const room = FSClimate.summary(await recent(home.token, 200).catch(() => []));
+      return { output: { id: "weather", room_by_his_tray: room.now ? { c: room.now.t, humidity: room.now.h, today_max_c: room.today.max, status: room.status, simulated: room.simulated } : "no sensor", now_c: r.current.temperature_2m, feels_like_c: r.current.apparent_temperature, humidity: r.current.relative_humidity_2m, next_24h_max_c: max, next_24h_min_c: min, note: "Outdoor weather; indoors is usually milder, a room in sun can be hotter." },
+        step: { tool: "weather", label: room.now ? `Checked the room: ${room.now.t.toFixed(1)}°C by his tray, ${Math.round(r.current.temperature_2m)}°C outside` : `Checked the weather at home: ${Math.round(r.current.temperature_2m)}°C now, up to ${Math.round(max)}°C` } };
     },
   };
   if (ctx) tools.check_litter_tray = {
@@ -206,7 +208,7 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;
-      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind));
+      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind));
       const out = list.slice(0, 25).map((e, i) => {
         const id = "d" + (seen.size + i + 1);
         seen.set(id, { kind: e.kind, what: e.title });

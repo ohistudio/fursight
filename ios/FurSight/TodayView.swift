@@ -21,6 +21,7 @@ struct TodayView: View {
                     ForEach(Array(data.arr("alerts").enumerated()), id: \.offset) { _, a in alert(a) }
                     if let m = data.obj("moment") { moment(m) }
                     if let t = data.obj("tray") { tray(t) }
+                    if let c = data.obj("climate") { room(c) }
                     if let a = data.obj("activity") { activity(a) }
                     if !data.arr("due").isEmpty || !data.arr("coming").isEmpty { upcoming }
                     if let r = data.obj("recap") { recap(r) }
@@ -106,6 +107,20 @@ struct TodayView: View {
             ForEach(t["reasons"] as? [String] ?? [], id: \.self) { Text("• " + $0).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if t["simulated"] as? Bool == true { Text("Simulated tray").font(.nunito(12)).foregroundStyle(Color.muted) }
         }.card()
+    }
+
+    // the room by his tray: rabbits handle heat badly
+    private func room(_ c: [String: Any]) -> some View {
+        let word = ["normal": "Comfortable", "watch": "Worth watching", "vet": "Too hot"][c.str("status")] ?? ""
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack { Text("The room").font(.nunito(20)); Spacer(); Pill(text: word, status: c.str("status")) }
+            HStack(alignment: .top) {
+                stat(String(format: "%.1f°C", c.num("t")), "by his tray", c["max"] is NSNumber ? String(format: "today %.0f to %.0f°C", c.num("min"), c.num("max")) : nil)
+                stat("\(Int(c.num("h")))%", "humidity", nil)
+            }
+            ForEach(c["reasons"] as? [String] ?? [], id: \.self) { Text("• " + $0).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
+            if c["simulated"] as? Bool == true { Text("Simulated readings").font(.nunito(12)).foregroundStyle(Color.muted) }
+        }.card(c.str("status") == "vet" ? .coral : .line)
     }
 
     private func activity(_ a: [String: Any]) -> some View {

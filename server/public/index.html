@@ -112,6 +112,8 @@
   .tray { display: grid; gap: 10px; }
   .idea { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
   .idea p { font-size: 14px; margin-top: 2px; } .idea small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .room { border-radius: 14px; padding: 10px 12px; background: var(--bg); font-size: 14px; } .room b { font-size: 18px; }
+  .room.watch { background: #FFF2D6; } .room.vet { background: #FFE6E8; color: var(--coral-lip); }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .tile { display: grid; gap: 2px; padding: 14px; } .tile b { font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; } .tile span { font-size: 13px; color: var(--muted); } .tile small { font-size: 12px; color: var(--muted); }
   .chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
@@ -119,7 +121,7 @@
   #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: #fff; font: 800 13px Nunito, sans-serif; padding: 6px 10px; border-radius: 10px; opacity: 0; transition: opacity .12s; max-width: 260px; }
   .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tstats b { display: block; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; } .tstats span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
-  .pill { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 900; white-space: nowrap; }
+  .pill { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 900; white-space: nowrap; flex: none !important; }
   .s-normal { background: #E3F6EA; color: var(--fern-lip); } .s-watch { background: #FFF2D6; color: #B87700; } .s-vet { background: #FFE6E8; color: var(--coral-lip); }
   .month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; text-align: center; }
   .month b { font-size: 12px; color: var(--muted); padding: 4px 0; }
@@ -177,6 +179,7 @@
 <script src="/routines.js"></script>
 <script src="/activity.js"></script>
 <script src="/sticker.js"></script>
+<script src="/climate.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -362,7 +365,7 @@ async function makeRecap(btn) {
 async function today() {
   $app.innerHTML = `<div class="stack">${header()}<a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
-  const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind)).slice(0, 80);
+  const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind)).slice(0, 80);
   const $l = document.getElementById("list");
   if (!entries.length) {
     $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
@@ -426,7 +429,7 @@ async function care() {
   };
   if (!items.length) return;
   const { entries } = await hub("/diary?limit=200");
-  document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p);
+  document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p, FSClimate.summary(entries));
   routinesCard(entries, p);
   ideasCard(entries, p);
   document.getElementById("activity").innerHTML = activityCard(FSActivity.summary(entries), p);
@@ -505,8 +508,8 @@ function routinesCard(entries, p) {
 
 // ---------------------------------------------------------------- the litter tray: weight, visits, output against his usual
 
-function trayCard(s, p) {
-  if (s.status === "none") return "";
+function trayCard(s, p, c) {
+  if (s.status === "none" && (!c || !c.now)) return "";
   const word = { normal: "All normal", watch: "Worth watching", vet: "Talk to your vet" }[s.status];
   const kg = (g) => g ? (g / 1000).toFixed(2) + " kg" : "–";
   // his weight across the week: a small line, today's point bigger
@@ -522,6 +525,8 @@ function trayCard(s, p) {
     </div>
     ${spark}<div class="when" style="text-align:center">His weight, last ${w.length} days</div>
     ${s.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}
+    ${c && c.now ? `<div class="room ${c.status}"><b>${c.now.t.toFixed(1)}°C</b> by his tray · ${Math.round(c.now.h)}% humidity${c.today.max !== null ? ` · today ${c.today.min.toFixed(0)} to ${c.today.max.toFixed(0)}°C` : ""}</div>
+      ${c.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}${c.status === "vet" ? `<p class="muted">${FSClimate.HEAT_TIPS.map(esc).join(". ")}.</p>` : ""}` : ""}
     ${s.simulated ? `<span class="chip" style="justify-self:start">Simulated tray</span>` : ""}</div>`;
 }
 
@@ -532,7 +537,7 @@ async function stats() {
   const p = me.pets[0];
   $app.innerHTML = `<div class="stack">${header()}<div id="st"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
-  const tray = FSTray.summary(entries), days = FSActivity.days(entries, 7), a = FSActivity.summary(entries);
+  const tray = FSTray.summary(entries), days = FSActivity.days(entries, 7), a = FSActivity.summary(entries), clim = FSClimate.summary(entries);
   const tw = tray.week.filter((d) => d.weight_g), wNow = tray.today.weight_g || (tw.length ? tw[tw.length - 1].weight_g : null);
   const wDelta = tw.length > 1 ? tw[tw.length - 1].weight_g - tw[0].weight_g : null;
   const day = (k) => k === FSCal.key(new Date()) ? "Today" : FSCal.day(k).toLocaleDateString(undefined, { weekday: "short" });
@@ -554,10 +559,12 @@ async function stats() {
         ${["loaf", "stretched", "flop", "active"].map((k) => `<tr><td>${FSActivity.WORD[k]}</td>${days.map((d) => `<td>${Math.round(d[k])}</td>`).join("")}</tr>`).join("")}
         <tr><td>Flops</td>${days.map((d) => `<td>${d.flops}</td>`).join("")}</tr></table><p class="when">Minutes</p></details>
       ${a.simulated ? `<span class="when">Includes simulated days</span>` : ""}</div>` : ""}
+    ${clim.now ? `<div class="card stack pop"><h3>Room temperature by his tray</h3>${rangeChart(clim.days.filter((d) => d.min !== null).map((d) => ({ x: day(d.date), lo: d.min, hi: d.max, tip: `${day(d.date)}: ${d.min.toFixed(1)} to ${d.max.toFixed(1)}°C` })))}
+      <p class="when">Each bar runs from the day's coolest to warmest. The dashed line is 25°C, where it starts to get too warm for a rabbit.</p>${clim.simulated ? `<span class="when">Simulated readings</span>` : ""}</div>` : ""}
     ${tray.week.length ? `<div class="card stack pop"><h3>Litter tray visits</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.visits, tip: `${day(d.date)}: ${d.visits} visits` })), "var(--grape-lip)")}</div>
       <div class="card stack pop"><h3>Litter tray output</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.output_g, tip: `${day(d.date)}: ${d.output_g} g` })), "#B87700", "g")}
       <p class="when">Today is so far. A drop in output is one of the earliest signs of gut trouble.</p></div>` : ""}
-  </div>`;
+  </div>`);
   tips(document.getElementById("st"));
 }
 
@@ -604,6 +611,17 @@ function stackChart(items) {
     return out + `<rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`;
   })}</svg>`;
 }
+// a day's coolest to warmest, with the 25°C line where it gets too warm for a rabbit
+function rangeChart(items) {
+  if (!items.length) return "";
+  const lo = Math.min(10, ...items.map((i) => i.lo)) , hi = Math.max(30, ...items.map((i) => i.hi));
+  const st = niceStep(hi - lo), min = Math.floor(lo / st) * st, max = min + 3 * st >= hi ? min + 3 * st : min + 4 * st;
+  const Y = (v) => CH - PB - ((v - min) / (max - min)) * (CH - PB - PT);
+  return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="Room temperature each day">${axis(max, min, "°C")}
+    <line x1="${PL}" x2="${CW}" y1="${Y(25)}" y2="${Y(25)}" stroke="var(--coral)" stroke-width="1.5" stroke-dasharray="4 4"/>
+    ${bars(items, 1, (it, x, w) => { const y1 = Y(it.hi), y2 = Y(it.lo), hot = it.hi >= 25;
+      return `<rect x="${x + w * 0.2}" y="${y1}" width="${w * 0.6}" height="${Math.max(4, y2 - y1)}" rx="4" fill="${hot ? "var(--coral)" : "var(--sky)"}"/><rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`; })}</svg>`;
+}
 function tips(root) {
   let t = document.getElementById("tip");
   if (!t) { t = document.createElement("div"); t.id = "tip"; document.body.appendChild(t); }
@@ -622,7 +640,7 @@ async function calendar() {
   $app.innerHTML = `<div class="stack">${header()}<div id="cal"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
   const routines = FSRoutine.list(entries), dueOn = (k) => routines.filter((r) => r.due === k || (k === today && r.days < 0));
-  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind));
+  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind));
   const byDay = new Map();
   for (const e of diary) { const k = FSCal.key(new Date(e.at)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
   const careDone = (k) => items.length && items.every((i) => (byDay.get(k) || []).some((e) => e.kind === "care" && e.title === i));
