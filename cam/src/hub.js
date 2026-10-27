@@ -9,7 +9,8 @@
 //   GET  /hub/pets/:id/photo              (token)                     -> image/jpeg
 //   POST /hub/diary                       (token) {kind, title, note, verdict?, image?, at?}        -> entry
 //   GET  /hub/diary?limit=&before=        (token)                     -> { entries }  (no images)
-//   GET  /hub/diary/:id/image             (token)                     -> image/jpeg
+//   GET  /hub/diary/:id/image             (token)                     -> image/jpeg (or png)
+//   GET  /hub/i/:household/:id?e=&s=                                  -> the same picture, by an expiring signed link (notifications)
 //   PUT  /hub/cams/:channel               (token) {name}              -> cam      (a webcam registering itself)
 //   PUT  /hub/home                        (token) {lat, lng, radius?} -> home     (where "home" is, for home/away)
 //   DELETE /hub/devices/:id               (token)                     -> ok
@@ -50,6 +51,14 @@ export async function handleHub(req, env, url) {
     return json({ household, token });
   }
   if (path.startsWith("/link/start") || path.startsWith("/link/poll")) return env.LINKS.get(env.LINKS.idFromName("links")).fetch(req);
+  // a diary picture for a notification: signed for that one picture, valid for a day, no device token in the link
+  let im = path.match(/^\/i\/([A-Za-z0-9]{16})\/([A-Za-z0-9]{1,20})$/);
+  if (im && req.method === "GET") {
+    const e = Number(url.searchParams.get("e")) || 0;
+    if (e < Date.now() || (await hmac(env, `img.${im[1]}.${im[2]}.${e}`)) !== url.searchParams.get("s")) return err("link expired", 403);
+    const fwd = new Request(`https://h/diary/${im[2]}/image`, { headers: { "x-device": "signed-link", "x-household": im[1] } });
+    return env.HOUSEHOLDS.get(env.HOUSEHOLDS.idFromName(im[1])).fetch(fwd);
+  }
 
   const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "") || url.searchParams.get("t");
   const who = await verify(env, token);
@@ -76,7 +85,7 @@ export class Household {
 
   // Something worth a phone notification just landed in the diary: a flop moment, a warning, a tray alert, or a
   // "don't" / "see a vet". The Vercel server holds the Apple push key, so ask it to send to every other iPhone.
-  notify(id, e, from) {
+  notify(id, e, from, hasImage) {
     const worth = ["moment", "warning", "alert"].includes(e.kind) || ["toxic", "vet"].includes(e.verdict) || (e.kind === "droppings" && e.verdict && e.verdict !== "safe");
     if (!worth || !this.env.NOTIFY_URL) return;
     const targets = this.all("SELECT token, sandbox FROM push WHERE device != ?", from).map((r) => ({ token: r.token, sandbox: !!r.sandbox }));
@@ -84,8 +93,13 @@ export class Household {
     const pet = this.one("SELECT data FROM pets ORDER BY updated DESC LIMIT 1");
     const name = pet ? JSON.parse(pet.data).name : "FurSight";
     const body = e.kind === "moment" ? e.title : e.kind === "alert" ? `${e.title}. ${e.note || ""}`.trim() : e.verdict === "vet" ? `${e.title}: see a vet today` : e.verdict === "toxic" ? `${e.title}: don't` : `${e.title}${e.note ? ". " + e.note : ""}`;
-    this.ctx.waitUntil(fetch(this.env.NOTIFY_URL, { method: "POST", headers: { "content-type": "application/json", "x-hub-key": this.env.HUB_KEY },
-      body: JSON.stringify({ targets, title: name, body: body.slice(0, 180), entry: id, kind: e.kind }) }).catch(() => {}));
+    const household = this.one("SELECT v FROM meta WHERE k = 'household'")?.v;
+    this.ctx.waitUntil((async () => {
+      let image;
+      if (hasImage && household) { const ex = Date.now() + 864e5; image = `${this.env.HUB_URL || "https://fursight-cam.wibble-crossplay.workers.dev"}/hub/i/${household}/${id}?e=${ex}&s=${await hmac(this.env, `img.${household}.${id}.${ex}`)}`; }
+      await fetch(this.env.NOTIFY_URL, { method: "POST", headers: { "content-type": "application/json", "x-hub-key": this.env.HUB_KEY },
+        body: JSON.stringify({ targets, title: name, body: body.slice(0, 180), entry: id, kind: e.kind, image }) });
+    })().catch(() => {}));
   }
 
   one(q, ...a) { const r = this.sql.exec(q, ...a).toArray(); return r[0]; }
@@ -107,6 +121,10 @@ export class Household {
 
     // a removed device's token still verifies, so check it's still a member
     const device = req.headers.get("x-device"), household = req.headers.get("x-household");
+    if (device === "signed-link") {
+      const mm2 = p.match(/^\/diary\/([A-Za-z0-9]{1,20})\/image$/), r = mm2 && this.one("SELECT image FROM diary WHERE id = ?", mm2[1]);
+      return r && r.image ? new Response(r.image, { headers: { "content-type": imageType(r.image), "cache-control": "private, max-age=86400" } }) : err("no image", 404);
+    }
     if (!this.one("SELECT id FROM devices WHERE id = ?", device)) return err("this device was removed", 401);
     this.sql.exec("UPDATE devices SET seen = ? WHERE id = ?", Date.now(), device);
 
@@ -144,7 +162,7 @@ export class Household {
       if (image === false) return err("image must be a JPEG data URL under 1.5 MB");
       const id = Date.now().toString(36) + rand(4), at = Number(b.at) || Date.now();
       this.sql.exec("INSERT INTO diary VALUES (?, ?, ?, ?)", id, at, JSON.stringify(entry), image);
-      this.notify(id, entry, device);
+      this.notify(id, entry, device, !!image);
       return json({ id, at, ...entry, has_image: !!image });
     }
     if (p === "/diary" && m === "GET") {
@@ -155,7 +173,7 @@ export class Household {
     }
     if ((mm = p.match(/^\/diary\/([A-Za-z0-9]{1,20})\/image$/)) && m === "GET") {
       const r = this.one("SELECT image FROM diary WHERE id = ?", mm[1]);
-      return r && r.image ? new Response(r.image, { headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=86400", ...CORS } }) : err("no image", 404);
+      return r && r.image ? new Response(r.image, { headers: { "content-type": imageType(r.image), "cache-control": "private, max-age=86400", ...CORS } }) : err("no image", 404);
     }
 
     if ((mm = p.match(/^\/cams\/([A-Za-z0-9]{16})$/)) && m === "PUT") {
@@ -193,12 +211,14 @@ export class Household {
 }
 
 // a JPEG data URL (or bare base64) to bytes; false if it isn't one or is too big
+// a JPEG, or a PNG (a moment's cut-out sticker keeps its transparency)
 function jpeg(s) {
-  const b = s.replace(/^data:image\/jpeg;base64,/, "");
+  const b = s.replace(/^data:image\/(jpeg|png);base64,/, "");
   if (b.length > 2_000_000 || /[^A-Za-z0-9+/=]/.test(b)) return false;
   const bytes = Uint8Array.from(atob(b), (c) => c.charCodeAt(0));
-  return bytes[0] === 0xff && bytes[1] === 0xd8 ? bytes : false;
+  return (bytes[0] === 0xff && bytes[1] === 0xd8) || (bytes[0] === 0x89 && bytes[1] === 0x50) ? bytes : false;
 }
+const imageType = (bytes) => (new Uint8Array(bytes)[0] === 0x89 ? "image/png" : "image/jpeg");
 
 // ---------------------------------------------------------------- pairing codes
 

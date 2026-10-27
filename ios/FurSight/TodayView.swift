@@ -64,8 +64,14 @@ struct TodayView: View {
     private func moment(_ m: [String: Any]) -> some View {
         HStack(spacing: 14) {
             if m["has_image"] as? Bool == true, let url = API.imageURL("/diary/\(m.str("id"))/image") {
-                AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.line }
-                    .frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 14))
+                if m["sticker"] as? Bool == true {
+                    // a cut-out sticker of him: no frame, a little tilt
+                    AsyncImage(url: url) { $0.resizable().scaledToFit() } placeholder: { Color.clear }
+                        .frame(width: 110, height: 110).rotationEffect(.degrees(-4))
+                } else {
+                    AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.line }
+                        .frame(width: 96, height: 96).clipShape(RoundedRectangle(cornerRadius: 14))
+                }
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text("MOMENT").font(.nunito(12)).foregroundStyle(Color.grape).kerning(0.8)

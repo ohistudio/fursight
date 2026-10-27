@@ -99,6 +99,7 @@
   .hz i { width: 26px; height: 26px; border-radius: 50%; color: #fff; font-style: normal; font-weight: 900; display: grid; place-items: center; }
   .moment { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; }
   .moment.noimg { grid-template-columns: 1fr; }
+  .moment.sticker img { object-fit: contain; border-radius: 0; transform: rotate(-4deg); }
   .moment img { width: 96px; height: 96px; object-fit: cover; border-radius: 14px; }
   table.act { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   table.act th { font-size: 12px; color: var(--muted); text-align: right; font-weight: 900; }
@@ -167,6 +168,7 @@
 <script src="/tray.js"></script>
 <script src="/routines.js"></script>
 <script src="/activity.js"></script>
+<script src="/sticker.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -441,7 +443,7 @@ function activityCard(a, p) {
   const rows = [["loaf", "Loafing"], ["stretched", "Stretched out"], ["flop", "Flopped"], ["active", "On the move"], ["eating", "Eating"], ["grooming", "Grooming"]]
     .filter(([k]) => a.week[k] > 0);
   return `<div class="card stack pop"><div class="row" style="justify-content:space-between"><h2>${esc(p.name)}'s day</h2><span class="chip" style="flex:none">${a.today.flops} flop${a.today.flops === 1 ? "" : "s"} today</span></div>
-    ${a.moment ? `<div class="moment${a.moment.has_image ? "" : " noimg"}">${a.moment.has_image ? `<img src="${img(`/diary/${a.moment.id}/image`)}" alt="">` : ""}<p><b>${esc(a.moment.title)}</b><br><span class="when">${new Date(a.moment.at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></p></div>` : ""}
+    ${a.moment ? `<div class="moment${a.moment.has_image ? "" : " noimg"}${a.moment.extra && a.moment.extra.sticker ? " sticker" : ""}">${a.moment.has_image ? `<img src="${img(`/diary/${a.moment.id}/image`)}" alt="">` : ""}<p><b>${esc(a.moment.title)}</b><br><span class="when">${new Date(a.moment.at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></p></div>` : ""}
     <table class="act"><tr><th></th><th>Today</th><th>This week</th></tr>
       ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}</table>
     ${a.simulated ? `<span class="chip" style="justify-self:start">Includes simulated days</span>` : ""}</div>`;
@@ -735,7 +737,9 @@ function watchActivity(v, c, g, view, status) {
       status(r.visible ? `${r.caption || FSActivity.WORD[r.pose]}` : `Still, but ${p.name} isn't in view`);
       if (r.visible && (r.pose === "flop" || r.pose === "stretched") && Date.now() - lastMoment > 3600e3) {
         lastMoment = Date.now();
-        post({ kind: "moment", title: r.caption || `${p.name} is ${r.pose === "flop" ? "having a big flop" : "stretched out and comfy"}`, image, extra: { pose: r.pose } });
+        // a cut-out sticker of him if SAM can find him, else the photo
+        const sticker = await makeSticker(image, api).catch(() => null);
+        post({ kind: "moment", title: r.caption || `${p.name} is ${r.pose === "flop" ? "having a big flop" : "stretched out and comfy"}`, image: sticker || image, extra: { pose: r.pose, sticker: !!sticker } });
       }
       if (r.visible && r.pose === "chewing") post({ kind: "warning", title: `Chewing ${r.chewing_what || "something"}`, note: `The pet cam saw ${p.name} chewing ${r.chewing_what || "something that isn't food"}.`, verdict: "caution", image });
     } catch (e) { seg = { pose: null, from }; }
