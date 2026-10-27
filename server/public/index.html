@@ -110,6 +110,8 @@
   .routine .x { border: 0; background: none; color: var(--muted); font: 900 20px Nunito, sans-serif; cursor: pointer; padding: 4px; }
   .addr summary { cursor: pointer; font-weight: 900; color: var(--grape-lip); }
   .tray { display: grid; gap: 10px; }
+  .idea { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+  .idea p { font-size: 14px; margin-top: 2px; } .idea small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .tile { display: grid; gap: 2px; padding: 14px; } .tile b { font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; } .tile span { font-size: 13px; color: var(--muted); } .tile small { font-size: 12px; color: var(--muted); }
   .chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
@@ -358,7 +360,7 @@ async function makeRecap(btn) {
 }
 
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  $app.innerHTML = `<div class="stack">${header()}<a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
   const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind)).slice(0, 80);
   const $l = document.getElementById("list");
@@ -411,7 +413,7 @@ const careItems = (p) => ((p.care && p.care.daily) || []).slice(0, 8);
 
 async function care() {
   const p = me.pets[0], items = careItems(p);
-  $app.innerHTML = `<div class="stack">${header()}<div id="tray"></div><div id="activity"></div><div id="checklist"></div><div id="routines"></div>
+  $app.innerHTML = `<div class="stack">${header()}<div id="tray"></div><div id="activity"></div><div id="checklist"></div><div id="routines"></div><div id="ideas"></div>
     <div class="card stack"><div class="row" style="justify-content:space-between"><h3>Nicknames</h3><button class="btn ghost small" id="nickEdit" style="flex:none;width:auto">Edit</button></div>
       <div id="nickView">${nicknames(p).length ? `<div class="chips">${nicknames(p).map((n) => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : `<p class="muted">Add a few and FurSight will use them sometimes.</p>`}</div>
       <div id="nickForm" class="hidden"><input id="nickIn" value="${esc(p.nicknames || "")}" placeholder="e.g. Si Si, Little Loaf" maxlength="120"><button class="btn" id="nickSave" style="margin-top:8px">Save nicknames</button></div></div>
@@ -426,6 +428,7 @@ async function care() {
   const { entries } = await hub("/diary?limit=200");
   document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p);
   routinesCard(entries, p);
+  ideasCard(entries, p);
   document.getElementById("activity").innerHTML = activityCard(FSActivity.summary(entries), p);
   const st = careState(entries, items);
   const left = items.filter((i) => !st.today.has(i)).length;
@@ -453,6 +456,29 @@ function activityCard(a, p) {
     <table class="act"><tr><th></th><th>Today</th><th>This week</th></tr>
       ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}</table>
     ${a.simulated ? `<span class="chip" style="justify-self:start">Includes simulated days</span>` : ""}</div>`;
+}
+
+// ---------------------------------------------------------------- ideas for him: treats, toys, enrichment (not adverts)
+
+const IDEA_ICON = { treat: "Treat", toy: "Toy", enrichment: "Enrichment", comfort: "Comfort", habitat: "Home", grooming: "Grooming" };
+function ideasCard(entries, p) {
+  const $i = document.getElementById("ideas"), last = entries.find((e) => e.kind === "ideas");
+  const fresh = last && Date.now() - last.at < 7 * 864e5;
+  const list = last && last.extra && last.extra.ideas || [];
+  $i.innerHTML = `<div class="card stack pop"><div class="row" style="justify-content:space-between"><h2>Ideas for ${esc(p.name)}</h2>${list.length ? `<button class="btn ghost small" id="moreIdeas" style="flex:none;width:auto">New ideas</button>` : ""}</div>
+    ${list.length ? list.map((i) => `<div class="idea"><span class="chip">${IDEA_ICON[i.kind] || i.kind}</span><div><b>${esc(i.name[0].toUpperCase() + i.name.slice(1))}</b><p class="muted">${esc(i.why)}</p><small>${esc(i.safety)} ${esc(i.tip)}</small></div></div>`).join("")
+      : `<p class="muted">Treats, toys and things to do that suit ${esc(p.name)}, from what FurSight knows about him and current welfare guidance. No adverts, no brands.</p><button class="btn grape" id="getIdeas">Get ideas</button>`}
+    ${list.length ? `<p class="when">${fresh ? "This week's ideas" : "From " + new Date(last.at).toLocaleDateString()} · generic kinds of thing, never sponsored</p>` : ""}</div>`;
+  const go = async (b) => {
+    b.disabled = true; b.textContent = "Thinking of ideas…";
+    try {
+      const r = await api("/api/ideas", {});
+      await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ideas", title: `Ideas for ${p.name}`, note: r.ideas.map((i) => i.name).join(", "), pet: p.name, extra: { ideas: r.ideas.map(({ kind, name, why, safety, tip }) => ({ kind, name: name.slice(0, 60), why: why.slice(0, 200), safety: safety.slice(0, 140), tip: tip.slice(0, 140) })) } }) });
+      care();
+    } catch (e) { toast(e.message); b.disabled = false; b.textContent = "Get ideas"; }
+  };
+  const b = document.getElementById("getIdeas") || document.getElementById("moreIdeas");
+  if (b) b.onclick = () => go(b);
 }
 
 // ---------------------------------------------------------------- routines: grooming and checks, due a set time after the last one
@@ -517,7 +543,7 @@ async function stats() {
     a.has ? [FSActivity.time(a.today.active), "on the move", `${FSActivity.time(a.week.active)} this week`] : null,
   ].filter(Boolean);
   const none = !tw.length && !a.has;
-  document.getElementById("st").innerHTML = none ? `<div class="card center stack pop">${bean("idle", 90)}<h3>No stats yet</h3><p class="muted">Stats fill in from the litter tray and the pet cam. Link a FurSight Tray or set up a pet cam in Devices.</p></div>` : `<div class="stack">
+  document.getElementById("st").innerHTML = (none ? "" : `<a class="btn sky" href="/wrapped/" style="margin-bottom:14px">${esc(p.name)}'s week, wrapped</a>`) + (none ? `<div class="card center stack pop">${bean("idle", 90)}<h3>No stats yet</h3><p class="muted">Stats fill in from the litter tray and the pet cam. Link a FurSight Tray or set up a pet cam in Devices.</p></div>` : `<div class="stack">
     <div class="tiles">${tiles.map(([b, l, sub]) => `<div class="card tile pop"><b>${b}</b><span>${l}</span><small>${sub}</small></div>`).join("")}</div>
     ${tw.length > 1 ? `<div class="card stack pop"><h3>Weight</h3>${lineChart(tw.map((d) => ({ x: day(d.date), y: d.weight_g, tip: `${day(d.date)}: ${(d.weight_g / 1000).toFixed(3)} kg` })), { unit: "g", colour: "var(--sky-lip)" })}
       ${tray.simulated ? `<span class="when">Simulated tray</span>` : ""}</div>` : ""}

@@ -8,6 +8,7 @@ struct WebTab: View {
 }
 
 struct WebApp: UIViewRepresentable {
+    var url: URL = Config.server
     func makeUIView(context _: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         if let token = API.token {
@@ -17,7 +18,7 @@ struct WebApp: UIViewRepresentable {
         let web = WKWebView(frame: .zero, configuration: config)
         web.isOpaque = false
         web.backgroundColor = .clear
-        web.load(URLRequest(url: Config.server))
+        web.load(URLRequest(url: url))
         return web
     }
     func updateUIView(_: WKWebView, context _: Context) {}

@@ -29,7 +29,11 @@ async function spark({ system, text, images = [], schema, name, webSearch = fals
     }
   }
   let data;
-  try { data = JSON.parse(raw); } catch { throw Object.assign(new Error("model returned no JSON"), { status: 502, raw: raw.slice(0, 300) }); }
+  // with web search the model sometimes says a sentence before the JSON: take the object itself
+  try { data = JSON.parse(raw); } catch {
+    try { data = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1)); }
+    catch { throw Object.assign(new Error("model returned no JSON"), { status: 502, raw: raw.slice(0, 300) }); }
+  }
   const seen = new Set();
   citations = citations.filter((c) => !seen.has(c.url) && seen.add(c.url));
   return { data, citations, usage: out.usage };

@@ -6,12 +6,17 @@ struct TodayView: View {
     @State private var data: [String: Any] = [:]
     @State private var error: String?
     @State private var loading = true
+    @State private var wrapped = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     header
+                    if data.obj("activity") != nil || data.obj("tray") != nil {
+                        Button { wrapped = true } label: { Label("\(data.obj("pet")?.str("name") ?? "His")'s week, wrapped", systemImage: "sparkles") }
+                            .buttonStyle(ChunkyButton(color: .sky, lip: .skyLip))
+                    }
                     if let error { Text(error).font(.nunito(15, black: false)).foregroundStyle(Color.coral).card() }
                     ForEach(Array(data.arr("alerts").enumerated()), id: \.offset) { _, a in alert(a) }
                     if let m = data.obj("moment") { moment(m) }
@@ -25,6 +30,13 @@ struct TodayView: View {
             .background(Color.page.ignoresSafeArea())
             .refreshable { await load() }
             .task { await load() }
+            .fullScreenCover(isPresented: $wrapped) {
+                ZStack(alignment: .topTrailing) {
+                    WebApp(url: URL(string: Config.server.absoluteString + "/wrapped/?app=1")!).ignoresSafeArea()
+                    Button { wrapped = false } label: { Image(systemName: "xmark").font(.system(size: 20, weight: .black)).foregroundStyle(.white).frame(width: 52, height: 52) }
+                        .padding(.top, 14).padding(.trailing, 6)
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .fursightRefresh)) { _ in Task { await load() } }
         }
     }
