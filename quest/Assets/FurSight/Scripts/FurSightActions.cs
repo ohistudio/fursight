@@ -57,6 +57,8 @@ namespace FurSight
             _mic.Begin();
         }
 
+        object _pending;   // when FurSight asked something back, the next question is the reply to it
+
         async void OnQuestion(byte[] wav)
         {
             if (_status != null) _status.Dismiss();
@@ -74,7 +76,10 @@ namespace FurSight
                     image = "data:image/jpeg;base64," + System.Convert.ToBase64String(_askShot.jpeg),
                     audio = System.Convert.ToBase64String(wav),
                     pet = PetProfile.Current.ForServer(),
+                    from = "quest",
+                    followup = _pending,
                 }, 60);
+                _pending = null;
                 Debug.Log("[FurSight] ask: " + res.ToString(Newtonsoft.Json.Formatting.None));
                 if (_status != null) _status.Dismiss();
                 string q = (string)res["question"], answer = (string)res["answer"], about = (string)res["about"], verdict = (string)res["verdict"];
@@ -82,8 +87,15 @@ namespace FurSight
                 var at = box != null && box.Length == 4 ? _askShot.WorldPoint(box) : InFront();
                 string kind = verdict == "safe" || verdict == "caution" || verdict == "toxic" || verdict == "vet" ? verdict : "answer";
                 string title = string.IsNullOrEmpty(about) ? PetProfile.Current.petName : about;
-                string asked = string.IsNullOrEmpty(q) ? null : "<color=#9A98A6>You asked: " + q + "</color>";
-                _last = VerdictCard.Verdict(at, title, kind, answer, asked);
+                if (res["needs"]?.Type == JTokenType.Object)
+                {
+                    // it couldn't tell, so it asks instead of guessing: press Ask again to reply
+                    _pending = new { asked = (string)res["needs"]["ask"], question = q };
+                    _last = VerdictCard.Verdict(InFront(), "Quick question", "none", (string)res["needs"]["ask"], "<color=#9A98A6>Press Ask to reply</color>");
+                    return;
+                }
+                string asked = (string.IsNullOrEmpty(q) ? "" : "You asked: " + q) + How(res["steps"]);
+                _last = VerdictCard.Verdict(at, title, kind, answer, string.IsNullOrEmpty(asked) ? null : "<color=#9A98A6>" + asked.TrimStart('\n') + "</color>");
                 HubClient.Diary("ask", string.IsNullOrEmpty(q) ? title : q, answer, kind == "answer" ? null : kind, _askShot.jpeg);
             }
             catch (System.Exception e)
@@ -93,6 +105,24 @@ namespace FurSight
                 _last = VerdictCard.Verdict(InFront(), "Couldn't answer", "none", "Try again in a moment.", null);
             }
             finally { Busy = false; }
+        }
+
+        // one line of what the Ask agent looked at and how many answers its checks stopped
+        static string How(JToken steps)
+        {
+            if (steps == null || steps.Type != JTokenType.Array) return "";
+            var used = new System.Collections.Generic.List<string>();
+            int stopped = 0;
+            foreach (var s in steps)
+            {
+                string tool = (string)s["tool"], label = (string)s["label"] ?? "";
+                if ((string)s["kind"] == "check") stopped++;
+                string name = tool == "cam" && !label.EndsWith("off") ? "pet cam" : tool == "diary" ? "diary" : tool == "care" ? "care plan" : tool == "food" ? "safety list" : null;
+                if (name != null && !used.Contains(name)) used.Add(name);
+            }
+            string line = used.Count > 0 ? "Looked at " + string.Join(", ", used) : "";
+            if (stopped > 0) line += (line.Length > 0 ? " · " : "") + stopped + (stopped > 1 ? " answers" : " answer") + " stopped by a check";
+            return line.Length > 0 ? "\n" + line : "";
         }
 
         // ---------------------------------------------------------------- photo
