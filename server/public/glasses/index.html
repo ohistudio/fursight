@@ -213,7 +213,14 @@ async function ask(question) {
     return null;
   }
 }
-$("q").addEventListener("change", () => { const v = $("q").value; $("q").value = ""; $("q").blur(); ask(v); });
+// The system composer (dictation, handwriting or keyboard) commits the finished text through "input" and/or
+// "change", not key by key: take whichever comes first, once.
+// On the glasses the composer commits the whole text at once; on a desktop keyboard "input" fires per key,
+// so "input" waits for a short pause and "change" (Enter / leaving the field) sends straight away.
+let askTimer = 0;
+function askFromField() { clearTimeout(askTimer); const v = $("q").value.trim(); if (!v) return; $("q").value = ""; $("q").blur(); ask(v); }
+$("q").addEventListener("input", () => { clearTimeout(askTimer); askTimer = setTimeout(askFromField, 1200); });
+$("q").addEventListener("change", askFromField);
 
 // ---------------------------------------------------------------- pet cam: the household's camera, a few pictures a second
 
