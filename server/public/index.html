@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3DBE6B">
+<title>FurSight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+<style>
+  :root {
+    --fern: #3DBE6B; --fern-lip: #2A9A52; --sun: #FFB627; --sun-lip: #D9900A; --coral: #FF4D5E; --coral-lip: #D93545;
+    --sky: #2FA8F5; --sky-lip: #1E86C9; --grape: #9B6CF0; --grape-lip: #7A4ED1;
+    --ink: #2B2A33; --muted: #6B6977; --line: #E4E1EA; --bg: #F6F5F9; --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 700 16px/1.45 Nunito, system-ui, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 18px 16px calc(96px + env(safe-area-inset-bottom)); }
+  h1, h2, h3 { font-weight: 900; margin: 0; letter-spacing: -0.01em; }
+  h1 { font-size: 30px; } h2 { font-size: 22px; } h3 { font-size: 17px; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .stack > * + * { margin-top: 14px; }
+
+  /* chunky cards and buttons with a lip, like keys */
+  .card { background: var(--card); border: 2px solid var(--line); border-bottom-width: 5px; border-radius: 20px; padding: 16px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; padding: 12px 18px;
+         border: 0; border-radius: 16px; font: 900 17px Nunito, sans-serif; color: #fff; background: var(--fern); box-shadow: 0 5px 0 var(--fern-lip);
+         cursor: pointer; transition: transform .08s, box-shadow .08s; text-decoration: none; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--fern-lip); }
+  .btn.sky { background: var(--sky); box-shadow: 0 5px 0 var(--sky-lip); } .btn.sky:active { box-shadow: 0 1px 0 var(--sky-lip); }
+  .btn.grape { background: var(--grape); box-shadow: 0 5px 0 var(--grape-lip); } .btn.grape:active { box-shadow: 0 1px 0 var(--grape-lip); }
+  .btn.ghost { background: var(--card); color: var(--ink); border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
+  .btn.ghost:active { box-shadow: 0 0 0 var(--line); }
+  .btn.small { min-height: 42px; width: auto; font-size: 15px; padding: 8px 14px; border-radius: 13px; }
+  .btn[disabled] { opacity: .5; pointer-events: none; }
+
+  label { display: block; font-weight: 900; font-size: 14px; margin-bottom: 6px; }
+  input, textarea, select { width: 100%; font: 800 16px Nunito, sans-serif; color: var(--ink); background: var(--card); border: 2px solid var(--line);
+         border-radius: 14px; padding: 12px 14px; outline: none; }
+  input:focus, textarea:focus, select:focus { border-color: var(--sky); }
+  textarea { min-height: 80px; resize: vertical; }
+  .row { display: flex; gap: 10px; align-items: center; } .row > * { flex: 1; }
+
+  /* top bar + pet header */
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 20px; }
+  .brand i { width: 30px; height: 30px; border-radius: 10px; background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); display: grid; place-items: center; }
+  .pet { display: flex; gap: 14px; align-items: center; }
+  .pet img, .pet .ph { width: 76px; height: 76px; border-radius: 22px; object-fit: cover; background: var(--line); border: 3px solid var(--card); box-shadow: 0 4px 0 var(--line); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { font-size: 13px; font-weight: 900; padding: 3px 10px; border-radius: 999px; background: var(--card); border: 2px solid var(--line); color: var(--muted); }
+
+  /* bottom tabs */
+  nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 2px solid var(--line); padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  nav .in { max-width: 560px; margin: 0 auto; display: flex; gap: 6px; }
+  nav button { flex: 1; border: 0; background: none; font: 900 13px Nunito, sans-serif; color: var(--muted); padding: 6px 0; border-radius: 12px; cursor: pointer; }
+  nav button svg { display: block; margin: 0 auto 2px; }
+  nav button.on { color: var(--sky); background: #EAF6FE; }
+
+  /* diary */
+  .entry { display: flex; gap: 12px; align-items: flex-start; }
+  .entry img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; flex: none; background: var(--line); }
+  .badge { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 900; }
+  .v-safe { background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); } .v-caution { background: var(--sun); box-shadow: 0 3px 0 var(--sun-lip); }
+  .v-toxic, .v-vet { background: var(--coral); box-shadow: 0 3px 0 var(--coral-lip); } .v-other { background: var(--sky); box-shadow: 0 3px 0 var(--sky-lip); }
+  .vword { font-weight: 900; font-size: 14px; }
+  .t-safe { color: var(--fern-lip); } .t-caution { color: var(--sun-lip); } .t-toxic, .t-vet { color: var(--coral); } .t-other { color: var(--sky-lip); }
+  .when { font-size: 13px; color: var(--muted); }
+  .day { font-weight: 900; color: var(--muted); font-size: 14px; margin: 18px 4px 8px; text-transform: uppercase; letter-spacing: .04em; }
+
+  /* care plan */
+  .care h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .care ul { margin: 0; padding-left: 20px; } .care li { margin: 3px 0; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+  /* link code */
+  .code { font-size: 44px; font-weight: 900; letter-spacing: .18em; text-align: center; padding: 10px 0; }
+  .codein { font-size: 32px; text-align: center; letter-spacing: .3em; text-transform: uppercase; font-weight: 900; }
+
+  /* camera */
+  .cam { position: relative; border-radius: 18px; overflow: hidden; background: #111; aspect-ratio: 1; }
+  .cam video, .cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .live { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.55); color: #fff; font-size: 13px; padding: 4px 10px; border-radius: 999px; }
+  .live b { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--coral); margin-right: 6px; }
+
+  .center { text-align: center; }
+  .hero { padding: 34px 4px 10px; }
+  .hero .big { width: 92px; height: 92px; margin: 0 auto 18px; border-radius: 28px; background: var(--fern); box-shadow: 0 7px 0 var(--fern-lip); display: grid; place-items: center; }
+  .spinner { width: 34px; height: 34px; border-radius: 50%; border: 5px solid var(--line); border-top-color: var(--sky); animation: spin .8s linear infinite; margin: 0 auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pop { animation: pop .32s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 14px; font-weight: 900; z-index: 9; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav id="tabs" class="hidden"><div class="in">
+  <button data-tab="today"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="4"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Diary</button>
+  <button data-tab="care"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>Care</button>
+  <button data-tab="cam"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="3"/><path d="M8 21h8"/><circle cx="16.5" cy="9" r="1.2" fill="currentColor"/></svg>Pet cam</button>
+  <button data-tab="devices"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg>Devices</button>
+</div></nav>
+
+<script>
+// FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
+// read the diary every device writes to, link devices with a code, and run or watch the pet cam.
+// Talks to the hub (households, diary, codes: Cloudflare) and to this server's /api (Meta models).
+const HUB = "https://fursight-cam.wibble-crossplay.workers.dev";
+const RELAY = HUB;
+const $app = document.getElementById("app"), $tabs = document.getElementById("tabs");
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} },
+};
+let token = store.get("fs.token"), me = null, tab = store.get("fs.tab") || "today";
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
+
+async function hub(path, opt = {}) {
+  const r = await fetch(HUB + "/hub" + path, { ...opt, headers: { "content-type": "application/json", ...(token ? { authorization: "Bearer " + token } : {}) } });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401 && token) { token = null; store.set("fs.token", null); render(); throw new Error("This phone was unlinked."); }
+  if (!r.ok) throw new Error(j.error || "Something went wrong");
+  return j;
+}
+async function api(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "The model didn't answer, try again");
+  return j;
+}
+function toast(msg) { const t = document.createElement("div"); t.className = "toast pop"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+const img = (path) => HUB + "/hub" + path + (path.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(token);
+
+// a photo from the phone, shrunk to a JPEG data URL (long side `max`)
+function shrink(file, max = 768) {
+  return new Promise((ok, no) => {
+    const i = new Image();
+    i.onload = () => {
+      const k = Math.min(1, max / Math.max(i.width, i.height));
+      const c = document.createElement("canvas"); c.width = Math.round(i.width * k); c.height = Math.round(i.height * k);
+      c.getContext("2d").drawImage(i, 0, 0, c.width, c.height);
+      ok(c.toDataURL("image/jpeg", 0.82)); URL.revokeObjectURL(i.src);
+    };
+    i.onerror = no; i.src = URL.createObjectURL(file);
+  });
+}
+
+// ---------------------------------------------------------------- start
+
+async function render() {
+  stopCam();
+  if (!token) { $tabs.classList.add("hidden"); return welcome(); }
+  try { me = await hub("/me"); } catch (e) { return; }
+  if (!me.pets.length) { $tabs.classList.add("hidden"); return addPet(); }
+  $tabs.classList.remove("hidden");
+  for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
+  ({ today, care, cam, devices })[tab]();
+}
+$tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.tab; store.set("fs.tab", tab); render(); });
+
+function header() {
+  const p = me.pets[0];
+  return `<div class="pet pop">${p.has_photo ? `<img src="${img(`/pets/${p.id}/photo`)}" alt="">` : `<div class="ph"></div>`}
+    <div><h1>${esc(p.name)}</h1><div class="chips">${[p.species, p.breed, p.sex].filter(Boolean).map((s) => `<span class="chip">${esc(cap(s))}</span>`).join("")}</div></div></div>`;
+}
+
+function welcome() {
+  $app.innerHTML = `<div class="hero center stack pop">
+    <div class="big"><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3.2" fill="#fff"/></svg></div>
+    <h1>FurSight</h1>
+    <p class="muted">Rabbits hide illness. FurSight notices.<br>It notices, your vet decides.</p>
+  </div>
+  <div class="stack" style="margin-top:28px">
+    <button class="btn" id="start">Add your pet</button>
+    <button class="btn ghost" id="join">I already use FurSight on another phone</button>
+  </div>`;
+  document.getElementById("start").onclick = async (e) => {
+    e.target.disabled = true;
+    try { const h = await hub("/households", { method: "POST", body: JSON.stringify({ name: deviceName() }) }); token = h.token; store.set("fs.token", token); render(); }
+    catch (err) { toast(err.message); e.target.disabled = false; }
+  };
+  document.getElementById("join").onclick = () => linkThis("phone");
+}
+function deviceName() { const ua = navigator.userAgent; return /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android phone" : /Mac/.test(ua) ? "Mac" : "Browser"; }
+
+// this browser joins a household: show a code, wait for another linked phone to enter it
+async function linkThis(kind) {
+  $app.innerHTML = `<div class="stack center pop" style="padding-top:30px"><h2>Link this ${kind === "camera" ? "camera" : "phone"}</h2>
+    <p class="muted">On a phone that already has FurSight, open <b>Devices</b>, tap <b>Link a device</b> and enter:</p>
+    <div class="card"><div class="code" id="code">····</div></div><div class="spinner"></div>
+    <button class="btn ghost" id="back">Back</button></div>`;
+  document.getElementById("back").onclick = () => { stopLink = true; render(); };
+  let stopLink = false;
+  const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind, name: deviceName() }) });
+  document.getElementById("code").textContent = s.code;
+  while (!stopLink) {
+    await new Promise((r) => setTimeout(r, 1800));
+    const p = await hub(`/link/poll?code=${s.code}&nonce=${s.nonce}`);
+    if (p.status === "linked") { token = p.token; store.set("fs.token", token); toast("Linked"); return render(); }
+    if (p.status === "expired") return linkThis(kind);
+  }
+}
+
+// ---------------------------------------------------------------- add a pet
+
+function addPet() {
+  $app.innerHTML = `<div class="stack pop">
+    <div class="brand"><i></i>FurSight</div>
+    <h1>Who are we looking after?</h1>
+    <p class="muted">Take a clear photo of your pet. FurSight works out what they are and writes a care plan you can check.</p>
+    <label class="card center" style="cursor:pointer;padding:26px">
+      <input type="file" accept="image/*" capture="environment" id="photo" class="hidden">
+      <img id="preview" class="hidden" style="width:100%;border-radius:14px;margin-bottom:10px">
+      <span class="btn sky small" style="pointer-events:none">Take or choose a photo</span>
+    </label>
+    <div><label for="name">Name</label><input id="name" placeholder="e.g. Xiaosi" autocomplete="off"></div>
+    <div><label for="notes">Anything we should know? (optional)</label><textarea id="notes" placeholder="e.g. had GI stasis in the spring, loves coriander"></textarea></div>
+    <button class="btn" id="go" disabled>Make ${"profile"}</button>
+  </div>`;
+  let photo = null;
+  const $go = document.getElementById("go"), $name = document.getElementById("name");
+  const ready = () => ($go.disabled = !(photo && $name.value.trim()));
+  document.getElementById("photo").onchange = async (e) => {
+    if (!e.target.files[0]) return;
+    photo = await shrink(e.target.files[0]);
+    const p = document.getElementById("preview"); p.src = photo; p.classList.remove("hidden"); ready();
+  };
+  $name.oninput = ready;
+  $go.onclick = async () => {
+    const name = $name.value.trim(), notes = document.getElementById("notes").value.trim();
+    $app.innerHTML = `<div class="stack center" style="padding-top:60px"><div class="spinner"></div><h2>Getting to know ${esc(name)}</h2><p class="muted">Muse Spark is looking at the photo and writing a care plan.</p></div>`;
+    try { review(await api("/api/profile", { image: photo, name, notes }), { name, notes, photo }); }
+    catch (err) { toast(err.message); addPet(); }
+  };
+}
+
+function review(p, base) {
+  const care = p.care || {};
+  $app.innerHTML = `<div class="stack pop">
+    <h1>Meet ${esc(base.name)}</h1>
+    <p class="muted">Check these and fix anything that's wrong. You know ${esc(base.name)} best.</p>
+    <div class="card stack">
+      <div class="row"><div><label>Species</label><input id="species" value="${esc(p.species)}"></div><div><label>Breed</label><input id="breed" value="${esc(p.breed)}"></div></div>
+      <div class="row"><div><label>Sex</label><select id="sex">${["male", "female", "unknown"].map((s) => `<option ${s === p.sex_guess ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+        <div><label>Colour</label><input id="colour" value="${esc(p.colour)}"></div></div>
+      <div><label>Notes</label><textarea id="pnotes">${esc(base.notes)}</textarea></div>
+    </div>
+    ${carePlan(care)}
+    <button class="btn" id="save">Looks right, save ${esc(base.name)}</button>
+  </div>`;
+  document.getElementById("save").onclick = async (e) => {
+    e.target.disabled = true;
+    const v = (id) => document.getElementById(id).value.trim();
+    try {
+      await hub("/pets/" + petId(base.name), { method: "PUT", body: JSON.stringify({ name: base.name, species: v("species"), breed: v("breed"), sex: v("sex"), colour: v("colour"), notes: v("pnotes"), care, photo: base.photo }) });
+      toast(base.name + " is all set"); tab = "today"; render();
+    } catch (err) { toast(err.message); e.target.disabled = false; }
+  };
+}
+const petId = (name) => (name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "pet").slice(0, 30);
+
+function carePlan(c) {
+  const sec = (title, col, items) => items && items.length ? `<div class="card care"><h3><span class="dot" style="background:${col}"></span>${title}</h3><ul>${items.map((i) => `<li>${esc(i)}</li>`).join("")}</ul></div>` : "";
+  return `${c.diet ? `<div class="card care"><h3><span class="dot" style="background:var(--fern)"></span>Everyday diet</h3><p>${esc(c.diet)}</p></div>` : ""}
+    ${sec("Never", "var(--coral)", c.never)}${sec("See a vet if", "var(--coral)", c.warning_signs)}
+    ${sec("Healthy looks like", "var(--fern)", c.healthy)}${sec("Treats", "var(--sun)", c.treats)}${sec("Every day", "var(--sky)", c.daily)}`;
+}
+
+// ---------------------------------------------------------------- tabs
+
+async function today() {
+  $app.innerHTML = `<div class="stack">${header()}<div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  const { entries } = await hub("/diary?limit=80");
+  const $l = document.getElementById("list");
+  if (!entries.length) {
+    $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
+    return;
+  }
+  let last = "";
+  $l.innerHTML = entries.map((e) => {
+    const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+    const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
+    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam" }[e.kind] || cap(e.kind);
+    const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
+    const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
+    return `${head}<div class="card entry pop" style="margin-bottom:10px">
+      ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
+      <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
+      ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}
+      <div class="when">${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""}</div></div></div>`;
+  }).join("");
+}
+
+function care() {
+  const p = me.pets[0];
+  $app.innerHTML = `<div class="stack">${header()}${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
+}
+
+function devices() {
+  const icon = { phone: "Phone", quest: "Quest", glasses: "Glasses", camera: "Camera", web: "Browser" };
+  $app.innerHTML = `<div class="stack">${header()}
+    <div class="card stack pop"><h2>Link a device</h2><p class="muted">On the Quest, glasses or pet cam, FurSight shows a 4-letter code. Type it here.</p>
+      <input id="code" class="codein" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="····">
+      <button class="btn sky" id="claim" disabled>Link</button></div>
+    <h3 style="margin:18px 4px 0">Linked</h3>
+    ${me.devices.map((d) => `<div class="card row pop"><div><h3>${esc(d.name)}</h3><div class="when">${icon[d.kind] || cap(d.kind)}${d.id === me.device ? " · this one" : ""} · seen ${ago(d.seen)}</div></div>
+      ${d.id === me.device ? "" : `<button class="btn ghost small" data-remove="${d.id}" style="flex:none">Remove</button>`}</div>`).join("")}
+    <button class="btn ghost" id="out">Unlink this phone</button>
+  </div>`;
+  const $c = document.getElementById("code"), $b = document.getElementById("claim");
+  $c.oninput = () => { $c.value = $c.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); $b.disabled = $c.value.length !== 4; };
+  $b.onclick = async () => {
+    $b.disabled = true;
+    try { const r = await hub("/link/claim", { method: "POST", body: JSON.stringify({ code: $c.value }) }); toast(r.device.name + " linked"); render(); }
+    catch (err) { toast(err.message); $b.disabled = false; }
+  };
+  for (const b of document.querySelectorAll("[data-remove]")) b.onclick = async () => { await hub("/devices/" + b.dataset.remove, { method: "DELETE" }); render(); };
+  document.getElementById("out").onclick = () => { if (confirm("Unlink this phone from FurSight?")) { hub("/devices/" + me.device, { method: "DELETE" }).finally(() => { token = null; store.set("fs.token", null); render(); }); } };
+}
+function ago(t) { const s = (Date.now() - t) / 1000; return s < 90 ? "just now" : s < 5400 ? Math.round(s / 60) + " min ago" : s < 129600 ? Math.round(s / 3600) + " h ago" : Math.round(s / 86400) + " days ago"; }
+
+// ---------------------------------------------------------------- pet cam: watch the household's cameras, or be one
+
+let camStop = null;
+function stopCam() { if (camStop) { camStop(); camStop = null; } }
+
+function cam() {
+  const cams = me.cams;
+  $app.innerHTML = `<div class="stack">${header()}
+    ${cams.map((c) => `<div class="card stack pop"><div class="cam"><img data-ch="${c.channel}" alt=""><div class="live" data-live="${c.channel}">connecting</div></div><h3>${esc(c.name)}</h3></div>`).join("")}
+    ${cams.length ? "" : `<div class="card center stack pop"><h3>No pet cam yet</h3><p class="muted">Any old laptop or phone with a camera can watch ${esc(me.pets[0].name)}'s space. Open FurSight on it and use it as a pet cam.</p></div>`}
+    <button class="btn sky" id="be">Use this device as a pet cam</button></div>`;
+  document.getElementById("be").onclick = beCam;
+  // pull each camera's latest picture a few times a second (the relay only sends while someone watches)
+  let alive = true; const me_ = Math.random().toString(36).slice(2, 10);
+  camStop = () => (alive = false);
+  for (const c of cams) (async function loop() {
+    const $i = document.querySelector(`[data-ch="${c.channel}"]`), $s = document.querySelector(`[data-live="${c.channel}"]`);
+    let last = 0, url = null;
+    while (alive) {
+      try {
+        const r = await fetch(`${RELAY}/c/${c.channel}/frame.jpg?v=${me_}&t=${Date.now()}`, { cache: "no-store" });
+        if (r.status === 200 && Number(r.headers.get("x-frame-age")) < 3000) { const u = URL.createObjectURL(await r.blob()); $i.src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); }
+      } catch (e) {}
+      $s.innerHTML = Date.now() - last < 3000 ? "<b></b>live" : last ? "paused" : "waking the camera";
+      await new Promise((r) => setTimeout(r, 180));
+    }
+  })();
+}
+
+// this browser becomes a pet cam: camera on, register with the household, send to the relay while watched
+async function beCam() {
+  stopCam();
+  const name = prompt("Name this camera", `${me.pets[0].name}'s pen`); if (!name) return render();
+  let channel = store.get("fs.camChannel"), key = store.get("fs.camKey");
+  const rnd = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"[b % 56]).join("");
+  if (!channel || !key) { channel = rnd(16); key = rnd(24); store.set("fs.camChannel", channel); store.set("fs.camKey", key); }
+  await hub("/cams/" + channel, { method: "PUT", body: JSON.stringify({ name }) });
+  $tabs.classList.add("hidden");
+  $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2><p class="muted">Leave this open near ${esc(me.pets[0].name)}. It only sends pictures while someone is watching.</p>
+    <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>
+    <button class="btn ghost" id="stop">Stop being a pet cam</button></div>`;
+  let ws, stream, timer, viewers = 0, alive = true, wake;
+  try { wake = await navigator.wakeLock?.request("screen"); } catch (e) {}
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 }, audio: false }); }
+  catch (e) { toast("Couldn't open the camera"); return render(); }
+  const v = document.getElementById("v"); v.srcObject = stream;
+  const c = document.createElement("canvas"); c.width = c.height = 480; const g = c.getContext("2d");
+  const connect = () => {
+    ws = new WebSocket(RELAY.replace("https", "wss") + `/c/${channel}/send?k=${key}`);
+    ws.onmessage = (e) => { try { viewers = JSON.parse(e.data).viewers ?? viewers; } catch (er) {} };
+    ws.onclose = () => { if (alive) setTimeout(connect, 2000); };
+  };
+  connect();
+  timer = setInterval(() => {
+    const st = document.getElementById("st"); if (st) st.innerHTML = viewers ? `<b></b>live to ${viewers}` : "ready, nobody watching";
+    if (!ws || ws.readyState !== 1 || !viewers || ws.bufferedAmount > 24 * 1024 || !v.videoWidth) return;
+    const s = Math.min(v.videoWidth, v.videoHeight);
+    g.drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, 480, 480);
+    c.toBlob((b) => b && ws.readyState === 1 && ws.send(b), "image/jpeg", 0.65);
+  }, 1000 / 6);
+  camStop = () => { alive = false; clearInterval(timer); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
+  document.getElementById("stop").onclick = () => { stopCam(); render(); };
+}
+
+render();
+</script>
+</body>
+</html>

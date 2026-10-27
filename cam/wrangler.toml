@@ -1,0 +1,28 @@
+name = "fursight-cam"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = false
+
+[[durable_objects.bindings]]
+name = "CHANNELS"
+class_name = "Channel"
+
+[[durable_objects.bindings]]
+name = "HOUSEHOLDS"
+class_name = "Household"
+
+[[durable_objects.bindings]]
+name = "LINKS"
+class_name = "Links"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Channel"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Household", "Links"]

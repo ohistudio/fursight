@@ -1,0 +1,7 @@
+{
+  "name": "fursight-cam",
+  "private": true,
+  "description": "Pet cam relay: a webcam page at home streams JPEG frames, Ray-Ban Display shows them",
+  "scripts": { "dev": "wrangler dev --port 8788", "deploy": "wrangler deploy" },
+  "devDependencies": { "wrangler": "^4.148.0" }
+}

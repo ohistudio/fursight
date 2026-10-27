@@ -1,0 +1,8 @@
+{
+  "name": "fursight-training",
+  "private": true,
+  "type": "module",
+  "description": "SAM 3.1 labels pet footage, YOLOX-Tiny learns from it",
+  "engines": { "node": ">=22.9.0" },
+  "dependencies": { "@meta-sam/parser": "^0.0.13", "openai": "^5.0.0" }
+}

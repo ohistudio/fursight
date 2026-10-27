@@ -1,0 +1,7 @@
+{
+  "name": "fursight-server",
+  "private": true,
+  "description": "FurSight API: holds the Meta Model API key and turns photos into pet-aware verdicts",
+  "engines": { "node": ">=20" },
+  "scripts": { "dev": "vercel dev", "smoke": "node scripts/smoke.js" }
+}
