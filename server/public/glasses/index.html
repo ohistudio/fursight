@@ -49,6 +49,10 @@
   .note { color: #C9C7D2; font-size: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .when { color: #9F9DAA; font-size: 14px; }
 
+  #q { width: 100%; box-sizing: border-box; font: 800 22px Nunito, sans-serif; color: #FFFFFF; background: #000000; border: 3px solid #9B6CF0; border-radius: 20px; padding: 14px 16px; outline: none; }
+  #q:focus { border-color: #C8A8FF; }
+  #answer .big { font-size: 22px; }
+  .speaking::after { content: " ●"; color: #9B6CF0; }
   .code { font-size: 76px; font-weight: 900; letter-spacing: .14em; text-align: center; margin: 22px 0 8px; color: #5BE38A; }
   .center { text-align: center; }
 </style>
@@ -76,6 +80,13 @@
     <div class="row" style="justify-content:space-between"><div class="big"><span class="live" id="live"></span><span id="camName">Pet cam</span></div><div class="sub" id="camState"></div></div>
     <div id="cam"><img id="camImg" alt=""><div id="camMsg">Waking the camera</div></div>
   </div>
+  <!-- ask -->
+  <div class="page" id="p-ask">
+    <div class="k">Ask about <span id="askPet">your pet</span></div>
+    <input id="q" type="text" placeholder="Pinch, then speak your question" autocomplete="off">
+    <div class="sub" id="askHint" style="margin-top:8px">FurSight looks through the pet cam and today's diary.</div>
+    <div id="answer"></div>
+  </div>
   <!-- diary -->
   <div class="page" id="p-diary">
     <div class="k">Diary</div>
@@ -86,7 +97,9 @@
 
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
-// between Today, Pet cam and Diary; up/down scrolls the diary; pinch (Enter) refreshes.
+// between Today, Ask, Pet cam and Diary; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
+// the system composer (speak, write or type). Answers are shown and spoken. New "Don't" / "See a vet" entries
+// are read out. With WebMCP on, Meta AI can use FurSight's tools while it's open ("how's Xiaosi today?").
 const HUB = "https://fursight-cam.wibble-crossplay.workers.dev";
 const q = new URLSearchParams(location.search), $ = (id) => document.getElementById(id);
 if (q.get("fit")) $("frame").style.setProperty("--fit", q.get("fit"));
@@ -94,7 +107,8 @@ if (q.get("at")) { const [x, y] = q.get("at").split(",").map(Number); $("frame")
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 let token = store.get("fs.glassesToken"), me = null, entries = [], page = 0, scroll = 0;
-const PAGES = ["today", "cam", "diary"];
+const PAGES = ["today", "ask", "cam", "diary"];
+const API = location.origin.includes("localhost") ? "" : "https://fursight-seven.vercel.app";
 
 async function hub(path, opt = {}) {
   const r = await fetch(HUB + "/hub" + path, { ...opt, headers: { "content-type": "application/json", ...(token ? { authorization: "Bearer " + token } : {}) } });
@@ -133,6 +147,7 @@ const time = (t) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute
 function render() {
   const pet = me.pets[0];
   $("pet").textContent = pet ? pet.name : "Add your pet";
+  $("askPet").textContent = pet ? pet.name : "your pet";
   $("date").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
   const today = entries.filter((e) => new Date(e.at).toDateString() === new Date().toDateString());
   $("nChecks").textContent = today.filter((e) => e.kind === "food").length;
@@ -140,6 +155,11 @@ function render() {
   $("nAsks").textContent = today.filter((e) => e.kind === "ask").length;
   // an alert: anything today that was a "don't" or "see a vet"
   const bad = today.find((e) => e.verdict === "toxic" || e.verdict === "vet");
+  // read out a new alert once (remembered across reloads)
+  if (bad && store.get("fs.spokenAlert") !== bad.id) {
+    if (store.get("fs.spokenAlert") !== null || Date.now() - bad.at < 10 * 60e3) say(`Heads up. ${bad.title}: ${v(bad)[2]}.`);
+    store.set("fs.spokenAlert", bad.id);
+  }
   $("alert").innerHTML = bad ? `<div class="card alert row"><div class="badge toxic">!</div><div><div class="big toxic">${esc(bad.title)}</div><div class="note">${esc(v(bad)[2])} · ${time(bad.at)}</div></div></div>`
     : today.length ? `<div class="card ok row"><div class="badge safe">✓</div><div class="big">All good today</div></div>` : "";
   const last = entries[0];
@@ -155,6 +175,45 @@ function renderDiary() {
     <div class="row" style="justify-content:space-between"><b>${esc(e.title || v(e)[2])}</b><span class="when">${time(e.at)}</span></div>
     <div class="note">${esc(e.note)}</div></div></div>`).join("") : `<div class="sub" style="margin-top:20px">Nothing yet. Checks, questions and photos from your Quest and phone land here.</div>`;
 }
+
+// ---------------------------------------------------------------- speech: short, and always shown too
+
+function say(text) {
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US"; u.rate = 1.05;
+  const a = $("answer").querySelector(".big");
+  u.onstart = () => a && a.classList.add("speaking");
+  u.onend = u.onerror = () => a && a.classList.remove("speaking");
+  speechSynthesis.speak(u);
+}
+
+// ---------------------------------------------------------------- ask: dictated (or written) question, answered from the pet cam and diary
+
+async function ask(question) {
+  question = String(question || "").trim();
+  if (!question) return null;
+  if (PAGES[page] !== "ask") go(PAGES.indexOf("ask"));
+  $("answer").innerHTML = `<div class="card"><div class="sub">Looking${me && me.cams.length ? " through the pet cam" : ""}…</div></div>`;
+  try {
+    const r = await fetch(API + "/api/ask", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ question, cam: true }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "no answer");
+    const cls = VERDICT[j.verdict] ? VERDICT[j.verdict][0] : "other";
+    $("answer").innerHTML = `<div class="card ${cls === "toxic" || cls === "vet" ? "alert" : ""}">
+      <div class="row"><div class="badge ${cls}">${VERDICT[j.verdict] ? VERDICT[j.verdict][1] : "?"}</div><div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>
+      <div style="margin-top:8px;font-size:19px">${esc(j.answer)}</div>
+      <div class="when" style="margin-top:6px">${j.looked ? "Looked through the " + esc(j.looked) + " · " : ""}You asked: ${esc(j.question)}</div></div>`;
+    say(j.answer);
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title: j.question, note: j.answer, verdict: VERDICT[j.verdict] ? j.verdict : undefined }) }).then(() => load()).catch(() => {});
+    return j.answer;
+  } catch (e) {
+    $("answer").innerHTML = `<div class="card"><div class="sub">Couldn't answer just now. Try again.</div></div>`;
+    return null;
+  }
+}
+$("q").addEventListener("change", () => { const v = $("q").value; $("q").value = ""; $("q").blur(); ask(v); });
 
 // ---------------------------------------------------------------- pet cam: the household's camera, a few pictures a second
 
@@ -189,18 +248,61 @@ function go(i) {
   if (PAGES[page] === "cam") camLoop(); else camAlive = false;
 }
 window.addEventListener("keydown", (e) => {
-  if (!token) return;
+  if (!token || document.activeElement === $("q")) return;   // the composer owns keys while it's open
   const k = e.key;
   if (["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter", " "].includes(k)) e.preventDefault();
   if (k === "ArrowRight") go(page + 1);
   else if (k === "ArrowLeft") go(page - 1);
   else if (PAGES[page] === "diary" && k === "ArrowDown") { scroll = Math.min(scroll + 1, Math.max(0, entries.length - 4)); renderDiary(); }
   else if (PAGES[page] === "diary" && k === "ArrowUp") { scroll = Math.max(0, scroll - 1); renderDiary(); }
+  else if ((k === "Enter" || k === " ") && PAGES[page] === "ask") { $("q").focus(); $("q").click(); }
   else if (k === "Enter" || k === " ") load();
 });
 
+// ---------------------------------------------------------------- WebMCP: tools Meta AI can use while FurSight is open
+
+async function registerTools() {
+  const mc = document.modelContext;
+  if (!mc || typeof mc.registerTool !== "function") return;   // off by default on the glasses; the app works without it
+  const name = () => (me && me.pets[0] ? me.pets[0].name : "the pet");
+  const text = (t) => ({ content: [{ type: "text", text: t }] });
+  const tools = [
+    { name: "pet_today", description: "Summarise how the user's pet is doing today from the FurSight diary: food checks, warnings, photos and questions.",
+      inputSchema: { type: "object", properties: {} },
+      async execute() {
+        await load();
+        const today = entries.filter((e) => new Date(e.at).toDateString() === new Date().toDateString());
+        if (!today.length) return text(`Nothing logged for ${name()} today yet.`);
+        const bad = today.filter((e) => e.verdict === "toxic" || e.verdict === "vet");
+        go(0);
+        return text(`${name()} today: ${today.length} entries. ${bad.length ? "Warnings: " + bad.map((e) => `${e.title} (${v(e)[2]})`).join(", ") + "." : "No warnings."} Latest: ${today[0].title}${today[0].note ? ", " + today[0].note : ""}.`);
+      } },
+    { name: "ask_about_pet", description: "Ask FurSight a question about the user's pet: health, behaviour, whether a food or plant is safe, what the pet is doing right now. FurSight looks through the home pet cam and reads today's diary.",
+      inputSchema: { type: "object", properties: { question: { type: "string", description: "The question, in the user's words." } }, required: ["question"] },
+      async execute(input) {
+        const q = String(input && input.question || "").slice(0, 300);
+        if (!q) return text("What would you like to know?");
+        return text((await ask(q)) || "FurSight couldn't answer just now.");
+      } },
+    { name: "show_pet_cam", description: "Show the live pet cam from home on the glasses.",
+      inputSchema: { type: "object", properties: {} },
+      async execute() { go(PAGES.indexOf("cam")); return text(me && me.cams.length ? `Showing ${me.cams[0].name}.` : "There's no pet cam set up yet. Add one in the FurSight app."); } },
+    { name: "log_pet_note", description: "Add a note to the pet's FurSight diary, for example what they ate, a vet visit, or something the user noticed.",
+      inputSchema: { type: "object", properties: { note: { type: "string", description: "The note, in the user's words." } }, required: ["note"] },
+      async execute(input) {
+        const note = String(input && input.note || "").slice(0, 600);
+        if (!note) return text("What should I note?");
+        await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "note", title: note.length > 60 ? note.slice(0, 57) + "..." : note, note }) });
+        await load(); go(PAGES.indexOf("diary"));
+        return text(`Noted in ${name()}'s diary.`);
+      } },
+  ];
+  for (const t of tools) { try { await mc.registerTool(t); } catch (e) { console.warn("tool", t.name, e); } }
+}
+
 async function start() {
   await load();
+  registerTools();
   go(0);
   setInterval(() => load().catch(() => {}), 30000);
 }

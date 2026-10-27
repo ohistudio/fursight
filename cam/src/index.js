@@ -75,8 +75,10 @@ export class Channel {
       const isNew = !this.pollers.has(who);
       this.pollers.set(who, Date.now());
       if (isNew) { this.tellSender(); this.ctx.storage.setAlarm(Date.now() + POLL_SEEN + 500); }
-      if (!this.frame) return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
-      return new Response(this.frame, { headers: { "content-type": "image/jpeg", "cache-control": "no-store", "x-frame-age": String(Date.now() - this.at) } });
+      // the web app and glasses app live on another site, so frames say they may be read from anywhere
+      const cors = { "access-control-allow-origin": "*", "access-control-expose-headers": "x-frame-age" };
+      if (!this.frame) return new Response(null, { status: 204, headers: { "cache-control": "no-store", ...cors } });
+      return new Response(this.frame, { headers: { "content-type": "image/jpeg", "cache-control": "no-store", "x-frame-age": String(Date.now() - this.at), ...cors } });
     }
 
     if (req.headers.get("Upgrade") !== "websocket") return new Response("expected a websocket", { status: 426 });

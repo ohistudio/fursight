@@ -26,12 +26,18 @@ function handler(fn) {
     if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = null; } }
     if (!body || typeof body !== "object") return res.status(400).json({ error: "JSON body required" });
     try {
-      res.status(200).json(await fn(body));
+      res.status(200).json(await fn(body, req));
     } catch (e) {
       console.error("[fursight]", e.message, e.raw || "");
       res.status(e.status || 500).json({ error: e.expose ? e.message : "something went wrong", detail: e.status === 400 ? e.message : undefined });
     }
   };
+}
+
+// the household behind a request, if it came from a linked device (for fetching its pet, diary and camera)
+function household(req) {
+  const who = linked(req);
+  return who ? { ...who, token: (req.headers.authorization || "").replace(/^Bearer\s+/i, "") } : null;
 }
 
 function bad(msg) { return Object.assign(new Error(msg), { status: 400, expose: true }); }
@@ -44,4 +50,4 @@ function image(v, field = "image") {
 
 function text(v, max = 300) { return String(v ?? "").trim().slice(0, max); }
 
-module.exports = { handler, bad, image, text };
+module.exports = { handler, bad, image, text, household };

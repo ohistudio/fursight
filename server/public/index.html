@@ -40,7 +40,7 @@
          border-radius: 14px; padding: 12px 14px; outline: none; }
   input:focus, textarea:focus, select:focus { border-color: var(--sky); }
   textarea { min-height: 80px; resize: vertical; }
-  .row { display: flex; gap: 10px; align-items: center; } .row > * { flex: 1; }
+  .row { display: flex; gap: 10px; align-items: center; } .row > * { flex: 1; min-width: 0; }
 
   /* top bar + pet header */
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 20px; }
@@ -245,7 +245,8 @@ function review(p, base) {
     <div class="card stack">
       <div class="row"><div><label>Species</label><input id="species" value="${esc(p.species)}"></div><div><label>Breed</label><input id="breed" value="${esc(p.breed)}"></div></div>
       <div class="row"><div><label>Sex</label><select id="sex">${["male", "female", "unknown"].map((s) => `<option ${s === p.sex_guess ? "selected" : ""}>${s}</option>`).join("")}</select></div>
-        <div><label>Colour</label><input id="colour" value="${esc(p.colour)}"></div></div>
+        <div><label>Age</label><input id="age" value="${esc(p.age_guess && p.age_guess !== "unknown" ? p.age_guess : "")}" placeholder="e.g. 2 years"></div></div>
+      <div><label>Colour</label><input id="colour" value="${esc(p.colour)}"></div>
       <div><label>Notes</label><textarea id="pnotes">${esc(base.notes)}</textarea></div>
     </div>
     ${carePlan(care)}
@@ -255,7 +256,7 @@ function review(p, base) {
     e.target.disabled = true;
     const v = (id) => document.getElementById(id).value.trim();
     try {
-      await hub("/pets/" + petId(base.name), { method: "PUT", body: JSON.stringify({ name: base.name, species: v("species"), breed: v("breed"), sex: v("sex"), colour: v("colour"), notes: v("pnotes"), care, photo: base.photo }) });
+      await hub("/pets/" + petId(base.name), { method: "PUT", body: JSON.stringify({ name: base.name, species: v("species"), breed: v("breed"), sex: v("sex"), age: v("age"), colour: v("colour"), notes: v("pnotes"), care, photo: base.photo }) });
       toast(base.name + " is all set"); tab = "today"; render();
     } catch (err) { toast(err.message); e.target.disabled = false; }
   };
