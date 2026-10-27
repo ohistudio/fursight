@@ -71,16 +71,17 @@
 <div id="frame"><div id="safe">
   <!-- link -->
   <div class="page" id="p-link">
-    <div class="center" style="padding-top:28px">
+    <div class="center" style="padding-top:4px">
+      <div id="linkBean" style="display:grid;place-items:center"></div>
       <div class="k">Link to FurSight</div>
-      <div class="code" id="code">····</div>
+      <div class="code" id="code" style="margin-top:8px">····</div>
       <div class="sub">On your phone, open FurSight, go to<br><b style="color:#FFFFFF">Devices</b> and enter this code.</div>
     </div>
   </div>
   <!-- today -->
   <div class="page" id="p-today">
     <div class="k" id="date">Today</div>
-    <div class="name" id="pet">Your pet</div>
+    <div class="row" style="justify-content:space-between;align-items:flex-end"><div class="name" id="pet">Your pet</div><div id="todayBean" style="flex:none;margin:0 4px -8px 0"></div></div>
     <div id="alert"></div>
     <div class="stats"><div class="stat"><b id="nChecks">0</b><span>checks</span></div><div class="stat"><b id="nPhotos">0</b><span>photos</span></div><div class="stat"><b id="nAsks">0</b><span>questions</span></div></div>
     <div id="latest"></div>
@@ -111,6 +112,7 @@
   <div id="dots"></div>
 </div></div>
 
+<script src="/bean.js"></script>
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
 // between Today, Care (tick the daily list), Ask, Pet cam and Diary; up/down picks a care item, pinch ticks it; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
@@ -137,7 +139,7 @@ function show(id) { for (const p of document.querySelectorAll(".page")) p.classL
 // ---------------------------------------------------------------- link
 
 async function link() {
-  show("link"); $("dots").innerHTML = "";
+  show("link"); $("dots").innerHTML = ""; $("linkBean").innerHTML = bean("idle", 84);
   const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind: "glasses", name: "Ray-Ban Display" }) });
   $("code").textContent = s.code;
   while (!token) {
@@ -179,6 +181,9 @@ function render() {
   $("alert").innerHTML = bad ? `<div class="card alert row"><div class="badge toxic">!</div><div><div class="big toxic">${esc(bad.title)}</div><div class="note">${esc(v(bad)[2])} · ${time(bad.at)}</div></div></div>`
     : today.length ? `<div class="card ok row"><div class="badge safe">✓</div><div class="big">All good today</div></div>` : "";
   if (away) $("alert").innerHTML = `<div class="card row" style="border-color:#FFC23D"><div class="badge caution">↗</div><div><div class="big away">You're out</div><div class="note">${me.cams[0] ? "Swipe to the pet cam, or tilt your head down to peek." : "Set up a pet cam to keep an eye on " + esc(pet.name) + "."}</div></div></div>` + $("alert").innerHTML;
+  const items = careItems(), done = items.length && items.every((i) => careToday().today.has(i));
+  const mood = bad ? "toxic" : done ? "safe" : "idle";
+  if ($("todayBean").dataset.mood !== mood) { $("todayBean").dataset.mood = mood; $("todayBean").innerHTML = bean(mood, 60); }
   const recap = entries.find((e) => e.kind === "recap" && Date.now() - e.at < 8 * 864e5);
   const last = recap || entries[0];
   $("date").innerHTML = esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) +
@@ -300,14 +305,14 @@ async function ask(question) {
   question = String(question || "").trim();
   if (!question) return null;
   if (PAGES[page] !== "ask") go(PAGES.indexOf("ask"));
-  $("answer").innerHTML = `<div class="card"><div class="sub">Looking${me && me.cams.length ? " through the pet cam" : ""}…</div></div>`;
+  $("answer").innerHTML = `<div class="card row">${bean("thinking", 64)}<div class="sub">Looking${me && me.cams.length ? " through the pet cam" : ""}…</div></div>`;
   try {
     const r = await fetch(API + "/api/ask", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ question, cam: true }) });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || "no answer");
     const cls = VERDICT[j.verdict] ? VERDICT[j.verdict][0] : "other";
     $("answer").innerHTML = `<div class="card ${cls === "toxic" || cls === "vet" ? "alert" : ""}">
-      <div class="row"><div class="badge ${cls}">${VERDICT[j.verdict] ? VERDICT[j.verdict][1] : "?"}</div><div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>
+      <div class="row">${bean(VERDICT[j.verdict] ? j.verdict : "idle", 64)}<div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>
       <div style="margin-top:8px;font-size:19px">${esc(j.answer)}</div>
       <div class="when" style="margin-top:6px">${j.looked ? "Looked through the " + esc(j.looked) + " · " : ""}You asked: ${esc(j.question)}</div></div>`;
     say(j.answer);

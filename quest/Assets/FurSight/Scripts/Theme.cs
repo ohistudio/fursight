@@ -25,6 +25,6 @@ namespace FurSight
         public static TMP_FontAsset Black => _black ??= Resources.Load<TMP_FontAsset>("Fonts/Nunito-900 SDF");
         public static TMP_FontAsset Bold => _bold ??= Resources.Load<TMP_FontAsset>("Fonts/Nunito-800 SDF");
 
-        static Color Hex(string h) { ColorUtility.TryParseHtmlString(h, out var c); return c; }
+        public static Color Hex(string h) { ColorUtility.TryParseHtmlString(h, out var c); return c; }
     }
 }

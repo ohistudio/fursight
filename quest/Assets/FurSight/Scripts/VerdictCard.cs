@@ -22,6 +22,7 @@ namespace FurSight
         string _label;
         public System.Func<float> Level;   // optional live level (0-1), e.g. the mic while listening
         Transform _spinner;
+        Bean _bean;
 
         // ---------------------------------------------------------------- verdict
 
@@ -77,6 +78,8 @@ namespace FurSight
             Place(word, top - pad - 0.041f);
             Place(body, top - pad - header - gap - bodyH / 2f);
             var close = c.CloseButton(top);
+            // the Bean sits on the card's top edge, above the badge, and reacts with the verdict
+            c._bean = Bean.Make(c._card, new Vector3(-W / 2f + 0.05f, top + 0.001f, Front / 2f), 0.06f, main ? "idle" : Mood(verdict));
             if (!main) c.transform.localScale = Vector3.one * 0.72f;
 
             // entrance: dot, stem, card, then each line
@@ -88,6 +91,7 @@ namespace FurSight
             c.StartCoroutine(Juice.Pop(word.transform, 0.37f, 0.22f));
             c.StartCoroutine(Juice.Pop(body.transform, 0.42f, 0.22f));
             c.StartCoroutine(Juice.Pop(close, 0.46f, 0.22f, 2.4f));
+            c.StartCoroutine(Juice.Pop(c._bean.transform, 0.24f, 0.3f, 2.4f));
             if (main) c.StartCoroutine(c.React(verdict, badge));
             c._until = Time.time + (main ? 25f : 18f);
             return c;
@@ -97,6 +101,7 @@ namespace FurSight
         {
             yield return new WaitForSeconds(0.3f);
             var at = _card.position;
+            if (_bean != null) _bean.SetMood(Mood(verdict));
             if (verdict == "safe")
             {
                 Sfx.Safe(at);
@@ -117,6 +122,10 @@ namespace FurSight
             }
             else Sfx.Tick(at);
         }
+
+        static string Mood(string verdict) =>
+            verdict == "safe" || verdict == "saved" || verdict == "linked" ? "safe"
+            : verdict == "caution" || verdict == "toxic" || verdict == "vet" ? verdict : "idle";
 
         static IEnumerator Wobble(Transform t)
         {
@@ -170,7 +179,9 @@ namespace FurSight
             float tx = -w / 2f + 0.058f, tw = w - 0.07f;
             c._spinnerText = Text(c._card, label, Theme.Black, 20f, Theme.Ink, new Vector2(tx, 0.009f), tw, 0.024f, 14f);
             Text(c._card, question, Theme.Bold, 13f, Theme.Muted, new Vector2(tx, -0.013f), tw, 0.018f, 9f);
+            c._bean = Bean.Make(c._card, new Vector3(-w / 2f + 0.032f, h / 2f + 0.001f, Front / 2f), 0.045f, "thinking");
             c.StartCoroutine(Juice.Pop(c._card, 0f, 0.28f));
+            c.StartCoroutine(Juice.Pop(c._bean.transform, 0.12f, 0.3f, 2.4f));
             return c;
         }
 
