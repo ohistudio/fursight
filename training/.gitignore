@@ -4,3 +4,5 @@ YOLOX_outputs/
 *.pth
 *.onnx
 !models/*.onnx
+train.log
+__pycache__/

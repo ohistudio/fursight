@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=600, initial-scale=1">
+<title>FurSight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&display=swap">
+<style>
+  /* Ray-Ban Display: 600x600, black is see-through, only light shows, the edges get cropped:
+     everything that matters lives in the central 420x420 */
+  html, body { margin: 0; width: 100%; height: 100%; background: #000000; overflow: hidden; }
+  body { font: 800 20px/1.3 Nunito, system-ui, sans-serif; color: #FFFFFF; }
+  #frame { position: absolute; left: 50%; top: 50%; width: 600px; height: 600px; transform: translate(-50%, -50%) scale(var(--fit, 1)); }
+  #safe { position: absolute; left: 90px; top: 90px; width: 420px; height: 420px; }
+  .page { position: absolute; inset: 0; display: none; }
+  .page.on { display: block; animation: in .28s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes in { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* page dots, bottom */
+  #dots { position: absolute; left: 0; right: 0; bottom: -18px; display: flex; justify-content: center; gap: 10px; }
+  #dots i { width: 9px; height: 9px; border-radius: 5px; background: #4A4A52; }
+  #dots i.on { background: #FFFFFF; width: 24px; }
+
+  .name { font-weight: 900; font-size: 40px; line-height: 1; }
+  .sub { color: #C9C7D2; font-size: 18px; }
+  .k { color: #9F9DAA; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; font-weight: 900; }
+  /* cards are outlines, not fills: dark fills vanish on the lens */
+  .card { border: 3px solid #3A3A44; border-radius: 22px; padding: 14px 16px; margin-top: 14px; }
+  .alert { border-color: #FF4D5E; }
+  .ok { border-color: #3DBE6B; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .badge { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 3px solid currentColor; display: grid; place-items: center; font-weight: 900; font-size: 18px; }
+  .safe { color: #5BE38A; } .caution { color: #FFC23D; } .toxic, .vet { color: #FF6B78; } .other { color: #6CC4FF; }
+  .big { font-size: 26px; font-weight: 900; }
+  .stats { display: flex; gap: 10px; margin-top: 14px; }
+  .stat { flex: 1; border: 3px solid #3A3A44; border-radius: 18px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 32px; font-weight: 900; line-height: 1.1; }
+  .stat span { color: #9F9DAA; font-size: 14px; }
+
+  #cam { position: absolute; left: 20px; top: 46px; width: 380px; height: 330px; border-radius: 22px; overflow: hidden; }
+  #cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #camMsg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #C9C7D2; padding: 30px; }
+  .live { display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #4A4A52; margin-right: 8px; vertical-align: 2px; }
+  .live.on { background: #FF6B78; }
+
+  .entry { padding: 10px 0; border-bottom: 2px solid #26262C; }
+  .entry:last-child { border-bottom: 0; }
+  .note { color: #C9C7D2; font-size: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .when { color: #9F9DAA; font-size: 14px; }
+
+  .code { font-size: 76px; font-weight: 900; letter-spacing: .14em; text-align: center; margin: 22px 0 8px; color: #5BE38A; }
+  .center { text-align: center; }
+</style>
+</head>
+<body>
+<div id="frame"><div id="safe">
+  <!-- link -->
+  <div class="page" id="p-link">
+    <div class="center" style="padding-top:28px">
+      <div class="k">Link to FurSight</div>
+      <div class="code" id="code">····</div>
+      <div class="sub">On your phone, open FurSight, go to<br><b style="color:#FFFFFF">Devices</b> and enter this code.</div>
+    </div>
+  </div>
+  <!-- today -->
+  <div class="page" id="p-today">
+    <div class="k" id="date">Today</div>
+    <div class="name" id="pet">Your pet</div>
+    <div id="alert"></div>
+    <div class="stats"><div class="stat"><b id="nChecks">0</b><span>checks</span></div><div class="stat"><b id="nPhotos">0</b><span>photos</span></div><div class="stat"><b id="nAsks">0</b><span>questions</span></div></div>
+    <div id="latest"></div>
+  </div>
+  <!-- pet cam -->
+  <div class="page" id="p-cam">
+    <div class="row" style="justify-content:space-between"><div class="big"><span class="live" id="live"></span><span id="camName">Pet cam</span></div><div class="sub" id="camState"></div></div>
+    <div id="cam"><img id="camImg" alt=""><div id="camMsg">Waking the camera</div></div>
+  </div>
+  <!-- diary -->
+  <div class="page" id="p-diary">
+    <div class="k">Diary</div>
+    <div id="list" style="margin-top:6px"></div>
+  </div>
+  <div id="dots"></div>
+</div></div>
+
+<script>
+// FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
+// between Today, Pet cam and Diary; up/down scrolls the diary; pinch (Enter) refreshes.
+const HUB = "https://fursight-cam.wibble-crossplay.workers.dev";
+const q = new URLSearchParams(location.search), $ = (id) => document.getElementById(id);
+if (q.get("fit")) $("frame").style.setProperty("--fit", q.get("fit"));
+if (q.get("at")) { const [x, y] = q.get("at").split(",").map(Number); $("frame").style.left = `calc(50% + ${x || 0}px)`; $("frame").style.top = `calc(50% + ${y || 0}px)`; }
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let token = store.get("fs.glassesToken"), me = null, entries = [], page = 0, scroll = 0;
+const PAGES = ["today", "cam", "diary"];
+
+async function hub(path, opt = {}) {
+  const r = await fetch(HUB + "/hub" + path, { ...opt, headers: { "content-type": "application/json", ...(token ? { authorization: "Bearer " + token } : {}) } });
+  if (r.status === 401 && token) { token = null; store.set("fs.glassesToken", null); link(); throw new Error("unlinked"); }
+  return r.json();
+}
+
+function show(id) { for (const p of document.querySelectorAll(".page")) p.classList.toggle("on", p.id === "p-" + id); }
+
+// ---------------------------------------------------------------- link
+
+async function link() {
+  show("link"); $("dots").innerHTML = "";
+  const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind: "glasses", name: "Ray-Ban Display" }) });
+  $("code").textContent = s.code;
+  while (!token) {
+    await new Promise((r) => setTimeout(r, 1800));
+    const p = await hub(`/link/poll?code=${s.code}&nonce=${s.nonce}`);
+    if (p.status === "expired") return link();
+    if (p.status === "linked") { token = p.token; store.set("fs.glassesToken", token); return start(); }
+  }
+}
+
+// ---------------------------------------------------------------- data
+
+async function load() {
+  [me, { entries }] = await Promise.all([hub("/me"), hub("/diary?limit=40")]);
+  render();
+}
+
+const VERDICT = { safe: ["safe", "✓", "Safe"], caution: ["caution", "!", "Small treat only"], toxic: ["toxic", "✕", "Don't"], vet: ["vet", "!", "See a vet today"] };
+const kindWord = { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam" };
+function v(e) { return VERDICT[e.verdict] || ["other", "•", kindWord[e.kind] || "Note"]; }
+const time = (t) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+function render() {
+  const pet = me.pets[0];
+  $("pet").textContent = pet ? pet.name : "Add your pet";
+  $("date").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+  const today = entries.filter((e) => new Date(e.at).toDateString() === new Date().toDateString());
+  $("nChecks").textContent = today.filter((e) => e.kind === "food").length;
+  $("nPhotos").textContent = today.filter((e) => e.kind === "photo").length;
+  $("nAsks").textContent = today.filter((e) => e.kind === "ask").length;
+  // an alert: anything today that was a "don't" or "see a vet"
+  const bad = today.find((e) => e.verdict === "toxic" || e.verdict === "vet");
+  $("alert").innerHTML = bad ? `<div class="card alert row"><div class="badge toxic">!</div><div><div class="big toxic">${esc(bad.title)}</div><div class="note">${esc(v(bad)[2])} · ${time(bad.at)}</div></div></div>`
+    : today.length ? `<div class="card ok row"><div class="badge safe">✓</div><div class="big">All good today</div></div>` : "";
+  const last = entries[0];
+  $("latest").innerHTML = last ? `<div class="card"><div class="k">Latest</div><div class="row" style="margin-top:6px"><div class="badge ${v(last)[0]}">${v(last)[1]}</div><div style="min-width:0"><div class="big">${esc(last.title || v(last)[2])}</div><div class="note">${esc(last.note)}</div></div></div></div>` : "";
+  const cam = me.cams[0];
+  $("camName").textContent = cam ? cam.name : "Pet cam";
+  renderDiary();
+}
+
+function renderDiary() {
+  const shown = entries.slice(scroll, scroll + 4);
+  $("list").innerHTML = shown.length ? shown.map((e) => `<div class="entry row"><div class="badge ${v(e)[0]}">${v(e)[1]}</div><div style="min-width:0;flex:1">
+    <div class="row" style="justify-content:space-between"><b>${esc(e.title || v(e)[2])}</b><span class="when">${time(e.at)}</span></div>
+    <div class="note">${esc(e.note)}</div></div></div>`).join("") : `<div class="sub" style="margin-top:20px">Nothing yet. Checks, questions and photos from your Quest and phone land here.</div>`;
+}
+
+// ---------------------------------------------------------------- pet cam: the household's camera, a few pictures a second
+
+let camAlive = false;
+async function camLoop() {
+  if (camAlive) return; camAlive = true;
+  const cam = me && me.cams[0];
+  if (!cam) { $("camMsg").textContent = "No pet cam yet. Set one up in the FurSight app."; camAlive = false; return; }
+  const viewer = "glasses" + Math.random().toString(36).slice(2, 8);
+  let last = 0, url = null;
+  while (camAlive && PAGES[page] === "cam") {
+    try {
+      const r = await fetch(`${HUB}/c/${cam.channel}/frame.jpg?v=${viewer}&t=${Date.now()}`, { cache: "no-store" });
+      if (r.status === 200 && Number(r.headers.get("x-frame-age")) < 3000) {
+        const u = URL.createObjectURL(await r.blob()); $("camImg").src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); $("camMsg").textContent = "";
+      }
+    } catch (e) {}
+    const live = Date.now() - last < 3000;
+    $("live").classList.toggle("on", live);
+    $("camState").textContent = live ? "live" : last ? "paused" : "waking";
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  camAlive = false;
+}
+
+// ---------------------------------------------------------------- navigation (Neural Band / touchpad arrive as keys)
+
+function go(i) {
+  page = (i + PAGES.length) % PAGES.length;
+  show(PAGES[page]);
+  $("dots").innerHTML = PAGES.map((_, k) => `<i class="${k === page ? "on" : ""}"></i>`).join("");
+  if (PAGES[page] === "cam") camLoop(); else camAlive = false;
+}
+window.addEventListener("keydown", (e) => {
+  if (!token) return;
+  const k = e.key;
+  if (["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter", " "].includes(k)) e.preventDefault();
+  if (k === "ArrowRight") go(page + 1);
+  else if (k === "ArrowLeft") go(page - 1);
+  else if (PAGES[page] === "diary" && k === "ArrowDown") { scroll = Math.min(scroll + 1, Math.max(0, entries.length - 4)); renderDiary(); }
+  else if (PAGES[page] === "diary" && k === "ArrowUp") { scroll = Math.max(0, scroll - 1); renderDiary(); }
+  else if (k === "Enter" || k === " ") load();
+});
+
+async function start() {
+  await load();
+  go(0);
+  setInterval(() => load().catch(() => {}), 30000);
+}
+token ? start().catch(() => {}) : link();
+</script>
+</body>
+</html>

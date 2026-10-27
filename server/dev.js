@@ -14,7 +14,7 @@ http.createServer(async (req, res) => {
   // the web app: files in public/, like Vercel serves them
   if (!req.url.startsWith("/api/")) {
     const rel = decodeURIComponent(req.url.split("?")[0]).replace(/\.\.+/g, "");
-    const f = path.join(__dirname, "public", rel === "/" ? "index.html" : rel);
+    const f = path.join(__dirname, "public", rel.endsWith("/") ? rel + "index.html" : rel);
     if (!fs.existsSync(f) || !fs.statSync(f).isFile()) { res.writeHead(404); return res.end("not found"); }
     res.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream" });
     return fs.createReadStream(f).pipe(res);
