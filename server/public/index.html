@@ -308,8 +308,8 @@ async function today() {
     const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
-    if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
-      <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px">${esc(e.note)}</p></div>`;
+    if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
+      <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p></div>`;
     return `${head}<div class="card entry pop" style="margin-bottom:10px">
       ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
