@@ -17,7 +17,7 @@ const { run, user } = require("../lib/agent");
 const { lookup } = require("../lib/verdict");
 const { handler, image, text, bad, household } = require("../lib/http");
 const { pet: readPet, describe } = require("../lib/pet");
-const { context, camFrame } = require("../lib/hub");
+const { context, camFrame, camView } = require("../lib/hub");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -51,14 +51,86 @@ module.exports = handler(async (body, req) => {
   if (photo) { seen.set("photo", { kind: "photo" }); looked = "photo"; steps.push({ tool: "photo", label: from === "quest" ? "Looked at what you're looking at" : "Looked at your photo" }); }
 
   const tools = {};
-  if (ctx && ctx.cams.length) tools.look_through_pet_cam = {
-    description: `Take a fresh picture from the pet cam at home (${ctx.cams[0].name || "pet cam"}) and look at it. Use it for anything about how ${p.name} is right now.`,
+  // the pet cams: each one is "cam1", "cam2"... (its room name says where); pictures are cited by that id
+  const cams = ctx ? ctx.cams.slice(0, 4).map((c, i) => ({ ...c, id: "cam" + (i + 1) })) : [];
+  const camList = cams.map((c) => `${c.id} "${c.name}"`).join(", ");
+  const camById = (id) => cams.find((c) => c.id === id || c.name.toLowerCase() === String(id || "").toLowerCase());
+  // the visible part of the full picture -> a view; box is 0-1 of what the camera showed under `from`
+  const zoomTo = (from, box) => {
+    const cx = (box.x0 + box.x1) / 2, cy = (box.y0 + box.y1) / 2, span = Math.max(box.x1 - box.x0, box.y1 - box.y0, 0.05);
+    return { z: Math.min(4, from.z * Math.max(1, 0.6 / span)), x: from.x + (cx - 0.5) / from.z, y: from.y + (cy - 0.5) / from.z };
+  };
+  if (cams.length) tools.look_through_pet_cams = {
+    description: `Take a fresh picture from the pet cams at home (${camList}) and look. Pass a cam id, or "all".`,
+    parameters: { type: "object", properties: { cam: { type: "string" } }, required: ["cam"], additionalProperties: false },
+    async run({ cam }) {
+      const which = cam === "all" || !camById(cam) ? cams : [camById(cam)];
+      const shots = await Promise.all(which.map(async (c) => ({ c, f: await camFrame(c.channel) })));
+      const got = shots.filter((s) => s.f);
+      for (const s of got) seen.set(s.c.id, { kind: "cam", what: s.c.name });
+      if (got.length) looked = "pet cam";
+      if (!got.length) return { output: { error: "The pet cams are off or not sending right now." }, step: { tool: "cam", label: `Tried the pet cam${which.length > 1 ? "s" : ""}: off` } };
+      return { output: { looked: got.map((s) => ({ id: s.c.id, room: s.c.name })), off: shots.filter((s) => !s.f).map((s) => s.c.id) },
+        images: got.map((s) => s.f), imageNote: "Pet cams, just now, in order: " + got.map((s) => `${s.c.id} (${s.c.name})`).join(", "),
+        step: { tool: "cam", label: got.length > 1 ? `Looked through ${got.length} pet cams` : `Looked through the ${got[0].c.name} cam` } };
+    },
+  };
+  if (cams.length) tools.find_pet = {
+    description: `Find ${p.name} across all the pet cams (SAM looks for a ${p.species} in each wide view), then zoom in on him and look closely. Use it whenever you need to see him, or he isn't in view.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
     async run() {
-      const f = await camFrame(ctx.cams[0].channel);
-      if (!f) return { output: { error: "The pet cam is off or not sending right now." }, step: { tool: "cam", label: "Tried the pet cam: it's off" } };
-      seen.set("cam", { kind: "cam" }); looked = "pet cam";
-      return { output: { ok: true, id: "cam", note: "The frame follows." }, images: [f], imageNote: "Pet cam, just now (cite as \"cam\"):", step: { tool: "cam", label: "Looked through the pet cam" } };
+      const wide = { z: 1, x: 0.5, y: 0.5 }, t = Date.now();
+      // every camera goes wide, then SAM looks in each picture
+      const looks = await Promise.all(cams.map(async (c) => {
+        await camView(c.channel, wide);
+        const f = await camFrame(c.channel, 4000, t);
+        const boxes = f ? await require("../lib/sam").find(f, p.species === "rabbit" ? "rabbit" : p.species).catch(() => []) : null;
+        return { c, f, boxes };
+      }));
+      const on = looks.filter((l) => l.f);
+      if (!on.length) return { output: { error: "The pet cams are off or not sending right now." }, step: { tool: "cam", label: "Tried to find him: the pet cams are off" } };
+      for (const l of on) seen.set(l.c.id, { kind: "cam", what: l.c.name });
+      looked = "pet cam";
+      const hit = on.find((l) => l.boxes && l.boxes.length);
+      if (!hit) return { output: { found: false, looked: on.map((l) => l.c.id), note: `Not in view on any cam. He may be hiding: that alone isn't a worry.` }, images: on.map((l) => l.f), imageNote: "Wide views, in order: " + on.map((l) => l.c.id).join(", "),
+        step: { tool: "find", label: `Looked for ${p.name} on ${on.length} cam${on.length > 1 ? "s" : ""}: not in view` } };
+      const v = await camView(hit.c.channel, zoomTo(wide, hit.boxes[0]));
+      const close = await camFrame(hit.c.channel, 4000, Date.now());
+      const id = hit.c.id + "z";
+      seen.set(id, { kind: "cam", what: hit.c.name + " close-up" });
+      return { output: { found: true, cam: hit.c.id, room: hit.c.name, zoom: v.z, close_up: close ? id : null },
+        images: close ? [hit.f, close] : [hit.f], imageNote: `Found on ${hit.c.id} (${hit.c.name}): the wide view${close ? `, then zoomed in ${v.z}× (cite as "${id}")` : ""}:`,
+        step: { tool: "find", label: `Found ${p.name} on the ${hit.c.name} cam${close ? `, zoomed in ${Math.round(v.z * 10) / 10}×` : ""}`, detail: `SAM looked at ${on.length} cam${on.length > 1 ? "s" : ""}` } };
+    },
+  };
+  if (cams.length) tools.zoom_pet_cam = {
+    description: `Zoom a pet cam in on part of its current picture to see it closely (droppings, the water bowl, his face). box is [x_min,y_min,x_max,y_max] 0-1000 of that cam's last picture you saw. Use box [0,0,1000,1000] to go back to wide.`,
+    parameters: { type: "object", properties: { cam: { type: "string" }, box: { type: "array", items: { type: "integer" } }, what: { type: "string", description: "what you're zooming in on, 1-4 words" } }, required: ["cam", "box", "what"], additionalProperties: false },
+    async run({ cam, box, what }) {
+      const c = camById(cam);
+      if (!c || !Array.isArray(box) || box.length !== 4) return { output: { error: `Pass one of ${cams.map((x) => x.id).join(", ")} and a 4-number box.` } };
+      const from = await camView(c.channel);
+      const full = box[0] <= 0 && box[1] <= 0 && box[2] >= 1000 && box[3] >= 1000;
+      const v = await camView(c.channel, full ? { z: 1, x: 0.5, y: 0.5 } : zoomTo(from, { x0: box[0] / 1000, y0: box[1] / 1000, x1: box[2] / 1000, y1: box[3] / 1000 }));
+      const f = await camFrame(c.channel, 4000, Date.now());
+      if (!f) return { output: { error: "That cam didn't send a picture." } };
+      const id = c.id + "z" + Math.round(v.z * 10);
+      seen.set(id, { kind: "cam", what: `${c.name}: ${what}` });
+      return { output: { id, zoom: v.z }, images: [f], imageNote: `${c.name}, ${v.z}× on ${text(what, 40)} (cite as "${id}"):`,
+        step: { tool: "zoom", label: full ? `Zoomed the ${c.name} cam back out` : `Zoomed the ${c.name} cam in on ${text(what, 40)}` } };
+    },
+  };
+  if (ctx && ctx.home) tools.check_weather = {
+    description: `The weather at home now and for the next 24 hours: temperature, humidity, heat. Rabbits handle heat badly (over about 25°C is a risk, over 28°C is dangerous) and cope with cold better. Use it for anything about heat, cold, outdoor time, water or a lethargic pet.`,
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    async run() {
+      const { lat, lng } = ctx.home;
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature&hourly=temperature_2m&forecast_hours=24&timezone=auto`).then((x) => x.json()).catch(() => null);
+      if (!r || !r.current) return { output: { error: "Couldn't get the weather just now." }, step: { tool: "weather", label: "Tried the weather: no answer" } };
+      const t = r.hourly.temperature_2m, max = Math.max(...t), min = Math.min(...t);
+      seen.set("weather", { kind: "weather" });
+      return { output: { id: "weather", now_c: r.current.temperature_2m, feels_like_c: r.current.apparent_temperature, humidity: r.current.relative_humidity_2m, next_24h_max_c: max, next_24h_min_c: min, note: "Outdoor weather; indoors is usually milder, a room in sun can be hotter." },
+        step: { tool: "weather", label: `Checked the weather at home: ${Math.round(r.current.temperature_2m)}°C now, up to ${Math.round(max)}°C` } };
     },
   };
   if (ctx) tools.read_diary = {
@@ -112,7 +184,7 @@ module.exports = handler(async (body, req) => {
       properties: {
         answer: { type: "string", description: "spoken style, at most 45 words, no lists, no markdown" },
         verdict: { type: "string", enum: ["safe", "caution", "toxic", "vet", "none"], description: "only for safety or health questions; vet = see a vet today" },
-        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"cam\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
+        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
         about: { type: "string", description: "short name of the thing in the photo the answer is about, or empty" },
         box: { type: "array", items: { type: "integer" }, description: "[x_min,y_min,x_max,y_max] 0-1000 of that thing in the photo, or []" },
       },
@@ -134,7 +206,7 @@ module.exports = handler(async (body, req) => {
       }
       // "see a vet", by verdict or in the words, needs something real behind it
       if (a.verdict === "vet" || /\b(vet|veterinar)/i.test(a.answer || "")) {
-        const real = ev.filter((id) => ["cam", "photo", "owner"].includes(id) || (seen.get(id) && !["food", "ask", "care", "food_list"].includes(seen.get(id).kind)));
+        const real = ev.filter((id) => ["photo", "owner"].includes(id) || (seen.get(id) && seen.get(id).kind === "cam") || (seen.get(id) && !["food", "ask", "care", "food_list"].includes(seen.get(id).kind)));
         if (!real.length || (real.length === 1 && real[0] === "owner" && !/\b(ate|eaten|eating|had|gave|swallow|chew|sick|not|won.?t|hasn.?t|isn.?t|stopp|hunch|grind|bloat|letharg|diarr|blood)/i.test(question)))
           problems.push("Sending someone to the vet needs something real: what you saw (photo or cam), a diary entry about his health, or the owner telling you something happened. A food check or a question is not a sign of illness.");
       }
@@ -155,7 +227,7 @@ module.exports = handler(async (body, req) => {
   };
 
   const intro = `You are FurSight, a calm, practical pet-care helper. The pet: ${describe(p)}. The owner is asking from their ${from}.
-Work like a careful vet nurse: look before you answer. Use your tools to gather what you need, calling several at once when you can, then call answer. Food entries in the diary are foods the owner checked: never treat one as something ${p.name} ate unless the owner says so. Don't guess about how ${p.name} is: look through the pet cam or read the diary. Check every food or plant you talk about against the safety list. If you still can't tell, ask the owner one thing instead of guessing.
+Work like a careful vet nurse: look before you answer. Use your tools to gather what you need, calling several at once when you can, then call answer. Food entries in the diary are foods the owner checked: never treat one as something ${p.name} ate unless the owner says so. Don't guess about how ${p.name} is: find him on the pet cams (find_pet zooms in on him) or read the diary. Zoom in when you need a closer look. Check every food or plant you talk about against the safety list. If you still can't tell, ask the owner one thing instead of guessing.
 Answers: short and spoken, at most 45 words, no lists, no markdown, no em dashes. If you SEE or the diary SAYS something urgent for this species (for rabbits: not eating, no droppings, hunched, teeth grinding, bloating), say so plainly and set verdict "vet". Never reassure about health from a picture alone; say what to watch for. For food or plant safety, err on the side of caution.`;
   const first = [{ type: "input_text", text: question }];
   if (photo) first.push({ type: "input_text", text: from === "quest" ? "What the owner is looking at (cite as \"photo\"):" : "The owner's photo (cite as \"photo\"):" }, { type: "input_image", image_url: photo });
