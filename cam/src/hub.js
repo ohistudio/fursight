@@ -190,7 +190,7 @@ export class Links {
     this.sql.exec("DELETE FROM codes WHERE created < ?", Date.now() - ttl);
     if (url.pathname.endsWith("/link/start")) {
       const b = await req.json().catch(() => ({}));
-      const kind = ["quest", "glasses", "camera", "phone", "web"].includes(b.kind) ? b.kind : "device";
+      const kind = ["quest", "glasses", "camera", "phone", "web", "tray"].includes(b.kind) ? b.kind : "device";
       let code; do code = rand(4, CODE); while (this.sql.exec("SELECT code FROM codes WHERE code = ?", code).toArray().length);
       const nonce = rand(24);
       this.sql.exec("INSERT INTO codes VALUES (?, ?, ?, ?, ?, NULL)", code, nonce, kind, String(b.name || kind).slice(0, 40), Date.now());

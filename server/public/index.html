@@ -94,6 +94,12 @@
   .flame { font-size: 30px; font-weight: 900; color: var(--sun-lip); }
   .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
   .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
+  .row > svg.bean { flex: none; }
+  .tray { display: grid; gap: 10px; }
+  .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tstats b { display: block; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; } .tstats span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
+  .pill { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 900; white-space: nowrap; }
+  .s-normal { background: #E3F6EA; color: var(--fern-lip); } .s-watch { background: #FFF2D6; color: #B87700; } .s-vet { background: #FFE6E8; color: var(--coral-lip); }
   .month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; text-align: center; }
   .month b { font-size: 12px; color: var(--muted); padding: 4px 0; }
   .month .day { aspect-ratio: 1; border: 0; border-radius: 12px; background: var(--bg); font: 800 15px Nunito, sans-serif; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0; min-width: 0; }
@@ -144,6 +150,7 @@
 
 <script src="/bean.js"></script>
 <script src="/calendar.js"></script>
+<script src="/tray.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -325,7 +332,7 @@ async function makeRecap(btn) {
 async function today() {
   $app.innerHTML = `<div class="stack">${header()}<button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
-  const entries = (await hub("/diary?limit=80")).entries.filter((e) => e.kind !== "event" && e.kind !== "event-cancel");
+  const entries = (await hub("/diary?limit=80")).entries.filter((e) => !/^(event|tray)/.test(e.kind));
   const $l = document.getElementById("list");
   if (!entries.length) {
     $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
@@ -374,14 +381,15 @@ const careItems = (p) => ((p.care && p.care.daily) || []).slice(0, 8);
 
 async function care() {
   const p = me.pets[0], items = careItems(p);
-  $app.innerHTML = `<div class="stack">${header()}<div id="checklist"></div>${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
+  $app.innerHTML = `<div class="stack">${header()}<div id="tray"></div><div id="checklist"></div>${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
   if (!items.length) return;
   const { entries } = await hub("/diary?limit=200");
+  document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p);
   const st = careState(entries, items);
   const left = items.filter((i) => !st.today.has(i)).length;
   document.getElementById("checklist").innerHTML = `<div class="card pop">
-    <div class="row" style="justify-content:space-between"><div class="row" style="gap:8px">${bean(left ? "idle" : "safe", 46)}<h2 style="white-space:nowrap">Today's care</h2></div>
-      <div class="streak"><span class="flame">${st.streak}</span><span class="muted" style="line-height:1.1">day<br>streak</span></div></div>
+    <div class="row" style="justify-content:space-between"><div class="row" style="gap:6px;flex:1">${bean(left ? "idle" : "safe", 40)}<h2>Today's care</h2></div>
+      <div class="streak" style="flex:none"><span class="flame">${st.streak}</span><span class="muted" style="line-height:1.1">day<br>streak</span></div></div>
     <div class="bar"><i style="width:${Math.round(((items.length - left) / items.length) * 100)}%"></i></div>
     <p class="muted" style="margin:8px 0 4px">${left ? `${left} to go` : `All done for today. Lovely.`}</p>
     ${items.map((i) => `<div class="check ${st.today.has(i) ? "done" : ""}" data-item="${esc(i)}"><div class="box"></div><span>${esc(i)}</span></div>`).join("")}</div>`;
@@ -390,6 +398,28 @@ async function care() {
     try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "care", title: el.dataset.item, pet: p.name }) }); } catch (e) { el.classList.remove("done"); return toast(e.message); }
     care();
   };
+}
+
+// ---------------------------------------------------------------- the litter tray: weight, visits, output against his usual
+
+function trayCard(s, p) {
+  if (s.status === "none") return "";
+  const word = { normal: "All normal", watch: "Worth watching", vet: "Talk to your vet" }[s.status];
+  const kg = (g) => g ? (g / 1000).toFixed(2) + " kg" : "–";
+  // his weight across the week: a small line, today's point bigger
+  const w = s.week.filter((d) => d.weight_g), lo = Math.min(...w.map((d) => d.weight_g)) - 20, hi = Math.max(...w.map((d) => d.weight_g)) + 20;
+  const pts = w.map((d, i) => [12 + (i * 276) / Math.max(1, w.length - 1), 52 - ((d.weight_g - lo) / (hi - lo)) * 40]);
+  const spark = w.length > 1 ? `<svg viewBox="0 0 300 64" width="100%" height="64" aria-label="Weight this week"><polyline points="${pts.map((q) => q.join(",")).join(" ")}" fill="none" stroke="var(--sky)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${pts.map((q, i) => `<circle cx="${q[0]}" cy="${q[1]}" r="${i === pts.length - 1 ? 6 : 3.5}" fill="${i === pts.length - 1 ? "var(--sky)" : "var(--card)"}" stroke="var(--sky)" stroke-width="2.5"/>`).join("")}</svg>` : "";
+  return `<div class="card pop tray">
+    <div class="row" style="justify-content:space-between"><h2>Litter tray</h2><span class="pill s-${s.status}">${word}</span></div>
+    <div class="tstats">
+      <div><b>${kg(s.today.weight_g)}</b><span>weight${s.usual ? ` · usual ${kg(s.usual.weight_g)}` : ""}</span></div>
+      <div><b>${s.today.visits}</b><span>visits${s.usual ? ` · usual ${s.usual.visits} by now` : ""}</span></div>
+      <div><b>${s.today.output_g} g</b><span>output${s.usual ? ` · usual ${s.usual.output_g} g` : ""}</span></div>
+    </div>
+    ${spark}<div class="when" style="text-align:center">His weight, last ${w.length} days</div>
+    ${s.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}
+    ${s.simulated ? `<span class="chip" style="justify-self:start">Simulated tray</span>` : ""}</div>`;
 }
 
 // ---------------------------------------------------------------- calendar: the month at a glance, plus reminders
@@ -402,7 +432,7 @@ async function calendar() {
   calMonth = calMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   $app.innerHTML = `<div class="stack">${header()}<div id="cal"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
-  const evs = FSCal.events(entries), diary = entries.filter((e) => e.kind !== "event" && e.kind !== "event-cancel");
+  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)/.test(e.kind));
   const byDay = new Map();
   for (const e of diary) { const k = FSCal.key(new Date(e.at)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
   const careDone = (k) => items.length && items.every((i) => (byDay.get(k) || []).some((e) => e.kind === "care" && e.title === i));
@@ -454,7 +484,7 @@ async function calendar() {
 }
 
 function devices() {
-  const icon = { phone: "Phone", quest: "Quest", glasses: "Glasses", camera: "Camera", web: "Browser" };
+  const icon = { phone: "Phone", quest: "Quest", glasses: "Glasses", camera: "Camera", web: "Browser", tray: "Litter tray" };
   $app.innerHTML = `<div class="stack">${header()}
     <div class="card stack pop"><h2>Link a device</h2><p class="muted">On the Quest, glasses or pet cam, FurSight shows a 4-letter code. Type it here.</p>
       <input id="code" class="codein" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="····">
