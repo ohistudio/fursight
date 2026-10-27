@@ -26,3 +26,7 @@ new_sqlite_classes = ["Channel"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Household", "Links"]
+
+[vars]
+# the Vercel server sends the Apple push notifications (it holds the APNs key)
+NOTIFY_URL = "https://fursight-seven.vercel.app/api/notify"
