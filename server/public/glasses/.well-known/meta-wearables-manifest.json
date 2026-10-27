@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "name": "FurSight",
+  "description": "Your pet's day at a glance: food checks, questions, photos and the pet cam.",
+  "appearance": { "theme_color": "#3DBE6B", "icon": { "src": "../icon.png", "type": "monochrome" } }
+}
