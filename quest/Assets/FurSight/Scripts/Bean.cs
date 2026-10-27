@@ -3,15 +3,22 @@ using UnityEngine;
 namespace FurSight
 {
     // The Bean: FurSight's little character, the same one as on the web app and the glasses, here in 3D.
-    // A glossy jellybean head with short Netherland Dwarf ears, built from spheres and capsules so it needs
-    // no model. It idles on its own (float, ear sway and flicks, blinks, glances, a sniff) and reacts to a
+    // A glossy jellybean head with short Netherland Dwarf ears, built from smooth generated shapes and lit by
+    // its own Jelly shader (so it looks the same in any room), no model needed. It idles on its own (float, ear sway and flicks, blinks, glances, a sniff) and reacts to a
     // mood: safe hops with ears up, caution tilts with one ear folded, toxic shakes with its ears down,
     // thinking looks up. Built facing -Z (towards the wearer, like the cards); "size" is the head's width.
     public class Bean : MonoBehaviour
     {
-        static readonly Color Body = Theme.Hex("#F1EDFA"), Face = Theme.Hex("#FFFFFF"), EarIn = Theme.Hex("#B596F5"),
-            Eye = Theme.Hex("#18171D"), Nose = Theme.Hex("#C9A3E8");
-        static Material _lit;
+        // each part's look for the Jelly shader: lit colour, shadow colour, rim colour, gloss, highlight, rim
+        static readonly (string lit, string shade, string rim, float gloss, float spec, float rimK)
+            Body = ("#F8F5FE", "#B3A2E2", "#EEE5FF", 48f, 0.7f, 0.55f),
+            Face = ("#FFFFFF", "#D8CEF1", "#F6F1FF", 40f, 0.45f, 0.3f),
+            EarIn = ("#BC9EF8", "#7C52D4", "#D9C8FF", 32f, 0.4f, 0.4f),
+            Eye = ("#34313E", "#0B0A0F", "#55506A", 170f, 1.25f, 0.35f),
+            Nose = ("#DDB9F3", "#A27CD8", "#F1E4FF", 40f, 0.5f, 0.3f);
+        static Material _jelly;
+        static readonly System.Collections.Generic.Dictionary<string, Material> _mats = new();
+        static readonly System.Collections.Generic.Dictionary<Vector2, Mesh> _meshes = new();
 
         Transform _tilt, _bob, _earL, _earR, _look, _eyes;
         string _mood = "idle";
@@ -28,6 +35,7 @@ namespace FurSight
             return b;
         }
 
+        // sizes below are radii, in head widths; the exponents make each part chunkier (<1) or rounder (1)
         void Build()
         {
             _t0 = Random.value * 10f;
@@ -36,26 +44,23 @@ namespace FurSight
             _tilt = Node("Tilt", transform, Vector3.zero);
             _bob = Node("Bob", _tilt, Vector3.zero);
 
-            Part(PrimitiveType.Sphere, "Head", _bob, new Vector3(0f, 0.4f, 0f), new Vector3(1f, 0.8f, 0.82f), Body, 0.85f);
-            Part(PrimitiveType.Sphere, "Face", _bob, new Vector3(0f, 0.37f, -0.27f), new Vector3(0.7f, 0.54f, 0.3f), Face, 0.6f);
+            Part("Head", _bob, new Vector3(0f, 0.4f, 0f), new Vector3(0.5f, 0.4f, 0.41f), 0.8f, 0.9f, Body);
+            Part("Face", _bob, new Vector3(0f, 0.37f, -0.275f), new Vector3(0.35f, 0.27f, 0.15f), 0.75f, 0.75f, Face);
             _earL = Ear("Ear L", -1f);
             _earR = Ear("Ear R", 1f);
 
             _look = Node("Look", _bob, Vector3.zero);
             _eyes = Node("Eyes", _look, new Vector3(0f, 0.41f, -0.415f));
             foreach (var s in new[] { -1f, 1f })
-            {
-                Part(PrimitiveType.Sphere, "Eye", _eyes, new Vector3(0.11f * s, 0f, 0f), new Vector3(0.075f, 0.105f, 0.04f), Eye, 0.95f);
-                Part(PrimitiveType.Sphere, "Glint", _eyes, new Vector3(0.11f * s - 0.015f, 0.025f, -0.02f), Vector3.one * 0.024f, Color.white, 0.3f);
-            }
-            Part(PrimitiveType.Sphere, "Nose", _look, new Vector3(0f, 0.315f, -0.425f), new Vector3(0.045f, 0.028f, 0.03f), Nose, 0.6f);
+                Part("Eye", _eyes, new Vector3(0.11f * s, 0f, 0f), new Vector3(0.038f, 0.053f, 0.022f), 1f, 1f, Eye);
+            Part("Nose", _look, new Vector3(0f, 0.315f, -0.425f), new Vector3(0.024f, 0.015f, 0.016f), 0.9f, 1f, Nose);
         }
 
         Transform Ear(string name, float side)
         {
             var pivot = Node(name, _bob, new Vector3(0.25f * side, 0.7f, 0.02f));
-            Part(PrimitiveType.Capsule, "Ear", pivot, new Vector3(0f, 0.2f, 0f), new Vector3(0.19f, 0.22f, 0.15f), Body, 0.85f);
-            Part(PrimitiveType.Capsule, "Inside", pivot, new Vector3(0f, 0.21f, -0.06f), new Vector3(0.1f, 0.16f, 0.05f), EarIn, 0.5f);
+            Part("Ear", pivot, new Vector3(0f, 0.2f, 0f), new Vector3(0.095f, 0.22f, 0.075f), 0.85f, 1f, Body);
+            Part("Inside", pivot, new Vector3(0f, 0.21f, -0.06f), new Vector3(0.05f, 0.16f, 0.025f), 0.85f, 1f, EarIn);
             return pivot;
         }
 
@@ -67,23 +72,67 @@ namespace FurSight
             return t;
         }
 
-        static void Part(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color color, float gloss)
+        static void Part(string name, Transform parent, Vector3 pos, Vector3 radii, float e1, float e2,
+            (string lit, string shade, string rim, float gloss, float spec, float rimK) look)
         {
-            var go = GameObject.CreatePrimitive(type);
-            go.name = name;
-            Destroy(go.GetComponent<Collider>());   // looks only: keep it out of the card rays
+            var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = pos;
-            go.transform.localScale = scale;
-            var r = go.GetComponent<MeshRenderer>();
+            go.transform.localScale = radii;
+            go.AddComponent<MeshFilter>().sharedMesh = Blob(e1, e2);
+            var r = go.AddComponent<MeshRenderer>();
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
-            _lit ??= Resources.Load<Material>("Bean/BeanLit");
-            var m = new Material(_lit);
-            m.SetColor("_BaseColor", color);
-            m.SetFloat("_Smoothness", gloss);
-            r.sharedMaterial = m;
+            r.sharedMaterial = Mat(look);
         }
+
+        static Material Mat((string lit, string shade, string rim, float gloss, float spec, float rimK) l)
+        {
+            if (_mats.TryGetValue(l.lit, out var m) && m != null) return m;
+            _jelly ??= Resources.Load<Material>("Bean/Jelly");
+            m = new Material(_jelly) { name = "Jelly " + l.lit };
+            m.SetColor("_BaseColor", Theme.Hex(l.lit));
+            m.SetColor("_ShadeColor", Theme.Hex(l.shade));
+            m.SetColor("_RimColor", Theme.Hex(l.rim));
+            m.SetFloat("_Gloss", l.gloss);
+            m.SetFloat("_Spec", l.spec);
+            m.SetFloat("_Rim", l.rimK);
+            return _mats[l.lit] = m;
+        }
+
+        // a unit superellipsoid with exact smooth normals: e = 1 is a sphere, lower is boxier (a jellybean)
+        static Mesh Blob(float e1, float e2)
+        {
+            var key = new Vector2(e1, e2);
+            if (_meshes.TryGetValue(key, out var mesh) && mesh != null) return mesh;
+            const int seg = 48, rings = 32;
+            var verts = new Vector3[(seg + 1) * (rings + 1)];
+            var norms = new Vector3[verts.Length];
+            for (int j = 0; j <= rings; j++)
+            {
+                float v = Mathf.Lerp(-Mathf.PI / 2f, Mathf.PI / 2f, j / (float)rings);
+                for (int i = 0; i <= seg; i++)
+                {
+                    float u = Mathf.Lerp(-Mathf.PI, Mathf.PI, i / (float)seg);
+                    int k = j * (seg + 1) + i;
+                    verts[k] = new Vector3(C(v, e1) * C(u, e2), S(v, e1), C(v, e1) * S(u, e2));
+                    norms[k] = new Vector3(C(v, 2f - e1) * C(u, 2f - e2), S(v, 2f - e1), C(v, 2f - e1) * S(u, 2f - e2)).normalized;
+                }
+            }
+            var tris = new int[seg * rings * 6];
+            for (int j = 0, t = 0; j < rings; j++)
+                for (int i = 0; i < seg; i++)
+                {
+                    int a = j * (seg + 1) + i, b = a + seg + 1;
+                    tris[t++] = a; tris[t++] = b; tris[t++] = a + 1;
+                    tris[t++] = a + 1; tris[t++] = b; tris[t++] = b + 1;
+                }
+            mesh = new Mesh { name = $"Blob {e1} {e2}", vertices = verts, normals = norms, triangles = tris };
+            mesh.RecalculateBounds();
+            return _meshes[key] = mesh;
+        }
+        static float C(float w, float m) { float c = Mathf.Cos(w); return Mathf.Sign(c) * Mathf.Pow(Mathf.Abs(c), m); }
+        static float S(float w, float m) { float s = Mathf.Sin(w); return Mathf.Sign(s) * Mathf.Pow(Mathf.Abs(s), m); }
 
         // ---------------------------------------------------------------- moods
 
