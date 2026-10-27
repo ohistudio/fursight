@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/FurSight.unity
+    guid: 0851559e632ef403eab4014ab632f926
+  m_configObjects:
+    com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: aeb0d6131bead465e954aadf131e623b, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: dc4e53c5f2745425880b5c8e2d645f4c, type: 2}
+  m_UseUCBPForAssetBundles: 0
