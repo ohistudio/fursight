@@ -110,6 +110,11 @@
   .routine .x { border: 0; background: none; color: var(--muted); font: 900 20px Nunito, sans-serif; cursor: pointer; padding: 4px; }
   .addr summary { cursor: pointer; font-weight: 900; color: var(--grape-lip); }
   .tray { display: grid; gap: 10px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { display: grid; gap: 2px; padding: 14px; } .tile b { font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; } .tile span { font-size: 13px; color: var(--muted); } .tile small { font-size: 12px; color: var(--muted); }
+  .chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
+  .chart .ax { font: 800 10px Nunito, sans-serif; fill: var(--muted); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
+  #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: #fff; font: 800 13px Nunito, sans-serif; padding: 6px 10px; border-radius: 10px; opacity: 0; transition: opacity .12s; max-width: 260px; }
   .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tstats b { display: block; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; } .tstats span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
   .pill { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 900; white-space: nowrap; }
@@ -159,6 +164,7 @@
   <button data-tab="today"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="4"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Diary</button>
   <button data-tab="care"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>Care</button>
   <button data-tab="calendar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="4"/><path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"/></svg>Calendar</button>
+  <button data-tab="stats"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Stats</button>
   <button data-tab="cam"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="3"/><path d="M8 21h8"/><circle cx="16.5" cy="9" r="1.2" fill="currentColor"/></svg>Pet cam</button>
   <button data-tab="devices"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg>Devices</button>
 </div></nav>
@@ -223,7 +229,7 @@ async function render() {
   if (!me.pets.length) { $tabs.classList.add("hidden"); return addPet(); }
   $tabs.classList.remove("hidden");
   for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
-  ({ today, care, calendar, cam, devices })[tab]();
+  ({ today, care, calendar, stats, cam, devices })[tab]();
 }
 $tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.tab; store.set("fs.tab", tab); render(); });
 
@@ -491,6 +497,92 @@ function trayCard(s, p) {
     ${spark}<div class="when" style="text-align:center">His weight, last ${w.length} days</div>
     ${s.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}
     ${s.simulated ? `<span class="chip" style="justify-self:start">Simulated tray</span>` : ""}</div>`;
+}
+
+// ---------------------------------------------------------------- stats: the week in numbers and charts
+
+const STAT_COL = { loaf: "#7A4ED1", stretched: "#2FA8F5", flop: "#E8A21A" };
+async function stats() {
+  const p = me.pets[0];
+  $app.innerHTML = `<div class="stack">${header()}<div id="st"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  const { entries } = await hub("/diary?limit=200");
+  const tray = FSTray.summary(entries), days = FSActivity.days(entries, 7), a = FSActivity.summary(entries);
+  const tw = tray.week.filter((d) => d.weight_g), wNow = tray.today.weight_g || (tw.length ? tw[tw.length - 1].weight_g : null);
+  const wDelta = tw.length > 1 ? tw[tw.length - 1].weight_g - tw[0].weight_g : null;
+  const day = (k) => k === FSCal.key(new Date()) ? "Today" : FSCal.day(k).toLocaleDateString(undefined, { weekday: "short" });
+  const tiles = [
+    wNow ? [`${(wNow / 1000).toFixed(2)} kg`, "weight", wDelta !== null ? `${wDelta >= 0 ? "+" : "−"}${Math.abs(wDelta)} g this week` : ""] : null,
+    a.has ? [FSActivity.time(a.today.loaf), "loafing today", `${FSActivity.time(a.week.loaf)} this week`] : null,
+    a.has ? [`${a.today.flops}`, "flops today", `${a.week.flops} this week`] : null,
+    a.has ? [FSActivity.time(a.today.active), "on the move", `${FSActivity.time(a.week.active)} this week`] : null,
+  ].filter(Boolean);
+  const none = !tw.length && !a.has;
+  document.getElementById("st").innerHTML = none ? `<div class="card center stack pop">${bean("idle", 90)}<h3>No stats yet</h3><p class="muted">Stats fill in from the litter tray and the pet cam. Link a FurSight Tray or set up a pet cam in Devices.</p></div>` : `<div class="stack">
+    <div class="tiles">${tiles.map(([b, l, sub]) => `<div class="card tile pop"><b>${b}</b><span>${l}</span><small>${sub}</small></div>`).join("")}</div>
+    ${tw.length > 1 ? `<div class="card stack pop"><h3>Weight</h3>${lineChart(tw.map((d) => ({ x: day(d.date), y: d.weight_g, tip: `${day(d.date)}: ${(d.weight_g / 1000).toFixed(3)} kg` })), { unit: "g", colour: "var(--sky-lip)" })}
+      ${tray.simulated ? `<span class="when">Simulated tray</span>` : ""}</div>` : ""}
+    ${a.has ? `<div class="card stack pop"><h3>Resting each day</h3>
+      <div class="legend">${["loaf", "stretched", "flop"].map((k) => `<span><i style="background:${STAT_COL[k]}"></i>${FSActivity.WORD[k]}</span>`).join("")}</div>
+      ${stackChart(days.map((d) => ({ x: day(d.date), parts: ["loaf", "stretched", "flop"].map((k) => ({ k, v: d[k] })), tip: `${day(d.date)}: ${["loaf", "stretched", "flop"].map((k) => `${FSActivity.WORD[k]} ${FSActivity.time(d[k])}`).join(", ")}, ${d.flops} flop${d.flops === 1 ? "" : "s"}` })))}
+      <details class="how"><summary>As a table</summary><table class="act"><tr><th></th>${days.map((d) => `<th>${day(d.date)}</th>`).join("")}</tr>
+        ${["loaf", "stretched", "flop", "active"].map((k) => `<tr><td>${FSActivity.WORD[k]}</td>${days.map((d) => `<td>${Math.round(d[k])}</td>`).join("")}</tr>`).join("")}
+        <tr><td>Flops</td>${days.map((d) => `<td>${d.flops}</td>`).join("")}</tr></table><p class="when">Minutes</p></details>
+      ${a.simulated ? `<span class="when">Includes simulated days</span>` : ""}</div>` : ""}
+    ${tray.week.length ? `<div class="card stack pop"><h3>Litter tray visits</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.visits, tip: `${day(d.date)}: ${d.visits} visits` })), "var(--grape-lip)")}</div>
+      <div class="card stack pop"><h3>Litter tray output</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.output_g, tip: `${day(d.date)}: ${d.output_g} g` })), "#B87700", "g")}
+      <p class="when">Today is so far. A drop in output is one of the earliest signs of gut trouble.</p></div>` : ""}
+  </div>`;
+  tips(document.getElementById("st"));
+}
+
+// charts: one y-axis each, thin marks, a recessive grid, a hover/tap tooltip from data-tip
+const CW = 320, CH = 150, PL = 40, PB = 22, PT = 14;
+// a round step (1, 2, 2.5, 5 x 10^n) so three steps cover the span
+const niceStep = (span) => { const e = Math.pow(10, Math.floor(Math.log10(span / 3 || 1))); return [1, 2, 2.5, 5, 10].map((m) => m * e).find((st) => st * 3 >= span) || 10 * e; };
+function axis(max, min = 0, unit = "") {
+  const steps = 3, lines = [];
+  for (let i = 0; i <= steps; i++) {
+    const v = min + ((max - min) * i) / steps, y = CH - PB - ((CH - PB - PT) * i) / steps;
+    lines.push(`<line x1="${PL}" x2="${CW}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/><text x="${PL - 6}" y="${y + 4}" text-anchor="end" class="ax">${Math.round(v)}${i === steps && unit ? " " + unit : ""}</text>`);
+  }
+  return lines.join("");
+}
+function lineChart(pts, { unit = "", colour = "var(--sky)" } = {}) {
+  const ys = pts.map((p) => p.y), st = niceStep(Math.max(...ys) - Math.min(...ys) + 10);
+  let lo = Math.floor((Math.min(...ys) - 5) / st) * st, hi = lo + 3 * st;
+  if (hi < Math.max(...ys) + 5) { lo += st; hi += st; }
+  const X = (i) => PL + 12 + (i * (CW - PL - 24)) / Math.max(1, pts.length - 1), Y = (v) => CH - PB - ((v - lo) / (hi - lo)) * (CH - PB - PT);
+  const last = pts[pts.length - 1];
+  return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="Weight over ${pts.length} days">${axis(hi, lo, unit)}
+    <polyline points="${pts.map((p, i) => `${X(i)},${Y(p.y)}`).join(" ")}" fill="none" stroke="${colour}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${pts.map((p, i) => `<circle cx="${X(i)}" cy="${Y(p.y)}" r="${i === pts.length - 1 ? 5 : 4}" fill="${i === pts.length - 1 ? colour : "var(--card)"}" stroke="${colour}" stroke-width="2"/><rect x="${X(i) - 18}" y="${PT}" width="36" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(p.tip)}"/>`).join("")}
+    <text x="${X(pts.length - 1)}" y="${Y(last.y) + (Y(last.y) > CH - PB - 24 ? -12 : 22)}" text-anchor="end" class="lab">${last.y} g</text>
+    ${pts.map((p, i) => `<text x="${X(i)}" y="${CH - 6}" text-anchor="middle" class="ax">${p.x}</text>`).join("")}</svg>`;
+}
+function bars(items, max, draw) {
+  const bw = (CW - PL - 8) / items.length;
+  return items.map((it, i) => draw(it, PL + 4 + i * bw + 3, bw - 6, (v) => ((CH - PB - PT) * v) / max) + `<text x="${PL + 4 + i * bw + bw / 2}" y="${CH - 6}" text-anchor="middle" class="ax">${it.x}</text>`).join("");
+}
+// a bar with its data end rounded (4px) and its base square on the axis
+const bar = (x, y, w, h, fill, round) => h <= 0 ? "" : round ? `<path d="M${x},${y + h}V${y + Math.min(4, h)}Q${x},${y} ${x + Math.min(4, w / 2)},${y}H${x + w - Math.min(4, w / 2)}Q${x + w},${y} ${x + w},${y + Math.min(4, h)}V${y + h}Z" fill="${fill}"/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`;
+function barChart(items, colour, unit = "") {
+  const max = niceStep(Math.max(1, ...items.map((i) => i.y)) * 1.05) * 3;
+  return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img">${axis(max, 0, unit)}${bars(items, max, (it, x, w, h) => { const hh = h(it.y), y = CH - PB - hh; return bar(x, y, w, hh, colour, true) + `<rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`; })}</svg>`;
+}
+function stackChart(items) {
+  const max = niceStep(Math.max(30, ...items.map((i) => i.parts.reduce((a, p) => a + p.v, 0))) * 1.05) * 3;
+  return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="Minutes resting each day">${axis(max, 0, "min")}${bars(items, max, (it, x, w, h) => {
+    let y = CH - PB, out = "";
+    const live = it.parts.filter((p) => p.v > 0);
+    live.forEach((p, j) => { const hh = h(p.v); y -= hh; out += bar(x, y + (j ? 1 : 0), w, hh - (j ? 2 : 0), STAT_COL[p.k], j === live.length - 1); });
+    return out + `<rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`;
+  })}</svg>`;
+}
+function tips(root) {
+  let t = document.getElementById("tip");
+  if (!t) { t = document.createElement("div"); t.id = "tip"; document.body.appendChild(t); }
+  const show = (e) => { const el = e.target.closest("[data-tip]"); if (!el) return (t.style.opacity = 0); t.textContent = el.dataset.tip; t.style.opacity = 1; t.style.left = Math.min(innerWidth - t.offsetWidth - 8, Math.max(8, e.clientX - t.offsetWidth / 2)) + "px"; t.style.top = e.clientY - t.offsetHeight - 14 + "px"; };
+  root.addEventListener("pointermove", show); root.addEventListener("pointerdown", show); root.addEventListener("pointerleave", () => (t.style.opacity = 0));
 }
 
 // ---------------------------------------------------------------- calendar: the month at a glance, plus reminders
