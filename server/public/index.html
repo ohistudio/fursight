@@ -335,21 +335,31 @@ function cam() {
     ${cams.length ? "" : `<div class="card center stack pop"><h3>No pet cam yet</h3><p class="muted">Any old laptop or phone with a camera can watch ${esc(me.pets[0].name)}'s space. Open FurSight on it and use it as a pet cam.</p></div>`}
     <button class="btn sky" id="be">Use this device as a pet cam</button></div>`;
   document.getElementById("be").onclick = beCam;
-  // pull each camera's latest picture a few times a second (the relay only sends while someone watches)
-  let alive = true; const me_ = Math.random().toString(36).slice(2, 10);
-  camStop = () => (alive = false);
-  for (const c of cams) (async function loop() {
+  // frames pushed over a socket per camera (no round trip per picture); polling if a socket won't open
+  let alive = true; const socks = [];
+  camStop = () => { alive = false; socks.forEach((w) => w.close()); };
+  for (const c of cams) {
     const $i = document.querySelector(`[data-ch="${c.channel}"]`), $s = document.querySelector(`[data-live="${c.channel}"]`);
-    let last = 0, url = null;
-    while (alive) {
-      try {
-        const r = await fetch(`${RELAY}/c/${c.channel}/frame.jpg?v=${me_}&t=${Date.now()}`, { cache: "no-store" });
-        if (r.status === 200 && Number(r.headers.get("x-frame-age")) < 3000) { const u = URL.createObjectURL(await r.blob()); $i.src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); }
-      } catch (e) {}
-      $s.innerHTML = Date.now() - last < 3000 ? "<b></b>live" : last ? "paused" : "waking the camera";
-      await new Promise((r) => setTimeout(r, 180));
+    let last = 0, url = null, frames = 0;
+    const show = (b) => { const u = URL.createObjectURL(b); $i.src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); frames++; };
+    const tick = setInterval(() => { if (!alive) return clearInterval(tick); $s.innerHTML = Date.now() - last < 3000 ? `<b></b>live · ${frames} fps` : last ? "paused" : "waking the camera"; frames = 0; }, 1000);
+    let opened = false;
+    const ws = new WebSocket(RELAY.replace("https", "wss") + `/c/${c.channel}/watch`); socks.push(ws);
+    ws.binaryType = "blob";
+    ws.onopen = () => (opened = true);
+    ws.onmessage = (e) => { if (typeof e.data !== "string") show(e.data); };
+    ws.onclose = () => { if (alive && !opened) poll(); };
+    setTimeout(() => { if (!opened) ws.close(); }, 4000);
+    async function poll() {
+      const me_ = Math.random().toString(36).slice(2, 10);
+      while (alive) {
+        try {
+          const r = await fetch(`${RELAY}/c/${c.channel}/frame.jpg?v=${me_}&t=${Date.now()}`, { cache: "no-store" });
+          if (r.status === 200 && Number(r.headers.get("x-frame-age")) < 3000) show(await r.blob()); else await new Promise((ok) => setTimeout(ok, 250));
+        } catch (e) { await new Promise((ok) => setTimeout(ok, 500)); }
+      }
     }
-  })();
+  }
 }
 
 // this browser becomes a pet cam: camera on, register with the household, send to the relay while watched

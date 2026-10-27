@@ -217,27 +217,41 @@ $("q").addEventListener("change", () => { const v = $("q").value; $("q").value =
 
 // ---------------------------------------------------------------- pet cam: the household's camera, a few pictures a second
 
-let camAlive = false;
-async function camLoop() {
+let camAlive = false, camSock = null;
+// Frames arrive pushed over a socket (one connection, no round trip per picture); if the socket won't open,
+// fall back to asking for the latest picture back to back.
+function camLoop() {
   if (camAlive) return; camAlive = true;
   const cam = me && me.cams[0];
   if (!cam) { $("camMsg").textContent = "No pet cam yet. Set one up in the FurSight app."; camAlive = false; return; }
-  const viewer = "glasses" + Math.random().toString(36).slice(2, 8);
-  let last = 0, url = null;
-  while (camAlive && PAGES[page] === "cam") {
-    try {
-      const r = await fetch(`${HUB}/c/${cam.channel}/frame.jpg?v=${viewer}&t=${Date.now()}`, { cache: "no-store" });
-      if (r.status === 200 && Number(r.headers.get("x-frame-age")) < 3000) {
-        const u = URL.createObjectURL(await r.blob()); $("camImg").src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); $("camMsg").textContent = "";
-      }
-    } catch (e) {}
+  let last = 0, url = null, frames = 0, fps = 0;
+  const showBlob = (b) => { const u = URL.createObjectURL(b); $("camImg").src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); frames++; $("camMsg").textContent = ""; };
+  const status = setInterval(() => {
+    if (!camAlive) { clearInterval(status); return; }
+    fps = frames; frames = 0;
     const live = Date.now() - last < 3000;
     $("live").classList.toggle("on", live);
-    $("camState").textContent = live ? "live" : last ? "paused" : "waking";
-    await new Promise((r) => setTimeout(r, 200));
+    $("camState").textContent = live ? fps + " fps" : last ? "paused" : "waking";
+  }, 1000);
+  let opened = false;
+  camSock = new WebSocket(HUB.replace("https", "wss") + `/c/${cam.channel}/watch`);
+  camSock.binaryType = "blob";
+  camSock.onopen = () => (opened = true);
+  camSock.onmessage = (e) => { if (typeof e.data !== "string") showBlob(e.data); };
+  camSock.onclose = () => { camSock = null; if (camAlive && !opened) poll(); else if (camAlive) setTimeout(() => { camAlive = false; clearInterval(status); camLoop(); }, 1500); };
+  setTimeout(() => { if (!opened && camSock) camSock.close(); }, 4000);
+  async function poll() {
+    const viewer = "glasses" + Math.random().toString(36).slice(2, 8);
+    while (camAlive && PAGES[page] === "cam") {
+      try {
+        const r = await fetch(`${HUB}/c/${cam.channel}/frame.jpg?v=${viewer}&t=${Date.now()}`, { cache: "no-store" });
+        if (r.status === 200 && Number(r.headers.get("x-frame-age")) < 3000) showBlob(await r.blob());
+        else await new Promise((ok) => setTimeout(ok, 250));
+      } catch (e) { await new Promise((ok) => setTimeout(ok, 500)); }
+    }
   }
-  camAlive = false;
 }
+function camStop() { camAlive = false; if (camSock) { camSock.close(); camSock = null; } }
 
 // ---------------------------------------------------------------- navigation (Neural Band / touchpad arrive as keys)
 
@@ -245,7 +259,7 @@ function go(i) {
   page = (i + PAGES.length) % PAGES.length;
   show(PAGES[page]);
   $("dots").innerHTML = PAGES.map((_, k) => `<i class="${k === page ? "on" : ""}"></i>`).join("");
-  if (PAGES[page] === "cam") camLoop(); else camAlive = false;
+  if (PAGES[page] === "cam") camLoop(); else camStop();
 }
 window.addEventListener("keydown", (e) => {
   if (!token || document.activeElement === $("q")) return;   // the composer owns keys while it's open

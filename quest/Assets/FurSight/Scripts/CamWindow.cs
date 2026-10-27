@@ -1,12 +1,18 @@
+using System;
 using System.Collections;
+using System.Collections.Concurrent;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 
 namespace FurSight
 {
-    // The pet cam, floating in front of you: the home webcam's latest pictures from the FurSight cam relay
-    // (cam/ in the repo), a few times a second, on a white 3D tile with the camera's name, a live dot and a close key.
+    // The pet cam, floating in front of you: the home webcam's pictures from the FurSight cam relay (cam/ in the
+    // repo), pushed over a WebSocket as they arrive (asking for each one costs a round trip: ~2 fps instead of ~6),
+    // with polling as the fallback. On a white 3D tile with the camera's name, a live dot and a close key.
     // The relay only sends while someone watches, so opening this wakes the camera at home.
     public class CamWindow : MonoBehaviour
     {
@@ -19,6 +25,11 @@ namespace FurSight
         Renderer _dot;
         float _lastFrame;
         string _viewer;
+        int _frames, _fps;
+        float _fpsAt;
+        readonly ConcurrentQueue<byte[]> _incoming = new ConcurrentQueue<byte[]>();
+        CancellationTokenSource _cts;
+        bool _socketOpen;
 
         public static void Toggle()
         {
@@ -36,7 +47,7 @@ namespace FurSight
 
         void Start()
         {
-            _viewer = "quest" + Random.Range(1000, 9999);
+            _viewer = "quest" + UnityEngine.Random.Range(1000, 9999);
             float h = Pic + 0.07f;
             var tile = new GameObject("Tile").transform;
             tile.SetParent(transform, false);
@@ -69,7 +80,7 @@ namespace FurSight
 
             StartCoroutine(Juice.Pop(transform, 0f, 0.3f));
             Sfx.Tick(transform.position);
-            if (!string.IsNullOrEmpty(FurSightApi.CamChannel)) StartCoroutine(Pull());
+            if (!string.IsNullOrEmpty(FurSightApi.CamChannel)) { _ = Socket(); StartCoroutine(FallbackIfNoSocket()); }
             else _status.text = "no camera linked";
         }
 
@@ -88,7 +99,65 @@ namespace FurSight
             return t;
         }
 
-        // the latest picture, about 6 times a second; the relay says how old it is
+        // frames pushed by the relay, received off the main thread and handed over through a queue
+        async Task Socket()
+        {
+            _cts = new CancellationTokenSource();
+            var url = new Uri(FurSightApi.CamRelay.Replace("https://", "wss://").TrimEnd('/') + "/c/" + FurSightApi.CamChannel + "/watch");
+            using (var ws = new ClientWebSocket())
+            {
+                try
+                {
+                    await ws.ConnectAsync(url, _cts.Token);
+                    _socketOpen = true;
+                    var buf = new byte[512 * 1024];
+                    while (ws.State == WebSocketState.Open && !_cts.IsCancellationRequested)
+                    {
+                        int got = 0;
+                        WebSocketReceiveResult r;
+                        do
+                        {
+                            r = await ws.ReceiveAsync(new ArraySegment<byte>(buf, got, buf.Length - got), _cts.Token);
+                            got += r.Count;
+                        } while (!r.EndOfMessage && got < buf.Length);
+                        if (r.MessageType == WebSocketMessageType.Binary && got > 0)
+                        {
+                            var frame = new byte[got];
+                            Buffer.BlockCopy(buf, 0, frame, 0, got);
+                            while (_incoming.Count > 1) _incoming.TryDequeue(out _);   // only the newest matters
+                            _incoming.Enqueue(frame);
+                        }
+                    }
+                }
+                catch (Exception e) { if (!_cts.IsCancellationRequested) Debug.LogWarning("[FurSight] pet cam socket: " + e.Message); }
+            }
+        }
+
+        IEnumerator FallbackIfNoSocket()
+        {
+            yield return new WaitForSeconds(4f);
+            if (!_socketOpen) StartCoroutine(Pull());
+        }
+
+        void Update()
+        {
+            if (_incoming.TryDequeue(out var jpg))
+            {
+                if (_tex == null) _tex = new Texture2D(2, 2, TextureFormat.RGB24, false);
+                if (_tex.LoadImage(jpg, false)) { _picMat.SetTexture("_BaseMap", _tex); _picMat.SetColor("_BaseColor", Color.white); _lastFrame = Time.time; _frames++; }
+            }
+            if (Time.time - _fpsAt >= 1f) { _fps = _frames; _frames = 0; _fpsAt = Time.time; Status(); }
+        }
+
+        void Status()
+        {
+            if (_status == null) return;
+            bool live = _lastFrame > 0f && Time.time - _lastFrame < 3f;
+            _status.text = live ? _fps + " fps" : _lastFrame > 0f ? "paused" : "waking the camera";
+            _dot.sharedMaterial = Shapes.Flat(live ? Theme.Coral : Theme.CardLip);
+        }
+
+        // fallback: ask for the latest picture back to back; the relay says how old it is
         IEnumerator Pull()
         {
             string url = FurSightApi.CamRelay.TrimEnd('/') + "/c/" + FurSightApi.CamChannel + "/frame.jpg?v=" + _viewer;
@@ -107,22 +176,21 @@ namespace FurSight
                         _picMat.SetTexture("_BaseMap", _tex);
                         _picMat.SetColor("_BaseColor", Color.white);
                         _lastFrame = Time.time;
+                        _frames++;
                     }
+                    else yield return new WaitForSeconds(0.25f);
                 }
-                bool live = _lastFrame > 0f && Time.time - _lastFrame < 3f;
-                _status.text = live ? "live" : _lastFrame > 0f ? "paused" : "waking the camera";
-                _dot.sharedMaterial = Shapes.Flat(live ? Theme.Coral : Theme.CardLip);
-                yield return new WaitForSeconds(0.15f);
             }
         }
 
         public void Close()
         {
             if (_open == this) _open = null;
+            _cts?.Cancel();
             StopAllCoroutines();
             StartCoroutine(Juice.ShrinkAway(transform));
         }
 
-        void OnDestroy() { if (_tex != null) Destroy(_tex); if (_open == this) _open = null; }
+        void OnDestroy() { _cts?.Cancel(); if (_tex != null) Destroy(_tex); if (_open == this) _open = null; }
     }
 }
