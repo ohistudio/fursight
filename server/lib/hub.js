@@ -28,4 +28,17 @@ async function camFrame(channel, waitMs = 3500) {
   return null;
 }
 
-module.exports = { context, camFrame };
+// the pet's photo as a data URL (for Muse Image), or null
+async function petPhoto(token, petId) {
+  const r = await fetch(`${HUB}/hub/pets/${petId}/photo`, { headers: { authorization: "Bearer " + token } });
+  return r.ok ? "data:image/jpeg;base64," + Buffer.from(await r.arrayBuffer()).toString("base64") : null;
+}
+
+const recent = (token, limit = 200) => get(`/diary?limit=${limit}`, token).then((d) => d.entries);
+
+async function addDiary(token, entry) {
+  const r = await fetch(HUB + "/hub/diary", { method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/json" }, body: JSON.stringify(entry) });
+  return r.ok ? r.json() : null;
+}
+
+module.exports = { context, camFrame, petPhoto, recent, addDiary };

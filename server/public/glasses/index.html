@@ -53,6 +53,16 @@
   #q:focus { border-color: #C8A8FF; }
   #answer .big { font-size: 22px; }
   .speaking::after { content: " ●"; color: #9B6CF0; }
+  .item { display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 16px; border: 3px solid transparent; }
+  .item.focus { border-color: #6CC4FF; }
+  .tick { width: 30px; height: 30px; flex: none; border-radius: 9px; border: 3px solid #6B6977; display: grid; place-items: center; font-weight: 900; color: #000; }
+  .item.done .tick { background: #5BE38A; border-color: #5BE38A; }
+  .item.done .txt { color: #8E8C99; text-decoration: line-through; }
+  .txt { font-size: 18px; line-height: 1.2; }
+  #peek { position: absolute; left: 20px; top: 20px; width: 380px; height: 380px; border-radius: 26px; overflow: hidden; border: 4px solid #FFC23D; display: none; z-index: 5; }
+  #peek img { width: 100%; height: 100%; object-fit: cover; }
+  #peek div { position: absolute; left: 12px; top: 10px; font-size: 18px; font-weight: 900; text-shadow: 0 0 6px #000; }
+  .away { color: #FFC23D; }
   .code { font-size: 76px; font-weight: 900; letter-spacing: .14em; text-align: center; margin: 22px 0 8px; color: #5BE38A; }
   .center { text-align: center; }
 </style>
@@ -80,6 +90,11 @@
     <div class="row" style="justify-content:space-between"><div class="big"><span class="live" id="live"></span><span id="camName">Pet cam</span></div><div class="sub" id="camState"></div></div>
     <div id="cam"><img id="camImg" alt=""><div id="camMsg">Waking the camera</div></div>
   </div>
+  <!-- daily care -->
+  <div class="page" id="p-care">
+    <div class="row" style="justify-content:space-between"><div class="k">Today's care</div><div class="sub" id="streak"></div></div>
+    <div id="items" style="margin-top:10px"></div>
+  </div>
   <!-- ask -->
   <div class="page" id="p-ask">
     <div class="k">Ask about <span id="askPet">your pet</span></div>
@@ -92,12 +107,13 @@
     <div class="k">Diary</div>
     <div id="list" style="margin-top:6px"></div>
   </div>
+  <div id="peek"><img id="peekImg" alt=""><div>Pet cam</div></div>
   <div id="dots"></div>
 </div></div>
 
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
-// between Today, Ask, Pet cam and Diary; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
+// between Today, Care (tick the daily list), Ask, Pet cam and Diary; up/down picks a care item, pinch ticks it; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
 // the system composer (speak, write or type). Answers are shown and spoken. New "Don't" / "See a vet" entries
 // are read out. With WebMCP on, Meta AI can use FurSight's tools while it's open ("how's Xiaosi today?").
 const HUB = "https://fursight-cam.wibble-crossplay.workers.dev";
@@ -107,7 +123,7 @@ if (q.get("at")) { const [x, y] = q.get("at").split(",").map(Number); $("frame")
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 let token = store.get("fs.glassesToken"), me = null, entries = [], page = 0, scroll = 0;
-const PAGES = ["today", "ask", "cam", "diary"];
+const PAGES = ["today", "care", "ask", "cam", "diary"];
 const API = location.origin.includes("localhost") ? "" : "https://fursight-seven.vercel.app";
 
 async function hub(path, opt = {}) {
@@ -162,11 +178,16 @@ function render() {
   }
   $("alert").innerHTML = bad ? `<div class="card alert row"><div class="badge toxic">!</div><div><div class="big toxic">${esc(bad.title)}</div><div class="note">${esc(v(bad)[2])} · ${time(bad.at)}</div></div></div>`
     : today.length ? `<div class="card ok row"><div class="badge safe">✓</div><div class="big">All good today</div></div>` : "";
-  const last = entries[0];
-  $("latest").innerHTML = last ? `<div class="card"><div class="k">Latest</div><div class="row" style="margin-top:6px"><div class="badge ${v(last)[0]}">${v(last)[1]}</div><div style="min-width:0"><div class="big">${esc(last.title || v(last)[2])}</div><div class="note">${esc(last.note)}</div></div></div></div>` : "";
+  if (away) $("alert").innerHTML = `<div class="card row" style="border-color:#FFC23D"><div class="badge caution">↗</div><div><div class="big away">You're out</div><div class="note">${me.cams[0] ? "Swipe to the pet cam, or tilt your head down to peek." : "Set up a pet cam to keep an eye on " + esc(pet.name) + "."}</div></div></div>` + $("alert").innerHTML;
+  const recap = entries.find((e) => e.kind === "recap" && Date.now() - e.at < 8 * 864e5);
+  const last = recap || entries[0];
+  $("date").innerHTML = esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) +
+    (me.cams[0] && !peekOn ? `<span style="float:right;text-transform:none;letter-spacing:0">pinch: head-tilt peek</span>` : "");
+  $("latest").innerHTML = (last ? `<div class="card"><div class="k">${last.kind === "recap" ? "This week" : "Latest"}</div><div class="row" style="margin-top:6px"><div class="badge ${v(last)[0]}">${v(last)[1]}</div><div style="min-width:0"><div class="big">${esc(last.title || v(last)[2])}</div><div class="note">${esc(last.note)}</div></div></div></div>` : "");
   const cam = me.cams[0];
   $("camName").textContent = cam ? cam.name : "Pet cam";
   renderDiary();
+  renderCare();
 }
 
 function renderDiary() {
@@ -174,6 +195,90 @@ function renderDiary() {
   $("list").innerHTML = shown.length ? shown.map((e) => `<div class="entry row"><div class="badge ${v(e)[0]}">${v(e)[1]}</div><div style="min-width:0;flex:1">
     <div class="row" style="justify-content:space-between"><b>${esc(e.title || v(e)[2])}</b><span class="when">${time(e.at)}</span></div>
     <div class="note">${esc(e.note)}</div></div></div>`).join("") : `<div class="sub" style="margin-top:20px">Nothing yet. Checks, questions and photos from your Quest and phone land here.</div>`;
+}
+
+// ---------------------------------------------------------------- daily care: the care plan's daily list, ticked into the diary
+
+let careFocus = 0;
+const careItems = () => ((me && me.pets[0] && me.pets[0].care && me.pets[0].care.daily) || []).slice(0, 5);
+function careToday() {
+  const today = new Set(), byDay = new Map();
+  for (const e of entries) if (e.kind === "care") {
+    const d = new Date(e.at).toDateString();
+    if (!byDay.has(d)) byDay.set(d, new Set()); byDay.get(d).add(e.title);
+    if (d === new Date().toDateString()) today.add(e.title);
+  }
+  const items = careItems(), all = (d) => items.length && items.every((i) => byDay.get(d.toDateString())?.has(i));
+  const day = new Date(); if (!all(day)) day.setDate(day.getDate() - 1);
+  let streak = 0; while (all(day)) { streak++; day.setDate(day.getDate() - 1); }
+  return { today, streak };
+}
+function renderCare() {
+  const items = careItems(), { today, streak } = careToday();
+  careFocus = Math.min(careFocus, Math.max(0, items.length - 1));
+  $("streak").textContent = streak ? `${streak} day streak` : "";
+  $("items").innerHTML = items.length ? items.map((i, k) => `<div class="item ${today.has(i) ? "done" : ""} ${k === careFocus ? "focus" : ""}"><div class="tick">${today.has(i) ? "✓" : ""}</div><div class="txt">${esc(i)}</div></div>`).join("")
+    : `<div class="sub">Add a care plan in the FurSight app.</div>`;
+}
+async function tickCare() {
+  const items = careItems(), item = items[careFocus];
+  if (!item || careToday().today.has(item)) return;
+  entries.unshift({ kind: "care", title: item, at: Date.now() });   // show it straight away
+  renderCare();
+  const left = items.filter((i) => !careToday().today.has(i)).length;
+  say(left ? `${item.split(/[,.(]/)[0]}. Done.` : "All done for today.");
+  await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "care", title: item, pet: me.pets[0].name }) }).catch(() => {});
+  if (careFocus < items.length - 1) careFocus++;
+  load();
+}
+
+// ---------------------------------------------------------------- home or away: lead with the pet cam when you're out
+
+let away = null;
+function distM(a, b) { const R = 6371e3, r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLng = (b.lng - a.lng) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+function checkWhere() {
+  if (!me || !me.home || !navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const was = away;
+    away = distM(me.home, { lat: pos.coords.latitude, lng: pos.coords.longitude }) > (me.home.radius || 200) + Math.min(pos.coords.accuracy || 0, 300);
+    render();
+    if (was === true && away === false) say(`Welcome home. ${careToday().today.size < careItems().length ? "Time for " + me.pets[0].name + "'s evening check." : ""}`);
+  }, () => {}, { timeout: 15000, maximumAge: 120000 });
+}
+
+// ---------------------------------------------------------------- head-tilt peek: glance down and the pet cam pops up
+
+let tiltBase = null, tiltSince = 0, peekUntil = 0, peekSock = null, peekOn = false;
+async function enablePeek() {
+  const O = window.DeviceOrientationEvent, M = window.DeviceMotionEvent;
+  const owner = O && typeof O.requestPermission === "function" ? O : M && typeof M.requestPermission === "function" ? M : null;
+  try { if (owner && (await owner.requestPermission()) !== "granted") return false; } catch (e) { return false; }
+  if (peekOn) return true; peekOn = true; store.set("fs.peek", "1");
+  window.addEventListener("deviceorientation", (e) => {
+    if (e.beta == null) return;
+    if (tiltBase == null) tiltBase = e.beta;
+    // a clear tilt away from how you normally hold your head, held for half a second
+    const tilted = Math.abs(e.beta - tiltBase) > 28;
+    if (!tilted) { tiltSince = 0; tiltBase = tiltBase * 0.98 + e.beta * 0.02; return; }   // slowly follows your resting angle
+    if (!tiltSince) tiltSince = Date.now();
+    if (Date.now() - tiltSince > 500 && PAGES[page] !== "cam") peek();
+  });
+  return true;
+}
+function peek() {
+  const cam = me && me.cams[0];
+  if (!cam) return;
+  peekUntil = Date.now() + 6000;
+  $("peek").style.display = "block";
+  if (!peekSock) {
+    peekSock = new WebSocket(HUB.replace("https", "wss") + `/c/${cam.channel}/watch`);
+    peekSock.binaryType = "blob";
+    let url = null;
+    peekSock.onmessage = (e) => { if (typeof e.data === "string") return; const u = URL.createObjectURL(e.data); $("peekImg").src = u; if (url) URL.revokeObjectURL(url); url = u; };
+  }
+  clearTimeout(peek.t);
+  peek.t = setTimeout(() => { if (Date.now() >= peekUntil) { $("peek").style.display = "none"; if (peekSock) { peekSock.close(); peekSock = null; } } }, 6100);
 }
 
 // ---------------------------------------------------------------- speech: short, and always shown too
@@ -274,6 +379,10 @@ window.addEventListener("keydown", (e) => {
   if (["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter", " "].includes(k)) e.preventDefault();
   if (k === "ArrowRight") go(page + 1);
   else if (k === "ArrowLeft") go(page - 1);
+  else if (PAGES[page] === "care" && k === "ArrowDown") { careFocus = Math.min(careFocus + 1, careItems().length - 1); renderCare(); }
+  else if (PAGES[page] === "care" && k === "ArrowUp") { careFocus = Math.max(0, careFocus - 1); renderCare(); }
+  else if (PAGES[page] === "care" && (k === "Enter" || k === " ")) tickCare();
+  else if (PAGES[page] === "today" && (k === "Enter" || k === " ") && !peekOn) { enablePeek().then((ok) => say(ok ? "Head tilt peek is on. Look down to see the pet cam." : "Couldn't turn on head tilt.")); load(); }
   else if (PAGES[page] === "diary" && k === "ArrowDown") { scroll = Math.min(scroll + 1, Math.max(0, entries.length - 4)); renderDiary(); }
   else if (PAGES[page] === "diary" && k === "ArrowUp") { scroll = Math.max(0, scroll - 1); renderDiary(); }
   else if ((k === "Enter" || k === " ") && PAGES[page] === "ask") { $("q").focus(); $("q").click(); }
@@ -324,6 +433,8 @@ async function registerTools() {
 async function start() {
   await load();
   registerTools();
+  if (store.get("fs.peek") === "1") enablePeek();   // (works where no permission prompt is needed)
+  checkWhere(); setInterval(checkWhere, 120000);
   go(0);
   setInterval(() => load().catch(() => {}), 30000);
 }
