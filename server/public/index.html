@@ -95,6 +95,14 @@
   .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
   .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
   .row > svg.bean { flex: none; }
+  .hz { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .hz i { width: 26px; height: 26px; border-radius: 50%; color: #fff; font-style: normal; font-weight: 900; display: grid; place-items: center; }
+  .moment { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; }
+  .moment.noimg { grid-template-columns: 1fr; }
+  .moment img { width: 96px; height: 96px; object-fit: cover; border-radius: 14px; }
+  table.act { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.act th { font-size: 12px; color: var(--muted); text-align: right; font-weight: 900; }
+  table.act td { padding: 6px 0; border-top: 1px solid var(--line); text-align: right; } table.act td:first-child { text-align: left; font-weight: 800; }
   .routine { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .routine small { display: block; font-size: 12px; line-height: 1.3; margin-top: 2px; }
   .routine .btn.small { width: auto; min-height: 40px; padding: 6px 14px; font-size: 14px; }
@@ -158,6 +166,7 @@
 <script src="/calendar.js"></script>
 <script src="/tray.js"></script>
 <script src="/routines.js"></script>
+<script src="/activity.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -215,6 +224,9 @@ async function render() {
   ({ today, care, calendar, cam, devices })[tab]();
 }
 $tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.tab; store.set("fs.tab", tab); render(); });
+
+// "Si Si, Little Loaf" -> ["Si Si", "Little Loaf"]
+const nicknames = (p) => String(p.nicknames || "").split(/[,;\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 6);
 
 function header() {
   const p = me.pets[0];
@@ -302,6 +314,7 @@ function review(p, base) {
       <div class="row"><div><label>Sex</label><select id="sex">${["male", "female", "unknown"].map((s) => `<option ${s === p.sex_guess ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         <div><label>Age</label><input id="age" value="${esc(p.age_guess && p.age_guess !== "unknown" ? p.age_guess : "")}" placeholder="e.g. 2 years"></div></div>
       <div><label>Colour</label><input id="colour" value="${esc(p.colour)}"></div>
+      <div><label>Nicknames</label><input id="nicks" placeholder="e.g. Si Si, Little Loaf" maxlength="120"></div>
       <div><label>Notes</label><textarea id="pnotes">${esc(base.notes)}</textarea></div>
     </div>
     ${carePlan(care)}
@@ -311,7 +324,7 @@ function review(p, base) {
     e.target.disabled = true;
     const v = (id) => document.getElementById(id).value.trim();
     try {
-      await hub("/pets/" + petId(base.name), { method: "PUT", body: JSON.stringify({ name: base.name, species: v("species"), breed: v("breed"), sex: v("sex"), age: v("age"), colour: v("colour"), notes: v("pnotes"), care, photo: base.photo }) });
+      await hub("/pets/" + petId(base.name), { method: "PUT", body: JSON.stringify({ name: base.name, species: v("species"), breed: v("breed"), sex: v("sex"), age: v("age"), colour: v("colour"), nicknames: v("nicks"), notes: v("pnotes"), care, photo: base.photo }) });
       toast(base.name + " is all set"); tab = "today"; render();
     } catch (err) { toast(err.message); e.target.disabled = false; }
   };
@@ -339,7 +352,7 @@ async function makeRecap(btn) {
 async function today() {
   $app.innerHTML = `<div class="stack">${header()}<button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
-  const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$/.test(e.kind)).slice(0, 80);
+  const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind)).slice(0, 80);
   const $l = document.getElementById("list");
   if (!entries.length) {
     $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
@@ -351,7 +364,7 @@ async function today() {
   $l.innerHTML = entries.map((e) => {
     const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
     const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
-    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check" }[e.kind] || cap(e.kind);
+    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
     if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
@@ -390,11 +403,22 @@ const careItems = (p) => ((p.care && p.care.daily) || []).slice(0, 8);
 
 async function care() {
   const p = me.pets[0], items = careItems(p);
-  $app.innerHTML = `<div class="stack">${header()}<div id="tray"></div><div id="checklist"></div><div id="routines"></div>${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
+  $app.innerHTML = `<div class="stack">${header()}<div id="tray"></div><div id="activity"></div><div id="checklist"></div><div id="routines"></div>
+    <div class="card stack"><div class="row" style="justify-content:space-between"><h3>Nicknames</h3><button class="btn ghost small" id="nickEdit" style="flex:none;width:auto">Edit</button></div>
+      <div id="nickView">${nicknames(p).length ? `<div class="chips">${nicknames(p).map((n) => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : `<p class="muted">Add a few and FurSight will use them sometimes.</p>`}</div>
+      <div id="nickForm" class="hidden"><input id="nickIn" value="${esc(p.nicknames || "")}" placeholder="e.g. Si Si, Little Loaf" maxlength="120"><button class="btn" id="nickSave" style="margin-top:8px">Save nicknames</button></div></div>
+    ${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
+  document.getElementById("nickEdit").onclick = () => { document.getElementById("nickForm").classList.toggle("hidden"); document.getElementById("nickIn").focus(); };
+  document.getElementById("nickSave").onclick = async () => {
+    const r = await hub("/pets/" + p.id, { method: "PUT", body: JSON.stringify({ nicknames: document.getElementById("nickIn").value.trim() }) });
+    if (r.nicknames === undefined) toast("Saved here; it sticks once the hub is updated"); else toast("Nicknames saved");
+    me = await hub("/me"); care();
+  };
   if (!items.length) return;
   const { entries } = await hub("/diary?limit=200");
   document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p);
   routinesCard(entries, p);
+  document.getElementById("activity").innerHTML = activityCard(FSActivity.summary(entries), p);
   const st = careState(entries, items);
   const left = items.filter((i) => !st.today.has(i)).length;
   document.getElementById("checklist").innerHTML = `<div class="card pop">
@@ -408,6 +432,19 @@ async function care() {
     try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "care", title: el.dataset.item, pet: p.name }) }); } catch (e) { el.classList.remove("done"); return toast(e.message); }
     care();
   };
+}
+
+// ---------------------------------------------------------------- his day from the pet cam: resting, flops, on the move
+
+function activityCard(a, p) {
+  if (!a.has && !a.moment) return "";
+  const rows = [["loaf", "Loafing"], ["stretched", "Stretched out"], ["flop", "Flopped"], ["active", "On the move"], ["eating", "Eating"], ["grooming", "Grooming"]]
+    .filter(([k]) => a.week[k] > 0);
+  return `<div class="card stack pop"><div class="row" style="justify-content:space-between"><h2>${esc(p.name)}'s day</h2><span class="chip" style="flex:none">${a.today.flops} flop${a.today.flops === 1 ? "" : "s"} today</span></div>
+    ${a.moment ? `<div class="moment${a.moment.has_image ? "" : " noimg"}">${a.moment.has_image ? `<img src="${img(`/diary/${a.moment.id}/image`)}" alt="">` : ""}<p><b>${esc(a.moment.title)}</b><br><span class="when">${new Date(a.moment.at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></p></div>` : ""}
+    <table class="act"><tr><th></th><th>Today</th><th>This week</th></tr>
+      ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}</table>
+    ${a.simulated ? `<span class="chip" style="justify-self:start">Includes simulated days</span>` : ""}</div>`;
 }
 
 // ---------------------------------------------------------------- routines: grooming and checks, due a set time after the last one
@@ -465,7 +502,7 @@ async function calendar() {
   $app.innerHTML = `<div class="stack">${header()}<div id="cal"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
   const routines = FSRoutine.list(entries), dueOn = (k) => routines.filter((r) => r.due === k || (k === today && r.days < 0));
-  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$/.test(e.kind));
+  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind));
   const byDay = new Map();
   for (const e of diary) { const k = FSCal.key(new Date(e.at)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
   const careDone = (k) => items.length && items.every((i) => (byDay.get(k) || []).some((e) => e.kind === "care" && e.title === i));
@@ -561,9 +598,15 @@ function cam() {
     <div class="camgrid">${cams.map((c) => `<div class="card stack pop"><div class="cam"><img data-ch="${c.channel}" alt="" title="Tap to zoom in"><div class="live" data-live="${c.channel}">connecting</div></div>
       <div class="row" style="justify-content:space-between"><h3>${esc(c.name)}</h3><div class="row" style="gap:6px"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}">Wide</button></div></div></div>`).join("")}</div>
     ${cams.length ? `<p class="muted center" style="font-size:13px">Tap a picture to zoom in there. FurSight zooms too when it looks for ${esc(me.pets[0].name)}.</p>` : ""}
+    <div class="card stack pop"><h2>Room check</h2><p class="muted">What could ${esc(me.pets[0].name)} chew, swallow, get stuck in or pee on? FurSight looks and rings each one.</p>
+      ${cams.map((c) => `<button class="btn ghost" data-room="${c.channel}">Check the ${esc(c.name)} view</button>`).join("")}
+      <label class="btn ghost" for="roomPhoto">Check a photo of a room</label><input id="roomPhoto" type="file" accept="image/*" class="hidden">
+      <div id="roomOut"></div></div>
     ${cams.length ? "" : `<div class="card center stack pop"><h3>No pet cam yet</h3><p class="muted">Any old laptop or phone with a camera can watch ${esc(me.pets[0].name)}'s space. Open FurSight on it and use it as a pet cam.</p></div>`}
     <button class="btn sky" id="be">Use this device as a pet cam</button></div>`;
   document.getElementById("be").onclick = beCam;
+  for (const b of document.querySelectorAll("[data-room]")) b.onclick = () => roomCheck({ cam: true, channel: b.dataset.room });
+  document.getElementById("roomPhoto").onchange = async (e) => e.target.files[0] && roomCheck({ image: await shrink(e.target.files[0]) });
   // frames pushed over a socket per camera (no round trip per picture); polling if a socket won't open
   let alive = true; const socks = [];
   camStop = () => { alive = false; socks.forEach((w) => w.close()); };
@@ -614,6 +657,7 @@ async function beCam() {
   $tabs.classList.add("hidden");
   $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2><p class="muted">Leave this open near ${esc(me.pets[0].name)}. It only sends pictures while someone is watching.</p>
     <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>
+    <p class="muted center" id="act" style="font-size:14px">Watching for ${esc(me.pets[0].name)}</p>
     <button class="btn ghost" id="stop">Stop being a pet cam</button></div>`;
   let ws, stream, timer, viewers = 0, alive = true, wake, view = { z: 1, x: 0.5, y: 0.5 };
   try { wake = await navigator.wakeLock?.request("screen"); } catch (e) {}
@@ -636,8 +680,83 @@ async function beCam() {
     g.drawImage(v, sx, sy, cs, cs, 0, 0, 480, 480);
     c.toBlob((b) => b && ws.readyState === 1 && ws.send(b), "image/jpeg", 0.65);
   }, 1000 / 6);
-  camStop = () => { alive = false; clearInterval(timer); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
+  const watch = watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
+  camStop = () => { alive = false; clearInterval(timer); clearInterval(watch); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { stopCam(); render(); };
+}
+
+// Room check: Muse Spark lists what matters, SAM outlines each; numbered rings on the picture, a list below
+async function roomCheck(req) {
+  const $o = document.getElementById("roomOut"), name = me.pets[0].name;
+  $o.innerHTML = `<div class="center stack">${bean("thinking", 80)}<p class="muted">Looking around the room…</p></div>`;
+  try {
+    const r = await api("/api/room", req), src = req.image || r.image;
+    const colour = { high: "#FF4D5E", medium: "#FFB627", low: "#2FA8F5" }, icon = { chew: "Chew", toxic: "Toxic", cable: "Cable", swallow: "Swallow", stuck: "Stuck", stain: "Pee spot" };
+    const pic = await new Promise((ok) => { const i = new Image(); i.onload = () => {
+      const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
+      const lw = Math.max(3, i.width / 220); g.lineWidth = lw; g.font = `900 ${Math.round(lw * 7)}px Nunito, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+      r.hazards.forEach((h, n) => { g.strokeStyle = colour[h.risk]; for (const b of h.boxes) {
+        const cx = (b.x0 + b.x1) / 2 * i.width, cy = (b.y0 + b.y1) / 2 * i.height;
+        g.beginPath(); g.ellipse(cx, cy, (b.x1 - b.x0) / 2 * i.width + lw * 2, (b.y1 - b.y0) / 2 * i.height + lw * 2, 0, 0, Math.PI * 2); g.stroke();
+        g.fillStyle = colour[h.risk]; g.beginPath(); g.arc(cx, (b.y0 * i.height) - lw * 2, lw * 5, 0, Math.PI * 2); g.fill(); g.fillStyle = "#fff"; g.fillText(String(n + 1), cx, (b.y0 * i.height) - lw * 2);
+      } }); ok(c.toDataURL("image/jpeg", 0.85)); }; i.src = src; });
+    $o.innerHTML = `<img src="${pic}" alt="Room with ${r.hazards.length} things ringed" style="width:100%;border-radius:14px">
+      ${r.hazards.map((h, n) => `<div class="hz"><i style="background:${colour[h.risk]}">${n + 1}</i><div><b>${esc(h.label)}</b> <span class="chip">${icon[h.kind] || h.kind}</span><br><span class="muted">${esc(h.why)}</span><br><span>Fix: ${esc(h.fix)}</span></div></div>`).join("")}`;
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "room", title: `Room check: ${r.hazards.length} things to sort`, note: r.hazards.slice(0, 5).map((h) => h.label).join(", "), image: pic, pet: name, extra: { hazards: r.hazards.map((h) => ({ label: h.label, kind: h.kind, risk: h.risk, fix: h.fix })) } }) }).catch(() => {});
+  } catch (e) { $o.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
+}
+
+// The pet cam keeps a diary of his day, cheaply. Movement is spotted here for free (tiny frames compared second
+// by second). Only when the picture has been still for two minutes does it ask the AI what he's doing, once; that
+// pose covers the whole still spell, logged when he gets up. Flops and big stretches are kept as moments with a
+// photo (at most one an hour); chewing something that isn't food is logged as a warning straight away.
+function watchActivity(v, c, g, view, status) {
+  const tiny = document.createElement("canvas"); tiny.width = tiny.height = 48;
+  const tg = tiny.getContext("2d", { willReadFrequently: true });
+  const p = me.pets[0];
+  let prev = null, lastMove = Date.now(), moveRun = 0, seg = null, asking = false, activeMs = 0, activeFrom = Date.now(), lastTick = Date.now(), lastMoment = 0;
+  const post = (b) => hub("/diary", { method: "POST", body: JSON.stringify({ pet: p.name, ...b }) }).catch(() => {});
+  const snap = () => {
+    const s = Math.min(v.videoWidth, v.videoHeight), vw = view(), cs = s / vw.z;
+    g.drawImage(v, (v.videoWidth - s) / 2 + vw.x * s - cs / 2, (v.videoHeight - s) / 2 + vw.y * s - cs / 2, cs, cs, 0, 0, 480, 480);
+    return c.toDataURL("image/jpeg", 0.8);
+  };
+  const close = (to) => {
+    const mins = (to - seg.from) / 60e3;
+    if (seg.pose && mins >= 2) post({ kind: "pose", title: FSActivity.WORD[seg.pose] || seg.pose, extra: { pose: seg.pose, mins: Math.round(mins), from: seg.from, to } });
+    seg = null;
+  };
+  async function ask(from) {
+    asking = true;
+    try {
+      const image = snap();
+      const r = await api("/api/pose", { image });
+      seg = { pose: r.visible && r.pose !== "other" ? r.pose : null, from };
+      status(r.visible ? `${r.caption || FSActivity.WORD[r.pose]}` : `Still, but ${p.name} isn't in view`);
+      if (r.visible && (r.pose === "flop" || r.pose === "stretched") && Date.now() - lastMoment > 3600e3) {
+        lastMoment = Date.now();
+        post({ kind: "moment", title: r.caption || `${p.name} is ${r.pose === "flop" ? "having a big flop" : "stretched out and comfy"}`, image, extra: { pose: r.pose } });
+      }
+      if (r.visible && r.pose === "chewing") post({ kind: "warning", title: `Chewing ${r.chewing_what || "something"}`, note: `The pet cam saw ${p.name} chewing ${r.chewing_what || "something that isn't food"}.`, verdict: "caution", image });
+    } catch (e) { seg = { pose: null, from }; }
+    asking = false;
+  }
+  return setInterval(() => {
+    if (!v.videoWidth) return;
+    tg.drawImage(v, 0, 0, 48, 48);
+    const d = tg.getImageData(0, 0, 48, 48).data;
+    let diff = 0;
+    if (prev) for (let i = 0; i < d.length; i += 4) diff += Math.abs(d[i] + d[i + 1] + d[i + 2] - prev[i] - prev[i + 1] - prev[i + 2]) / 3;
+    prev = d.slice();
+    const now = Date.now(), dt = now - lastTick, moving = diff / (48 * 48) > 4;
+    lastTick = now;
+    if (moving) { moveRun++; activeMs += dt; } else moveRun = 0;
+    if (moveRun >= 3) { if (seg) close(lastMove); lastMove = now; status(`${p.name} is on the move`); }
+    else if (moving) lastMove = now;
+    if (!seg && !asking && now - lastMove > 120e3) ask(lastMove);
+    if (seg && now - seg.from > 45 * 60e3) { const from = now; close(now); ask(from); }   // a long rest: look again
+    if (now - activeFrom > 30 * 60e3) { if (activeMs > 60e3) post({ kind: "active", title: "On the move", extra: { mins: Math.round(activeMs / 60e3) } }); activeMs = 0; activeFrom = now; }
+  }, 1000);
 }
 
 render();

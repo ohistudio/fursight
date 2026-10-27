@@ -106,7 +106,7 @@ export class Household {
     if ((mm = p.match(/^\/pets\/([A-Za-z0-9-]{1,40})$/)) && m === "PUT") {
       const b = await req.json().catch(() => ({}));
       const pet = {};
-      for (const k of ["name", "species", "breed", "sex", "notes", "colour", "age"]) if (b[k] != null) pet[k] = String(b[k]).slice(0, k === "notes" ? 600 : 80);
+      for (const k of ["name", "species", "breed", "sex", "notes", "colour", "age", "nicknames"]) if (b[k] != null) pet[k] = String(b[k]).slice(0, k === "notes" ? 600 : 80);
       if (b.care && typeof b.care === "object") pet.care = JSON.parse(JSON.stringify(b.care).slice(0, 12000));
       const old = this.one("SELECT data FROM pets WHERE id = ?", mm[1]);
       const merged = { ...(old ? JSON.parse(old.data) : {}), ...pet };
