@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FurSight Labeller</title>
+<style>
+  :root { --ink:#2B2A33; --muted:#6B6977; --line:#E4E1EA; --page:#F6F5F9; --card:#fff; --grape:#9B6CF0; --grape-lip:#7A4ED1; --fern:#3DBE6B; --fern-lip:#2A9A52; --sun:#FFB627; --coral:#FF4D5E; --sky:#2FA8F5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 800 15px system-ui, -apple-system, sans-serif; }
+  header { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding: 14px 18px; background: var(--card); border-bottom: 2px solid var(--line); position: sticky; top: 0; z-index: 2; }
+  h1 { font-size: 20px; margin: 0; font-weight: 900; }
+  .refs { display: flex; gap: 8px; } .refs figure { margin: 0; text-align: center; font-size: 11px; color: var(--muted); } .refs img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; display: block; }
+  .bar { flex: 1; min-width: 160px; } .bar div { height: 10px; background: var(--line); border-radius: 6px; overflow: hidden; } .bar i { display: block; height: 100%; background: var(--fern); }
+  .bar small { color: var(--muted); }
+  button, select { font: inherit; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--ink); padding: 8px 12px; cursor: pointer; box-shadow: 0 3px 0 var(--line); }
+  button:active { transform: translateY(2px); box-shadow: none; }
+  button.go { background: var(--grape); color: #fff; border-color: var(--grape); box-shadow: 0 3px 0 var(--grape-lip); }
+  main { display: grid; grid-template-columns: minmax(280px, 1fr) 380px; gap: 18px; padding: 18px; max-width: 1100px; margin: 0 auto; }
+  .photo { background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 12px; display: grid; place-items: center; min-height: 420px; position: relative; }
+  .photo img { max-width: 100%; max-height: 70vh; border-radius: 12px; }
+  .photo .meta { position: absolute; left: 14px; bottom: 10px; font-size: 12px; color: var(--muted); }
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 14px; }
+  .card h3 { margin: 0 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .opt { text-align: left; display: flex; justify-content: space-between; align-items: center; }
+  .opt kbd { font: 800 11px ui-monospace, monospace; color: var(--muted); border: 1.5px solid var(--line); border-radius: 6px; padding: 1px 5px; }
+  .opt.on { background: var(--grape); color: #fff; border-color: var(--grape); box-shadow: 0 3px 0 var(--grape-lip); } .opt.on kbd { color: #fff; border-color: #fff8; }
+  .opt.act.on { background: var(--sky); border-color: var(--sky); box-shadow: 0 3px 0 #1E86C9; }
+  .opt.him.on { background: var(--fern); border-color: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); }
+  .spark { font-size: 13px; color: var(--muted); } .spark b { color: var(--ink); }
+  .nav { display: flex; gap: 8px; } .nav button { flex: 1; }
+  .save { background: var(--fern); color: #fff; border-color: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); font-size: 17px; padding: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 18px; max-width: 1100px; margin: 0 auto; }
+  .grid figure { margin: 0; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 6px; cursor: pointer; font-size: 11px; color: var(--muted); }
+  .grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 4px; }
+  .grid figure.done { border-color: var(--fern); }
+  .hidden { display: none !important; }
+  .help { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+</style></head>
+<body>
+<header>
+  <h1>FurSight Labeller</h1>
+  <div class="refs" id="refs"></div>
+  <div class="bar"><div><i id="fill"></i></div><small id="count"></small></div>
+  <select id="filter"></select>
+  <button id="view">Grid</button>
+  <button class="go" id="ask">Ask Spark to suggest</button>
+</header>
+<main id="one">
+  <div class="photo"><img id="img" alt=""><div class="meta" id="meta"></div></div>
+  <div class="side">
+    <div class="card"><h3>Spark suggests</h3><div class="spark" id="spark"></div></div>
+    <div class="card"><h3>Posture</h3><div class="opts" id="postures"></div></div>
+    <div class="card"><h3>Doing (any)</h3><div class="opts" id="acts"></div></div>
+    <div class="card"><h3>Who</h3><div class="opts"><button class="opt him" id="him">Xiaosi <kbd>H</kbd></button><button class="opt" id="other">Another rabbit <kbd>O</kbd></button></div></div>
+    <button class="save" id="save">Save and next ⏎</button>
+    <div class="nav"><button id="prev">← Back</button><button id="next">Skip →</button></div>
+    <p class="help">Spark's guess is filled in. Fix anything wrong, then Enter. Numbers pick the posture, letters toggle what he's doing.</p>
+  </div>
+</main>
+<div class="grid hidden" id="grid"></div>
+<script>
+let S, list = [], at = 0, cur = null;
+const $ = (id) => document.getElementById(id);
+const KEYS = { loaf: "1", sitting: "2", stretched: "3", flop: "4", upright: "5", hopping: "6", "not visible": "7" };
+const AKEYS = { eating: "E", drinking: "D", grooming: "G", chewing: "C", yawning: "Y" };
+const NAME = { loaf: "Loaf", sitting: "Sitting", stretched: "Stretched", flop: "Flop", upright: "Upright", hopping: "Hopping", "not visible": "Can't see" };
+
+async function load() {
+  S = await (await fetch("/api/state")).json();
+  $("refs").innerHTML = S.refs.map((r) => `<figure><img src="/crops/${r.id}.jpg"><span>${NAME[r.posture]}</span></figure>`).join("");
+  $("postures").innerHTML = S.POSTURES.map((p) => `<button class="opt" data-p="${p}">${NAME[p]} <kbd>${KEYS[p]}</kbd></button>`).join("");
+  $("acts").innerHTML = S.ACTIVITIES.map((a) => `<button class="opt act" data-a="${a}">${a[0].toUpperCase() + a.slice(1)} <kbd>${AKEYS[a]}</kbd></button>`).join("");
+  for (const b of document.querySelectorAll("[data-p]")) b.onclick = () => { cur.posture = b.dataset.p; paint(); };
+  for (const b of document.querySelectorAll("[data-a]")) b.onclick = () => toggle(b.dataset.a);
+  const f = [["todo", "To review"], ["all", "All"], ["unsure", "Spark unsure"], ["other", "Not Xiaosi"], ...S.POSTURES.map((p) => ["p:" + p, "Labelled " + NAME[p]]), ...S.ACTIVITIES.map((a) => ["a:" + a, "Labelled " + a])];
+  $("filter").innerHTML = f.map(([k, w]) => `<option value="${k}">${w}</option>`).join("");
+  $("filter").onchange = () => { pick(); show(); };
+  pick(); show(); progress();
+}
+const L = (id) => S.labels[id] || {};
+function pick() {
+  const k = $("filter").value;
+  list = S.items.filter((i) => { const l = L(i.id);
+    if (k === "todo") return !l.reviewed;
+    if (k === "unsure") return l.spark && l.spark.sure !== "high" && !l.reviewed;
+    if (k === "other") return l.reviewed ? !l.him : l.spark && !l.spark.is_xiaosi;
+    if (k.startsWith("p:")) return l.reviewed && l.posture === k.slice(2);
+    if (k.startsWith("a:")) return l.reviewed && (l.activity || []).includes(k.slice(2));
+    return true; });
+  at = 0;
+}
+function show() {
+  if ($("grid").classList.contains("hidden")) one(); else grid();
+}
+function one() {
+  const it = list[at];
+  if (!it) { $("img").removeAttribute("src"); $("meta").textContent = "Nothing here. Try another filter."; $("spark").textContent = ""; cur = null; return; }
+  const l = L(it.id), sp = l.spark;
+  // start from what you saved, else Spark's guess
+  cur = { id: it.id, posture: l.posture || (sp && sp.posture) || null, activity: [...(l.activity || (sp && sp.activity) || [])], him: l.reviewed ? !!l.him : sp ? !!sp.is_xiaosi : true };
+  $("img").src = `/crops/${it.id}.jpg`;
+  $("meta").textContent = `${at + 1} of ${list.length} · ${it.photo} · ${it.split}${l.reviewed ? " · saved" : ""}`;
+  $("spark").innerHTML = sp ? `<b>${NAME[sp.posture]}</b>${sp.activity.length ? ", " + sp.activity.join(", ") : ""} · ${sp.is_xiaosi ? "looks like Xiaosi" : "another rabbit"} · ${sp.sure} confidence` : "Not asked yet.";
+  paint();
+}
+function paint() {
+  if (!cur) return;
+  for (const b of document.querySelectorAll("[data-p]")) b.classList.toggle("on", b.dataset.p === cur.posture);
+  for (const b of document.querySelectorAll("[data-a]")) b.classList.toggle("on", cur.activity.includes(b.dataset.a));
+  $("him").classList.toggle("on", cur.him); $("other").classList.toggle("on", !cur.him);
+}
+function toggle(a) { const i = cur.activity.indexOf(a); i < 0 ? cur.activity.push(a) : cur.activity.splice(i, 1); paint(); }
+async function saveNext() {
+  if (!cur || !cur.posture) return;
+  await fetch("/api/label", { method: "POST", body: JSON.stringify(cur) });
+  S.labels[cur.id] = { ...L(cur.id), posture: cur.posture, activity: cur.activity, him: cur.him, reviewed: Date.now() };
+  progress();
+  if ($("filter").value === "todo") { list.splice(at, 1); if (at >= list.length) at = Math.max(0, list.length - 1); } else at = Math.min(list.length - 1, at + 1);
+  one();
+}
+function grid() {
+  $("grid").innerHTML = list.map((it, i) => { const l = L(it.id), p = l.posture || (l.spark && l.spark.posture);
+    return `<figure class="${l.reviewed ? "done" : ""}" data-i="${i}"><img loading="lazy" src="/crops/${it.id}.jpg"><span>${p ? NAME[p] : "?"}${(l.activity || (l.spark && l.spark.activity) || []).map((a) => " · " + a).join("")}</span></figure>`; }).join("");
+  for (const f of $("grid").querySelectorAll("figure")) f.onclick = () => { at = +f.dataset.i; $("view").click(); };
+}
+function progress() {
+  const done = S.items.filter((i) => L(i.id).reviewed).length, sp = S.items.filter((i) => L(i.id).spark).length;
+  $("fill").style.width = (100 * done / S.items.length) + "%";
+  $("count").textContent = `${done} of ${S.items.length} reviewed · ${sp} suggested by Spark`;
+}
+$("view").onclick = () => { const g = $("grid").classList.toggle("hidden"); $("one").classList.toggle("hidden", !g); $("view").textContent = g ? "Grid" : "One at a time"; show(); };
+$("save").onclick = saveNext;
+$("next").onclick = () => { at = Math.min(list.length - 1, at + 1); one(); };
+$("prev").onclick = () => { at = Math.max(0, at - 1); one(); };
+$("him").onclick = () => { cur.him = true; paint(); };
+$("other").onclick = () => { cur.him = false; paint(); };
+$("ask").onclick = async () => {
+  await fetch("/api/suggest", { method: "POST" });
+  const t = setInterval(async () => {
+    const p = await (await fetch("/api/progress")).json();
+    $("ask").textContent = p.job.running ? `Spark: ${p.job.done} of ${p.job.total}` : "Ask Spark to suggest";
+    if (!p.job.running) { clearInterval(t); const st = await (await fetch("/api/state")).json(); S.labels = st.labels; progress(); show(); }
+  }, 1500);
+};
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "SELECT" || !cur || $("one").classList.contains("hidden")) return;
+  const k = e.key.toUpperCase();
+  const p = Object.keys(KEYS).find((x) => KEYS[x] === e.key); if (p) { cur.posture = p; return paint(); }
+  const a = Object.keys(AKEYS).find((x) => AKEYS[x] === k); if (a) return toggle(a);
+  if (k === "H") { cur.him = true; return paint(); } if (k === "O") { cur.him = false; return paint(); }
+  if (e.key === "Enter") return saveNext();
+  if (e.key === "ArrowRight") return $("next").click(); if (e.key === "ArrowLeft") return $("prev").click();
+});
+load();
+</script>
+</body></html>
