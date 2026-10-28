@@ -84,6 +84,7 @@
     <div class="row" style="justify-content:space-between;align-items:flex-end"><div class="name" id="pet">Your pet</div><div id="todayBean" style="flex:none;margin:0 4px -8px 0"></div></div>
     <div id="alert"></div>
     <div class="stats"><div class="stat"><b id="nChecks">0</b><span>checks</span></div><div class="stat"><b id="nPhotos">0</b><span id="lPhotos">photos</span></div><div class="stat"><b id="nAsks">0</b><span id="lAsks">questions</span></div></div>
+    <div class="sub" id="seen" style="margin-top:6px"></div>
     <div id="latest"></div>
   </div>
   <!-- pet cam -->
@@ -189,6 +190,9 @@ function render() {
   $("lPhotos").textContent = rest !== null ? "flops" : "photos";
   $("nAsks").textContent = rest !== null ? FSActivity.time(rest).replace(" min", "m").replace(" h ", "h") : today.filter((e) => e.kind === "ask").length;
   $("lAsks").textContent = rest !== null ? "resting" : "questions";
+  // honest about what the cams saw; treats you told FurSight about ("I gave him some apple")
+  const tr = activity ? activity.treats.today.length : 0;
+  $("seen").textContent = rest !== null ? `Seen ${FSActivity.time(activity.today.seen)} · not seen ${FSActivity.time(activity.today.unseen)}${tr ? ` · ${tr} treat${tr === 1 ? "" : "s"}` : ""}` : "";
   // a new flop or big stretch: say it, once
   const mo = activity && activity.moment;
   if (mo && store.get("fs.spokenMoment") !== mo.id && Date.now() - mo.at < 30 * 60e3) { store.set("fs.spokenMoment", mo.id); say(mo.title); }

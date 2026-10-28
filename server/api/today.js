@@ -23,7 +23,7 @@ module.exports = handler(async (body, req) => {
     alerts: today.filter((e) => e.kind !== "food" && (["toxic", "vet"].includes(e.verdict) || e.kind === "warning" || e.kind === "alert")).slice(0, 4).map(pick),
     tray: tray.status === "none" ? null : { status: tray.status, reasons: tray.reasons, today: tray.today, usual: tray.usual, weights: tray.week.map((d) => d.weight_g), simulated: tray.simulated },
     climate: (() => { const c = FSClimate.summary(all); return c.now ? { t: c.now.t, h: c.now.h, status: c.status, reasons: c.reasons, min: c.today.min, max: c.today.max, simulated: c.simulated } : null; })(),
-    activity: activity.has ? { today: activity.today, week: activity.week, simulated: activity.simulated } : null,
+    activity: activity.has ? { today: activity.today, week: activity.week, treats: activity.treats, simulated: activity.simulated } : null,
     moment: pick(activity.moment),
     due: FSRoutine.list(all).filter((r) => r.days <= 1).map((r) => ({ id: r.id, title: r.title, when: FSRoutine.when(r), days: r.days })),
     coming: FSCal.upcoming(all, 30).slice(0, 3),

@@ -75,11 +75,11 @@ async function build() {
 
   if (a.has && a.week.loaf > 0) {
     const perDay = a.week.loaf / 7;
-    S.push({ bg: COLOURS[1], html: `<div class="k rise">Professional loafer</div><h1 class="rise">${esc(nick || name)} loafed for</h1><div class="big rise" data-count="${Math.round(a.week.loaf)}" data-fmt="hm">0</div><p class="rise">That's about ${FSActivity.time(perDay)} a day, tucked up like a bread roll.</p>` });
+    S.push({ bg: COLOURS[1], html: `<div class="k rise">Professional loafer</div><h1 class="rise">${esc(nick || name)} loafed for</h1><div class="big rise" data-count="${Math.round(a.week.loaf)}" data-fmt="hm">0</div><p class="rise">That's about ${FSActivity.time(perDay)} a day, tucked up like a bread roll.</p><p class="rise" style="opacity:.75;font-size:14px">Out of the ${FSActivity.time(a.week.seen)} the cams saw him. The rest stays his secret.</p>` });
   }
   if (a.has && a.week.flops > 0) {
     const best = days.reduce((m, d) => (d.flops > m.flops ? d : m), days[0]);
-    S.push({ bg: COLOURS[4], html: `<div class="k rise">Flop count</div><div class="big rise" data-count="${a.week.flops}">0</div><h1 class="rise">flops this week</h1><p class="rise">${best.flops ? `His floppiest day was ${dayName(best.date)}, with ${best.flops}. A flop means he feels completely safe.` : "A flop means he feels completely safe."}</p>` });
+    S.push({ bg: COLOURS[4], html: `<div class="k rise">Flop count</div><div class="big rise" data-count="${a.week.flops}">0</div><h1 class="rise">flops this week</h1>${a.week.flopsYou ? `<p class="rise" style="opacity:.75;font-size:14px">${a.week.flopsYou} spotted by you</p>` : ""}<p class="rise">${best.flops ? `His floppiest day was ${dayName(best.date)}, with ${best.flops}. A flop means he feels completely safe.` : "A flop means he feels completely safe."}</p>` });
   }
   const moment = week.find((e) => e.kind === "moment" && e.has_image);
   if (moment) S.push({ bg: COLOURS[5], html: `<div class="k rise">Moment of the week</div><img class="sticker pop" src="${img(`/diary/${moment.id}/image`)}" alt=""><h1 class="rise" style="text-align:center">${esc(moment.title)}</h1>`, cls: "center" });

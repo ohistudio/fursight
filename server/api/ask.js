@@ -152,15 +152,15 @@ module.exports = handler(async (body, req) => {
     },
   };
   if (ctx) tools.check_activity = {
-    description: `What ${p.name} has been doing, from the pet cam: minutes loafing, stretched out, flopped, eating, grooming and on the move, today and this week; flops; the latest moment; and any warnings (chewing things that aren't food). A relaxed rabbit loafs, stretches and flops; an unwell one sits hunched and still. Use it for "how's he been", mood, energy and behaviour.`,
+    description: `What ${p.name} has been doing, from the pet cam: minutes loafing, stretched out, flopped, eating, grooming and on the move, today and this week; flops; the latest moment; and any warnings (chewing things that aren't food). A relaxed rabbit loafs, stretches and flops; an unwell one sits hunched and still. Use it for "how's he been", mood, energy and behaviour. The cams only see part of the day: seen and unseen are minutes, and you must never describe the unseen time, only say it wasn't seen. flopsYou are flops the owner saw and added; treats are what the owner says they gave.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
     async run() {
       const all = await recent(home.token, 200).catch(() => []), a = FSActivity.summary(all);
       const warnings = all.filter((e) => e.kind === "warning" && e.at > Date.now() - 3 * 864e5).slice(0, 5).map((e) => ({ when: new Date(e.at).toISOString().slice(0, 16), what: e.title }));
       if (!a.has && !warnings.length) return { output: { error: "No pet cam activity yet: a pet cam needs to be watching him." }, step: { tool: "activity", label: "No pet cam activity yet" } };
       seen.set("activity", { kind: "activity" });
-      return { output: { id: "activity", today_minutes: a.today, week_minutes: a.week, latest_moment: a.moment ? { when: new Date(a.moment.at).toISOString().slice(0, 16), what: a.moment.title } : null, warnings, simulated: a.simulated },
-        step: { tool: "activity", label: `Checked his day: ${a.today.flops} flop${a.today.flops === 1 ? "" : "s"}, ${FSActivity.time(a.today.loaf + a.today.stretched + a.today.flop)} resting, ${FSActivity.time(a.today.active)} on the move` } };
+      return { output: { id: "activity", today_minutes: a.today, week_minutes: a.week, treats_added_by_owner: a.treats, latest_moment: a.moment ? { when: new Date(a.moment.at).toISOString().slice(0, 16), what: a.moment.title } : null, warnings, simulated: a.simulated },
+        step: { tool: "activity", label: `Checked his day: ${a.today.flops} flop${a.today.flops === 1 ? "" : "s"}, ${FSActivity.time(a.today.loaf + a.today.stretched + a.today.flop)} resting, ${FSActivity.time(a.today.active)} on the move, ${FSActivity.time(a.today.unseen)} not seen` } };
     },
   };
   if (ctx) tools.read_calendar = {
@@ -203,8 +203,20 @@ module.exports = handler(async (body, req) => {
       return { output: { id: "reminder", saved: true, date, repeat }, step: { tool: "calendar", label: `Added a reminder: ${t}, ${FSCal.day(date).toDateString().slice(0, 10)}${repeat !== "none" ? ", " + FSCal.REPEATS[repeat].toLowerCase() : ""}` } };
     },
   };
+  if (ctx) tools.add_to_diary = {
+    description: `Add something the cams missed, only when the owner tells you it happened: a treat or greens they gave him (item and amount), a flop, loaf or zoomies they saw, good droppings, or a short note. Not for questions ("can he have apple?" is a question, not a treat).`,
+    parameters: { type: "object", properties: { what: { type: "string", enum: Object.keys(FSActivity.LOG) }, item: { type: "string", description: "for a treat, greens or note: what, in a few words" }, amount: { type: "string", enum: ["tiny", "small", "handful", ""] } }, required: ["what", "item", "amount"], additionalProperties: false },
+    async run({ what, item, amount }) {
+      const ent = FSActivity.entry({ name: p.name, care: ctx.pet && ctx.pet.care }, what, text(item, 60), amount);
+      if (!ent) return { output: { error: "Say what it was." } };
+      const e = await addDiary(home.token, ent);
+      if (!e) return { output: { error: "Couldn't save it." } };
+      seen.set("log", { kind: "log", what: ent.title });
+      return { output: { id: "log", saved: true, title: ent.title, on_never_list: ent.verdict ? ent.note : null }, step: { tool: "diary", label: `Added to the diary: ${ent.title}`, detail: ent.verdict ? ent.note : undefined } };
+    },
+  };
   if (ctx) tools.read_diary = {
-    description: `Read ${p.name}'s diary: food checks, questions, photos, daily care ticks and notes from every device. "food" entries are foods the owner CHECKED, not things ${p.name} ate.`,
+    description: `Read ${p.name}'s diary: food checks, questions, photos, daily care ticks, things the owner added, and notes from every device. "food" entries are foods the owner CHECKED, not things ${p.name} ate. "log" entries are things the owner says happened (a treat they gave, a flop they saw).`,
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;

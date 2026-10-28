@@ -6,6 +6,7 @@
 //
 // Pass a device token from the real household to copy Xiaosi's photo across (for his cards and the moment).
 // Prints a link that opens the web app signed in to the demo household.
+const FSActivity = require("../public/activity.js");
 const HUB = "https://fursight-cam.wibble-crossplay.workers.dev/hub";
 const WEB = process.env.WEB || "http://localhost:3030";
 
@@ -121,6 +122,13 @@ async function photo(from) {
     { kind: "toy", name: "Willow ball", why: "Safe to chew and fun to toss.", safety: "Untreated willow only.", tip: "Stuff it with hay." },
     { kind: "toy", name: "Dig box", why: "Netherland Dwarfs love to dig.", safety: "Use shredded paper, no ink.", tip: "Hide a coriander leaf inside." },
     { kind: "treat", name: "Timothy hay cubes", why: "Good for his teeth and gut.", safety: "Plain, no added sugar.", tip: "One or two a day." }] } });
+
+  // what the owner added: the cams don't see everything
+  for (const [d, h, what, item, amount] of [[6, 18, "treat", "slice of apple", "small"], [4, 19, "greens", "coriander", "handful"], [3, 20, "flop", "", ""], [2, 18, "treat", "dried hay cube", "tiny"], [1, 21, "zoomies", "", ""], [1, 19, "treat", "slice of banana", "tiny"]]) {
+    const ent = FSActivity.entry({ name: NAME, care: CARE }, what, item, amount);
+    await go({ ...ent, at: at(d, h) });
+  }
+  if (hr > 1) await go({ ...FSActivity.entry({ name: NAME, care: CARE }, "greens", "coriander", "small"), at: at(0, hr - 0.5) });
 
   console.log(`Demo household ready: ${n} mock entries${pic ? ", with his photo" : ""}.`);
   console.log(`Open it:  ${WEB}/#t=${token}`);

@@ -7,6 +7,7 @@ struct TodayView: View {
     @State private var error: String?
     @State private var loading = true
     @State private var wrapped = false
+    @State private var logging = false
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,7 @@ struct TodayView: View {
                         .padding(.top, 14).padding(.trailing, 6)
                 }
             }
+            .sheet(isPresented: $logging) { LogView(pet: data.obj("pet")?.str("name") ?? "him") { Task { await load() } }.presentationDetents([.medium, .large]) }
             .onReceive(NotificationCenter.default.publisher(for: .fursightRefresh)) { _ in Task { await load() } }
         }
     }
@@ -133,6 +135,17 @@ struct TodayView: View {
                 stat(hm(today.num("loaf")), "loafing", "\(hm(week.num("loaf"))) this week")
                 stat(hm(today.num("active")), "on the move", "\(hm(week.num("active"))) this week")
             }
+            // the cams only see part of the day, and say so
+            HStack(spacing: 6) {
+                Image(systemName: "eye.slash").foregroundStyle(Color.muted)
+                Text("Not seen today: \(hm(today.num("unseen")))").font(.nunito(13)).foregroundStyle(Color.muted)
+                if today.num("flopsYou") > 0 { Text("· \(Int(today.num("flopsYou"))) flop\(today.num("flopsYou") == 1 ? "" : "s") added by you").font(.nunito(13)).foregroundStyle(Color.muted) }
+            }
+            if let treats = a.obj("treats")?["today"] as? [[String: Any]], !treats.isEmpty {
+                Text("Treats today: " + treats.map { $0.str("item") + ($0.str("amount").isEmpty ? "" : " (\($0.str("amount")))") }.joined(separator: ", ")).font(.nunito(14, black: false))
+            }
+            Button { logging = true } label: { Label("Add what the cams missed", systemImage: "plus") }
+                .buttonStyle(ChunkyButton(color: .grape, lip: .grapeLip))
             if a["simulated"] as? Bool == true { Text("Includes simulated days").font(.nunito(12)).foregroundStyle(Color.muted) }
         }.card()
     }

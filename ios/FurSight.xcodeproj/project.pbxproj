@@ -20,6 +20,7 @@
 		A90D442809C72FD5A214EB63 /* FurSightApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */; };
 		C6D071D8B9CEC1D9897F1C93 /* Nunito-800.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8583F6F10EB8ECBC0C1DE059 /* Nunito-800.ttf */; };
 		D45FB92B4394ED0287C49098 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9D732289DF18D3692759629C /* OFL.txt */; };
+		E45CA93CADC60F9A9CD1EB09 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19D8F5344D2E39D85A054F5 /* LogView.swift */; };
 		F722484F4EB1777B6B56A855 /* Nunito-900.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 847362D05B546CE9AB660E15 /* Nunito-900.ttf */; };
 /* End PBXBuildFile section */
 
@@ -65,6 +66,7 @@
 		BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FurSightApp.swift; sourceTree = "<group>"; };
 		C6E81CC2719C38F24AF9BE30 /* FurSight.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FurSight.entitlements; sourceTree = "<group>"; };
 		E2196AD68290A9ADF9BC341E /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		F19D8F5344D2E39D85A054F5 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
 		F830D04ED96D187E6937789B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -88,6 +90,7 @@
 				C6E81CC2719C38F24AF9BE30 /* FurSight.entitlements */,
 				BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */,
 				F830D04ED96D187E6937789B /* Info.plist */,
+				F19D8F5344D2E39D85A054F5 /* LogView.swift */,
 				BB47E5313091B76D55BDF20E /* StatsView.swift */,
 				E2196AD68290A9ADF9BC341E /* Theme.swift */,
 				AE70F44C1F5C4BD30FF105FF /* TodayView.swift */,
@@ -227,6 +230,7 @@
 				1A98F18C9B87C94B4C7E1714 /* AskView.swift in Sources */,
 				8222348CBFA39D7C19274830 /* FoodView.swift in Sources */,
 				A90D442809C72FD5A214EB63 /* FurSightApp.swift in Sources */,
+				E45CA93CADC60F9A9CD1EB09 /* LogView.swift in Sources */,
 				4662C64B40BB6EB85C581A4B /* StatsView.swift in Sources */,
 				97DF3E8BAB08550B72856DDF /* Theme.swift in Sources */,
 				016CA0A3F04F3F32F685D12E /* TodayView.swift in Sources */,

@@ -117,7 +117,9 @@
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .tile { display: grid; gap: 2px; padding: 14px; } .tile b { font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; } .tile span { font-size: 13px; color: var(--muted); } .tile small { font-size: 12px; color: var(--muted); }
   .chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
-  .chart .ax { font: 800 10px Nunito, sans-serif; fill: var(--muted); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
+  .chart .ax { font: 800 10px Nunito, sans-serif; fill: var(--muted); } .chart .so { font-style: italic; }
+  table.act tr.unseen td { color: var(--muted); font-style: italic; }
+  #logForm .pick.on { background: var(--grape); color: #fff; border-color: var(--grape); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
   #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: #fff; font: 800 13px Nunito, sans-serif; padding: 6px 10px; border-radius: 10px; opacity: 0; transition: opacity .12s; max-width: 260px; }
   .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tstats b { display: block; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; } .tstats span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
@@ -247,7 +249,46 @@ const nicknames = (p) => String(p.nicknames || "").split(/[,;\n]/).map((s) => s.
 function header() {
   const p = me.pets[0];
   return `<div class="pet pop">${p.has_photo ? `<img src="${img(`/pets/${p.id}/photo`)}" alt="">` : `<div class="ph"></div>`}
-    <div><h1>${esc(p.name)}</h1><div class="chips">${[p.species, p.breed, p.sex].filter(Boolean).map((s) => `<span class="chip">${esc(cap(s))}</span>`).join("")}</div></div></div>`;
+    <div style="flex:1"><h1>${esc(p.name)}</h1><div class="chips">${[p.species, p.breed, p.sex].filter(Boolean).map((s) => `<span class="chip">${esc(cap(s))}</span>`).join("")}</div></div>
+    <button class="btn ghost small" onclick="editPet()" style="flex:none;width:auto;align-self:flex-start">Edit</button></div>`;
+}
+
+// change anything about him after he's set up: name, photo, details, nicknames, notes (the care plan stays)
+function editPet() {
+  stopCam();
+  const p = me.pets[0];
+  let photo = null;
+  $app.innerHTML = `<div class="stack pop">
+    <div class="row" style="justify-content:space-between"><h1>Edit ${esc(p.name)}</h1><button class="btn ghost small" id="back" style="flex:none;width:auto">Cancel</button></div>
+    <label class="card center" style="cursor:pointer;display:grid;justify-items:center">
+      <input type="file" accept="image/*" id="ephoto" class="hidden">
+      ${p.has_photo ? `<img id="epreview" src="${img(`/pets/${p.id}/photo`)}" style="width:140px;height:140px;object-fit:cover;border-radius:28px;margin:0 auto 10px">` : `<img id="epreview" class="hidden" style="width:140px;height:140px;object-fit:cover;border-radius:28px;margin:0 auto 10px">`}
+      <span class="btn sky small" style="pointer-events:none">Change photo</span></label>
+    <div class="card stack">
+      <div><label>Name</label><input id="ename" value="${esc(p.name)}" maxlength="40"></div>
+      <div class="row"><div><label>Species</label><input id="especies" value="${esc(p.species || "")}"></div><div><label>Breed</label><input id="ebreed" value="${esc(p.breed || "")}"></div></div>
+      <div class="row"><div><label>Sex</label><select id="esex">${["male", "female", "unknown"].map((s) => `<option ${s === p.sex ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+        <div><label>Age</label><input id="eage" value="${esc(p.age || "")}" placeholder="e.g. 2 years"></div></div>
+      <div><label>Colour</label><input id="ecolour" value="${esc(p.colour || "")}"></div>
+      <div><label>Nicknames</label><input id="enicks" value="${esc(p.nicknames || "")}" placeholder="e.g. Si Si, Little Loaf" maxlength="120"></div>
+      <div><label>Notes</label><textarea id="enotes">${esc(p.notes || "")}</textarea></div>
+    </div>
+    <button class="btn" id="esave">Save</button></div>`;
+  document.getElementById("back").onclick = () => render();
+  document.getElementById("ephoto").onchange = async (e) => {
+    if (!e.target.files[0]) return;
+    photo = await shrink(e.target.files[0]);
+    const pv = document.getElementById("epreview"); pv.src = photo; pv.classList.remove("hidden");
+  };
+  document.getElementById("esave").onclick = async (e) => {
+    const v = (id) => document.getElementById(id).value.trim();
+    if (!v("ename")) return document.getElementById("ename").focus();
+    e.target.disabled = true;
+    // same id, so his diary, calendar and stats all stay with him
+    try { await hub("/pets/" + p.id, { method: "PUT", body: JSON.stringify({ name: v("ename"), species: v("especies"), breed: v("ebreed"), sex: v("esex"), age: v("eage"), colour: v("ecolour"), nicknames: v("enicks"), notes: v("enotes"), ...(photo ? { photo } : {}) }) }); }
+    catch (err) { e.target.disabled = false; return toast(err.message); }
+    toast("Saved"); render();
+  };
 }
 
 function welcome() {
@@ -380,7 +421,7 @@ async function today() {
   $l.innerHTML = entries.map((e) => {
     const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
     const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
-    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
+    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
     if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
@@ -436,6 +477,7 @@ async function care() {
   routinesCard(entries, p);
   ideasCard(entries, p);
   document.getElementById("activity").innerHTML = activityCard(FSActivity.summary(entries), p);
+  logForm(p);
   const st = careState(entries, items);
   const left = items.filter((i) => !st.today.has(i)).length;
   document.getElementById("checklist").innerHTML = `<div class="card pop">
@@ -460,8 +502,42 @@ function activityCard(a, p) {
   return `<div class="card stack pop"><div class="row" style="justify-content:space-between"><h2>${esc(p.name)}'s day</h2><span class="chip" style="flex:none">${a.today.flops} flop${a.today.flops === 1 ? "" : "s"} today</span></div>
     ${a.moment ? `<div class="moment${a.moment.has_image ? "" : " noimg"}${a.moment.extra && a.moment.extra.sticker ? " sticker" : ""}">${a.moment.has_image ? `<img src="${img(`/diary/${a.moment.id}/image`)}" alt="">` : ""}<p><b>${esc(a.moment.title)}</b><br><span class="when">${new Date(a.moment.at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></p></div>` : ""}
     <table class="act"><tr><th></th><th>Today</th><th>This week</th></tr>
-      ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}</table>
+      ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}
+      <tr class="unseen"><td>Not seen</td><td>${FSActivity.time(a.today.unseen)}</td><td>${FSActivity.time(a.week.unseen)}</td></tr></table>
+    <p class="when">Only what the cams saw is counted. Not seen means out of view, another room, the cam off or the night: FurSight doesn't guess.${a.week.flopsYou ? ` ${a.week.flopsYou} flop${a.week.flopsYou === 1 ? "" : "s"} this week ${a.week.flopsYou === 1 ? "was" : "were"} added by you.` : ""}</p>
+    ${a.treats.today.length ? `<p class="muted"><b>Treats today:</b> ${a.treats.today.map((t) => esc(t.item + (t.amount ? ` (${t.amount})` : ""))).join(", ")}</p>` : ""}
+    <button class="btn ghost" id="logOpen">Add what the cams missed</button>
+    <div id="logForm" class="stack hidden">
+      <div class="chips">${Object.entries({ treat: "Treat", greens: "Greens", flop: "Flop", loaf: "Loaf", zoomies: "Zoomies", droppings: "Good droppings", note: "Note" }).map(([k, w]) => `<button class="chip pick" data-log="${k}">${w}</button>`).join("")}</div>
+      <input id="logItem" class="hidden" maxlength="60" placeholder="What? e.g. a slice of apple">
+      <select id="logAmount" class="hidden"><option value="tiny">A tiny bit</option><option value="small">A small piece</option><option value="handful">A handful</option></select>
+      <button class="btn" id="logSave" disabled>Add to his diary</button></div>
     ${a.simulated ? `<span class="chip" style="justify-self:start">Includes simulated days</span>` : ""}</div>`;
+}
+
+// the owner adds what the cams didn't see (through /api/log, which checks a treat against his never list)
+function logForm(p) {
+  const open = document.getElementById("logOpen");
+  if (!open) return;
+  const $f = document.getElementById("logForm"), $item = document.getElementById("logItem"), $amt = document.getElementById("logAmount"), $save = document.getElementById("logSave");
+  let what = null;
+  open.onclick = () => { $f.classList.toggle("hidden"); open.classList.add("hidden"); };
+  for (const b of $f.querySelectorAll("[data-log]")) b.onclick = () => {
+    what = b.dataset.log;
+    for (const o of $f.querySelectorAll("[data-log]")) o.classList.toggle("on", o === b);
+    $item.classList.toggle("hidden", !["treat", "greens", "note"].includes(what));
+    $amt.classList.toggle("hidden", !["treat", "greens"].includes(what));
+    $item.placeholder = what === "note" ? "What happened?" : what === "greens" ? "Which? e.g. coriander" : "What? e.g. a slice of apple";
+    $save.disabled = false;
+  };
+  $save.onclick = async () => {
+    if (["treat", "greens", "note"].includes(what) && !$item.value.trim()) return $item.focus();
+    $save.disabled = true;
+    let r;
+    try { r = await api("/api/log", { what, item: $item.value.trim(), amount: $amt.value }); } catch (e) { $save.disabled = false; return toast(e.message); }
+    toast(r.never ? "Careful: that's on his never list" : "Added. Thanks for filling the gap");
+    care();
+  };
 }
 
 // ---------------------------------------------------------------- ideas for him: treats, toys, enrichment (not adverts)
@@ -549,7 +625,13 @@ async function stats() {
     a.has ? [FSActivity.time(a.today.loaf), "loafing today", `${FSActivity.time(a.week.loaf)} this week`] : null,
     a.has ? [`${a.today.flops}`, "flops today", `${a.week.flops} this week`] : null,
     a.has ? [FSActivity.time(a.today.active), "on the move", `${FSActivity.time(a.week.active)} this week`] : null,
+    a.has ? [FSActivity.time(a.week.seen / 7), "seen a day", `${FSActivity.time(a.week.unseen / 7)} a day not seen`] : null,
+    a.treats.week ? [`${a.treats.week}`, "treats this week", "added by you"] : null,
   ].filter(Boolean);
+  // today isn't over: its bars are drawn faded, with a dashed outline of a usual day behind them
+  const isToday = (k) => k === FSCal.key(new Date());
+  const restOf = (d) => d.loaf + d.stretched + d.flop, pastRest = days.filter((d) => !isToday(d.date) && d.seen > 0);
+  const usualRest = pastRest.length ? pastRest.reduce((t, d) => t + restOf(d), 0) / pastRest.length : 0;
   const none = !tw.length && !a.has;
   document.getElementById("st").innerHTML = (none ? "" : `<a class="btn sky" href="/wrapped/" style="margin-bottom:14px">${esc(p.name)}'s week, wrapped</a>`) + (none ? `<div class="card center stack pop">${bean("idle", 90)}<h3>No stats yet</h3><p class="muted">Stats fill in from the litter tray and the pet cam. Link a FurSight Tray or set up a pet cam in Devices.</p></div>` : `<div class="stack">
     <div class="tiles">${tiles.map(([b, l, sub]) => `<div class="card tile pop"><b>${b}</b><span>${l}</span><small>${sub}</small></div>`).join("")}</div>
@@ -557,16 +639,18 @@ async function stats() {
       ${tray.simulated ? `<span class="when">Simulated tray</span>` : ""}</div>` : ""}
     ${a.has ? `<div class="card stack pop"><h3>Resting each day</h3>
       <div class="legend">${["loaf", "stretched", "flop"].map((k) => `<span><i style="background:${STAT_COL[k]}"></i>${FSActivity.WORD[k]}</span>`).join("")}</div>
-      ${stackChart(days.map((d) => ({ x: day(d.date), parts: ["loaf", "stretched", "flop"].map((k) => ({ k, v: d[k] })), tip: `${day(d.date)}: ${["loaf", "stretched", "flop"].map((k) => `${FSActivity.WORD[k]} ${FSActivity.time(d[k])}`).join(", ")}, ${d.flops} flop${d.flops === 1 ? "" : "s"}` })))}
+      ${stackChart(days.map((d) => ({ x: day(d.date), partial: isToday(d.date), ghost: isToday(d.date) ? usualRest : 0, parts: ["loaf", "stretched", "flop"].map((k) => ({ k, v: d[k] })), tip: `${day(d.date)}${isToday(d.date) ? " so far" : ""}: ${["loaf", "stretched", "flop"].map((k) => `${FSActivity.WORD[k]} ${FSActivity.time(d[k])}`).join(", ")}, ${d.flops} flop${d.flops === 1 ? "" : "s"}. Not seen ${FSActivity.time(d.unseen)}` })))}
+      <p class="when">Today is so far: the dashed outline is a usual day. Counts only the time the cams saw him, about ${FSActivity.time(a.week.seen / 7)} a day.</p>
       <details class="how"><summary>As a table</summary><table class="act"><tr><th></th>${days.map((d) => `<th>${day(d.date)}</th>`).join("")}</tr>
         ${["loaf", "stretched", "flop", "active"].map((k) => `<tr><td>${FSActivity.WORD[k]}</td>${days.map((d) => `<td>${Math.round(d[k])}</td>`).join("")}</tr>`).join("")}
-        <tr><td>Flops</td>${days.map((d) => `<td>${d.flops}</td>`).join("")}</tr></table><p class="when">Minutes</p></details>
+        <tr><td>Flops</td>${days.map((d) => `<td>${d.flops}</td>`).join("")}</tr>
+        <tr><td>Not seen</td>${days.map((d) => `<td>${Math.round(d.unseen)}</td>`).join("")}</tr></table><p class="when">Minutes</p></details>
       ${a.simulated ? `<span class="when">Includes simulated days</span>` : ""}</div>` : ""}
-    ${clim.now ? `<div class="card stack pop"><h3>Room temperature by his tray</h3>${rangeChart(clim.days.filter((d) => d.min !== null).map((d) => ({ x: day(d.date), lo: d.min, hi: d.max, tip: `${day(d.date)}: ${d.min.toFixed(1)} to ${d.max.toFixed(1)}°C` })))}
+    ${clim.now ? `<div class="card stack pop"><h3>Room temperature by his tray</h3>${rangeChart(clim.days.filter((d) => d.min !== null).map((d) => ({ x: day(d.date), partial: isToday(d.date), lo: d.min, hi: d.max, tip: `${day(d.date)}${isToday(d.date) ? " so far" : ""}: ${d.min.toFixed(1)} to ${d.max.toFixed(1)}°C` })))}
       <p class="when">Each bar runs from the day's coolest to warmest. The dashed line is 25°C, where it starts to get too warm for a rabbit.</p>${clim.simulated ? `<span class="when">Simulated readings</span>` : ""}</div>` : ""}
-    ${tray.week.length ? `<div class="card stack pop"><h3>Litter tray visits</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.visits, tip: `${day(d.date)}: ${d.visits} visits` })), "var(--grape-lip)")}</div>
-      <div class="card stack pop"><h3>Litter tray output</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.output_g, tip: `${day(d.date)}: ${d.output_g} g` })), "#B87700", "g")}
-      <p class="when">Today is so far. A drop in output is one of the earliest signs of gut trouble.</p></div>` : ""}
+    ${tray.week.length ? `<div class="card stack pop"><h3>Litter tray visits</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.visits, partial: isToday(d.date), ghost: isToday(d.date) && tray.usual ? tray.usual.visits_day : 0, tip: `${day(d.date)}${isToday(d.date) ? ` so far: ${d.visits} visits${tray.usual ? `, usually ${tray.usual.visits_day} a day` : ""}` : `: ${d.visits} visits`}` })), "var(--grape-lip)")}<p class="when">Today is so far: the dashed outline is a usual day.</p></div>
+      <div class="card stack pop"><h3>Litter tray output</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.output_g, partial: isToday(d.date), ghost: isToday(d.date) && tray.usual ? tray.usual.output_day : 0, tip: `${day(d.date)}${isToday(d.date) ? ` so far: ${d.output_g} g${tray.usual ? `, usually ${tray.usual.output_day} g a day` : ""}` : `: ${d.output_g} g`}` })), "#B87700", "g")}
+      <p class="when">Today is so far: the dashed outline is a usual day. A drop in output is one of the earliest signs of gut trouble.</p></div>` : ""}
   </div>`);
   tips(document.getElementById("st"));
 }
@@ -596,8 +680,16 @@ function lineChart(pts, { unit = "", colour = "var(--sky)" } = {}) {
     ${pts.map((p, i) => `<text x="${X(i)}" y="${CH - 6}" text-anchor="middle" class="ax">${p.x}</text>`).join("")}</svg>`;
 }
 function bars(items, max, draw) {
-  const bw = (CW - PL - 8) / items.length;
-  return items.map((it, i) => draw(it, PL + 4 + i * bw + 3, bw - 6, (v) => ((CH - PB - PT) * v) / max) + `<text x="${PL + 4 + i * bw + bw / 2}" y="${CH - 6}" text-anchor="middle" class="ax">${it.x}</text>`).join("");
+  const bw = (CW - PL - 8) / items.length, H = (v) => ((CH - PB - PT) * v) / max;
+  return items.map((it, i) => {
+    const x = PL + 4 + i * bw + 3, w = bw - 6, cx = PL + 4 + i * bw + bw / 2;
+    const label = `<text x="${cx}" y="${CH - 6}" text-anchor="middle" class="ax">${it.x}</text>`;
+    if (!it.partial) return draw(it, x, w, H) + label;
+    // a day still going: faded, a dashed outline of a usual day behind it, and "so far" on top
+    const val = it.parts ? it.parts.reduce((t, p) => t + p.v, 0) : it.y || 0, top = it.lo != null ? null : CH - PB - H(Math.max(val, it.ghost || 0));
+    const ghost = it.ghost > 0 ? `<rect x="${x + 0.75}" y="${CH - PB - H(it.ghost)}" width="${w - 1.5}" height="${H(it.ghost)}" rx="4" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="3 3"/>` : "";
+    return ghost + `<g opacity=".45">${draw(it, x, w, H)}</g>` + (top !== null ? `<text x="${cx}" y="${Math.max(PT - 2, top - 5)}" text-anchor="middle" class="ax so">so far</text>` : "") + label;
+  }).join("");
 }
 // a bar with its data end rounded (4px) and its base square on the axis
 const bar = (x, y, w, h, fill, round) => h <= 0 ? "" : round ? `<path d="M${x},${y + h}V${y + Math.min(4, h)}Q${x},${y} ${x + Math.min(4, w / 2)},${y}H${x + w - Math.min(4, w / 2)}Q${x + w},${y} ${x + w},${y + Math.min(4, h)}V${y + h}Z" fill="${fill}"/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`;
@@ -623,7 +715,7 @@ function rangeChart(items) {
   return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="Room temperature each day">${axis(max, min, "°C")}
     <line x1="${PL}" x2="${CW}" y1="${Y(25)}" y2="${Y(25)}" stroke="var(--coral)" stroke-width="1.5" stroke-dasharray="4 4"/>
     ${bars(items, 1, (it, x, w) => { const y1 = Y(it.hi), y2 = Y(it.lo), hot = it.hi >= 25;
-      return `<rect x="${x + w * 0.2}" y="${y1}" width="${w * 0.6}" height="${Math.max(4, y2 - y1)}" rx="4" fill="${hot ? "var(--coral)" : "var(--sky)"}"/><rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`; })}</svg>`;
+      return (it.partial ? `<text x="${x + w / 2}" y="${y1 - 5}" text-anchor="middle" class="ax so">so far</text>` : "") + `<rect x="${x + w * 0.2}" y="${y1}" width="${w * 0.6}" height="${Math.max(4, y2 - y1)}" rx="4" fill="${hot ? "var(--coral)" : "var(--sky)"}"/><rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`; })}</svg>`;
 }
 function tips(root) {
   let t = document.getElementById("tip");
@@ -701,6 +793,8 @@ function devices() {
     <div class="card stack pop"><h2>Link a device</h2><p class="muted">On the Quest, glasses or pet cam, FurSight shows a 4-letter code. Type it here.</p>
       <input id="code" class="codein" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="····">
       <button class="btn sky" id="claim" disabled>Link</button></div>
+    <div class="card stack pop"><h3>This device</h3><div><label for="dname">Name</label><input id="dname" maxlength="40" value="${esc((me.devices.find((d) => d.id === me.device) || {}).name || "")}"></div>
+      <button class="btn ghost" id="drename">Rename</button></div>
     <h3 style="margin:18px 4px 0">Linked</h3>
     ${me.devices.map((d) => `<div class="card row pop"><div><h3>${esc(d.name)}</h3><div class="when">${icon[d.kind] || cap(d.kind)}${d.id === me.device ? " · this one" : ""} · seen ${ago(d.seen)}</div></div>
       ${d.id === me.device ? "" : `<button class="btn ghost small" data-remove="${d.id}" style="flex:none">Remove</button>`}</div>`).join("")}
@@ -716,6 +810,13 @@ function devices() {
     catch (err) { toast(err.message); $b.disabled = false; }
   };
   for (const b of document.querySelectorAll("[data-remove]")) b.onclick = async () => { await hub("/devices/" + b.dataset.remove, { method: "DELETE" }); render(); };
+  document.getElementById("drename").onclick = async (e) => {
+    const name = document.getElementById("dname").value.trim();
+    if (!name) return;
+    e.target.disabled = true;
+    try { await hub("/devices/" + me.device, { method: "PUT", body: JSON.stringify({ name }) }); toast("Renamed"); render(); }
+    catch (err) { e.target.disabled = false; toast(/404|405|not found/i.test(err.message) ? "Renaming works once the hub is updated" : err.message); }
+  };
   document.getElementById("sethome").onclick = (e) => {
     if (!navigator.geolocation) return toast("This browser can't share location");
     e.target.disabled = true;
