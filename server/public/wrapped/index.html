@@ -51,7 +51,9 @@
 // Xiaosi's week, wrapped: his week as full-screen story slides, made only from what FurSight actually logged.
 // A slide with nothing behind it is left out. Opened from the web app and the iPhone app (signed in as that device).
 const HUB = "https://fursight-cam.wibble-crossplay.workers.dev";
-const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } } };
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const hashT = /^#t=(fs1\.[\w.-]+)$/.exec(location.hash);   // the demo link from scripts/demo.js
+if (hashT) { store.set("fs.token", hashT[1]); history.replaceState(null, "", location.pathname + location.search); }
 const token = store.get("fs.token") || store.get("fs.glassesToken");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const hub = (p) => fetch(HUB + "/hub" + p, { headers: { authorization: "Bearer " + token } }).then((r) => r.json());

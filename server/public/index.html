@@ -191,6 +191,9 @@ const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} },
 };
+// a link with #t=<token> signs this browser in (the demo household from scripts/demo.js); the fragment never reaches a server
+const hashT = /^#t=(fs1\.[\w.-]+)$/.exec(location.hash);
+if (hashT) { store.set("fs.token", hashT[1]); history.replaceState(null, "", location.pathname + location.search); }
 let token = store.get("fs.token"), me = null, tab = store.get("fs.tab") || "today";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
