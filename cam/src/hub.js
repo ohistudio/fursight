@@ -8,7 +8,7 @@
 //   PUT  /hub/pets/:id                    (token) {name, species, breed, sex, notes, care, photo?}  -> pet
 //   GET  /hub/pets/:id/photo              (token)                     -> image/jpeg
 //   POST /hub/diary                       (token) {kind, title, note, verdict?, image?, at?}        -> entry
-//   GET  /hub/diary?limit=&before=        (token)                     -> { entries }  (no images)
+//   GET  /hub/diary?limit=&before=&kinds= (token)                     -> { entries }  (no images; kinds = comma list)
 //   GET  /hub/diary/:id/image             (token)                     -> image/jpeg (or png)
 //   GET  /hub/i/:household/:id?e=&s=                                  -> the same picture, by an expiring signed link (notifications)
 //   PUT  /hub/cams/:channel               (token) {name}              -> cam      (a webcam registering itself)
@@ -168,7 +168,11 @@ export class Household {
     }
     if (p === "/diary" && m === "GET") {
       const limit = Math.min(200, Number(url.searchParams.get("limit")) || 50), before = Number(url.searchParams.get("before")) || 9e15;
-      const entries = this.all("SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? ORDER BY at DESC LIMIT ?", before, limit)
+      // ?kinds=record,photo: only those (uploads can be dated years back, past the latest 200)
+      const kinds = (url.searchParams.get("kinds") || "").split(",").filter((k) => /^[a-z-]{1,20}$/.test(k)).slice(0, 8);
+      const entries = (kinds.length
+        ? this.all(`SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? AND json_extract(data, '$.kind') IN (${kinds.map(() => "?").join(",")}) ORDER BY at DESC LIMIT ?`, before, ...kinds, limit)
+        : this.all("SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? ORDER BY at DESC LIMIT ?", before, limit))
         .map((r) => ({ id: r.id, at: r.at, ...JSON.parse(r.data), has_image: !!r.has_image }));
       return json({ entries });
     }

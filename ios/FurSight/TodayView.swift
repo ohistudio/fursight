@@ -8,6 +8,7 @@ struct TodayView: View {
     @State private var loading = true
     @State private var wrapped = false
     @State private var logging = false
+    @State private var uploading = false
 
     var body: some View {
         NavigationStack {
@@ -25,6 +26,9 @@ struct TodayView: View {
                     if let c = data.obj("climate") { room(c) }
                     if let a = data.obj("activity") { activity(a) }
                     if !data.arr("due").isEmpty || !data.arr("coming").isEmpty { upcoming }
+                    // old photos, videos and vet papers: the web app's upload page, which reads PDFs and videos
+                    Button { uploading = true } label: { Label("Add photos, videos or vet papers", systemImage: "doc.badge.plus") }
+                        .buttonStyle(ChunkyButton(color: .sky, lip: .skyLip))
                     if let r = data.obj("recap") { recap(r) }
                 }
                 .padding(16)
@@ -37,6 +41,13 @@ struct TodayView: View {
                     WebApp(url: URL(string: Config.server.absoluteString + "/wrapped/?app=1")!).ignoresSafeArea()
                     Button { wrapped = false } label: { Image(systemName: "xmark").font(.system(size: 20, weight: .black)).foregroundStyle(.white).frame(width: 52, height: 52) }
                         .padding(.top, 14).padding(.trailing, 6)
+                }
+            }
+            .sheet(isPresented: $uploading, onDismiss: { Task { await load() } }) {
+                NavigationStack {
+                    WebApp(url: URL(string: Config.server.absoluteString + "/#upload")!).ignoresSafeArea(edges: .bottom)
+                        .navigationTitle("Add to his record").navigationBarTitleDisplayMode(.inline)
+                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { uploading = false } } }
                 }
             }
             .sheet(isPresented: $logging) { LogView(pet: data.obj("pet")?.str("name") ?? "him") { Task { await load() } }.presentationDetents([.medium, .large]) }

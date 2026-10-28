@@ -123,6 +123,16 @@ async function photo(from) {
     { kind: "toy", name: "Dig box", why: "Netherland Dwarfs love to dig.", safety: "Use shredded paper, no ink.", tip: "Hide a coriander leaf inside." },
     { kind: "treat", name: "Timothy hay cubes", why: "Good for his teeth and gut.", safety: "Plain, no added sugar.", tip: "One or two a day." }] } });
 
+  // things uploaded from before FurSight: a vet record (as Muse Spark would read it) and an old photo
+  const y = now.getFullYear();
+  await go({ kind: "record", title: "Vet visit for mild gut stasis", at: new Date(y, 4, 14, 12).getTime(), verdict: "caution",
+    note: "A vet visit for reduced appetite and small droppings. The vet found mild gut stasis and prescribed motility medicine, pain relief and syringe feeding. An RHDV2 vaccine was given and a recheck is booked.",
+    extra: { uploaded: true, understood: true, file: "green-meadow-vets.pdf", pages: 1, record: { clinic: "Green Meadow Exotic Vets (mock)", reason: "Reduced appetite and small droppings for 24 hours", weight_g: 1060,
+      findings: ["Mild gut stasis", "Reduced gut sounds", "Teeth normal"], medications: [{ name: "Metoclopramide", dose: "0.2 ml by mouth twice daily", until: `${y}-05-19` }, { name: "Meloxicam", dose: "0.1 ml by mouth once daily", until: `${y}-05-19` }],
+      vaccinations: [{ name: "RHDV2", given: `${y}-05-14`, next_due: `${y + 1}-05-14` }, { name: "Myxo-RHD Plus", given: `${y - 1}-12-02`, next_due: `${y}-12-02` }], follow_up: { date: key(new Date(now.getTime() + 24 * D)), what: "Recheck weight and gut health" } } } });
+  await go({ kind: "photo", title: "First week home", at: new Date(y - 1, 8, 20, 12).getTime(), ...(pic ? { image: pic } : {}),
+    note: "Xiaosi sitting by his pen on the wooden floor, alert and settled. Nothing worrying visible.", extra: { uploaded: true, understood: true, file: "IMG_0412.jpg", seen: { doing: "Sitting by his pen", pose: "sitting", health_notes: [] } } });
+
   // what the owner added: the cams don't see everything
   for (const [d, h, what, item, amount] of [[6, 18, "treat", "slice of apple", "small"], [4, 19, "greens", "coriander", "handful"], [3, 20, "flop", "", ""], [2, 18, "treat", "dried hay cube", "tiny"], [1, 21, "zoomies", "", ""], [1, 19, "treat", "slice of banana", "tiny"]]) {
     const ent = FSActivity.entry({ name: NAME, care: CARE }, what, item, amount);

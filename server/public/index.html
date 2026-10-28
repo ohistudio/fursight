@@ -119,6 +119,9 @@
   .chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
   .chart .ax { font: 800 10px Nunito, sans-serif; fill: var(--muted); } .chart .so { font-style: italic; }
   table.act tr.unseen td { color: var(--muted); font-style: italic; }
+  .chip.pick.on { background: var(--grape); color: #fff; }
+  .upthumb { width: 72px; height: 72px; flex: none; border-radius: 14px; overflow: hidden; background: var(--line); }
+  .upthumb img { width: 100%; height: 100%; object-fit: cover; }
   #logForm .pick.on { background: var(--grape); color: #fff; border-color: var(--grape); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
   #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: #fff; font: 800 13px Nunito, sans-serif; padding: 6px 10px; border-radius: 10px; opacity: 0; transition: opacity .12s; max-width: 260px; }
   .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -239,6 +242,7 @@ async function render() {
   if (!me.pets.length) { $tabs.classList.add("hidden"); return addPet(); }
   $tabs.classList.remove("hidden");
   for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
+  if (location.hash === "#upload") return uploadPage();
   ({ today, care, calendar, stats, cam, devices })[tab]();
 }
 $tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.tab; store.set("fs.tab", tab); render(); });
@@ -406,22 +410,36 @@ async function makeRecap(btn) {
   } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Make this week's card"; document.getElementById("drawing")?.remove(); }
 }
 
+let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  $app.innerHTML = `<div class="stack">${header()}<a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+    <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
+    <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
+    <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
-  const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind)).slice(0, 80);
+  document.getElementById("upload").onclick = () => uploadPage();
+  for (const b of document.querySelectorAll("[data-show]")) b.onclick = () => { diaryShow = b.dataset.show; today(); };
+  const kinds = { record: ["record"], media: ["photo", "video", "moment"] }[diaryShow];
+  // uploads can be dated long ago, so a filter asks the hub for just those kinds
+  let all = (await hub(kinds ? `/diary?limit=200&kinds=${kinds.join(",")}` : "/diary?limit=120")).entries;
+  // an older hub ignores kinds: page back through up to 1000 entries for them
+  for (let page = 0, list = all; kinds && page < 4 && list.length === 200 && !list.every((e) => kinds.includes(e.kind)); page++)
+    all = all.concat(list = (await hub(`/diary?limit=200&before=${list[list.length - 1].at}&kinds=${kinds.join(",")}`)).entries);
+  const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind))).slice(0, 80);
   const $l = document.getElementById("list");
   if (!entries.length) {
-    $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
+    $l.innerHTML = kinds ? `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>None yet</h3><p class="muted">Add old photos, videos and vet papers and FurSight keeps them with ${esc(me.pets[0].name)}'s diary.</p></div>`
+      : `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
     return;
   }
   let last = "";
-  const bday = FSCal.upcoming(all, 1).find((u) => /birthday/i.test(u.title));
+  const bday = !kinds && FSCal.upcoming(all, 1).find((u) => /birthday/i.test(u.title));
   if (bday) $l.insertAdjacentHTML("beforebegin", `<div class="card center stack pop birthday"><div class="beanbox">${bean("safe", 110)}</div><h2>Happy birthday, ${esc(me.pets[0].name)}!</h2><p class="muted">A good day for a favourite herb and some extra floor time.</p></div>`);
   $l.innerHTML = entries.map((e) => {
-    const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+    const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short", ...(Date.now() - e.at > 300 * 864e5 ? { year: "numeric" } : {}) });
     const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
-    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
+    const word = e.extra && e.extra.uploaded && UPKIND[e.kind] ? UPKIND[e.kind] + ({ caution: " · keep an eye on", vet: " · see a vet" }[e.verdict] || "")
+      : { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", video: "Video", record: "Vet record", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
     if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
@@ -429,9 +447,166 @@ async function today() {
     return `${head}<div class="card entry pop" style="margin-bottom:10px">
       ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
-      ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}
-      <div class="when">${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""}</div></div></div>`;
+      ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}${recordDetails(e)}
+      <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""}</div></div></div>`;
   }).join("");
+  remindButtons($l);
+}
+
+// ---------------------------------------------------------------- uploads: old photos, videos and vet records
+// Everything is read in the browser first: a photo is shrunk, a video gives four frames (kept as one 2 by 2 sheet:
+// the video itself isn't stored), a PDF gives its first pages as pictures (page 1 is kept). With "Understand it",
+// Muse Spark reads them (/api/understand) and fills in the title, the summary and, for a vet record, the details.
+
+const UPKIND = { record: "Vet record", photo: "Photo", video: "Video" };
+const ymd = (t) => FSCal.key(new Date(t));
+const loadScript = (src) => new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => no(new Error("couldn't load the PDF reader")); document.head.appendChild(s); });
+const canvasJpeg = (c, q = 0.82) => c.toDataURL("image/jpeg", q);
+
+async function pdfPages(file, n = 4) {
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise, out = [];
+  for (let i = 1; i <= Math.min(n, doc.numPages); i++) {
+    const page = await doc.getPage(i), v1 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: Math.min(2, 1200 / v1.width) });
+    const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    out.push(canvasJpeg(c, 0.8));
+  }
+  return { pages: out, total: doc.numPages };
+}
+
+function videoFrames(file, n = 4) {
+  return new Promise((ok, no) => {
+    const v = document.createElement("video"), url = URL.createObjectURL(file), frames = [];
+    v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+    v.onerror = () => { URL.revokeObjectURL(url); no(new Error("This browser can't read that video")); };
+    v.onloadedmetadata = async () => {
+      const k = Math.min(1, 640 / Math.max(v.videoWidth, v.videoHeight)), w = Math.round(v.videoWidth * k), h = Math.round(v.videoHeight * k);
+      for (let i = 0; i < n; i++) {
+        await new Promise((r) => { v.onseeked = r; v.currentTime = Math.min(v.duration - 0.05, v.duration * (0.1 + (0.8 * i) / Math.max(1, n - 1))); });
+        const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(v, 0, 0, w, h); frames.push(c);
+      }
+      // the four frames as one 2 by 2 sheet for the diary
+      const s = document.createElement("canvas"); s.width = w * 2 + 6; s.height = h * 2 + 6;
+      const g = s.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, s.width, s.height);
+      frames.forEach((f, i) => g.drawImage(f, (i % 2) * (w + 6), Math.floor(i / 2) * (h + 6)));
+      URL.revokeObjectURL(url);
+      ok({ frames: frames.map((f) => canvasJpeg(f, 0.8)), sheet: canvasJpeg(s, 0.8), secs: Math.round(v.duration) });
+    };
+  });
+}
+
+// the diary entry: extra is capped at 4000 characters, so long lists are trimmed
+function trimRecord(r) {
+  if (!r) return undefined;
+  const s = (x, n = 160) => String(x || "").slice(0, n), l = (a, n = 8) => (Array.isArray(a) ? a : []).slice(0, n);
+  return { clinic: s(r.clinic, 80), reason: s(r.reason), weight_g: Number(r.weight_g) || 0, findings: l(r.findings).map((x) => s(x)), medications: l(r.medications, 6).map((m) => ({ name: s(m.name, 60), dose: s(m.dose, 100), until: s(m.until, 10) })),
+    vaccinations: l(r.vaccinations, 6).map((v) => ({ name: s(v.name, 60), given: s(v.given, 10), next_due: s(v.next_due, 10) })), follow_up: r.follow_up && r.follow_up.date ? { date: s(r.follow_up.date, 10), what: s(r.follow_up.what, 100) } : null };
+}
+
+// dates in a record worth a reminder: the follow-up and jabs coming due
+function recordDates(rec) {
+  if (!rec) return [];
+  const today = ymd(Date.now()), out = [];
+  if (rec.follow_up && rec.follow_up.date >= today) out.push({ date: rec.follow_up.date, title: rec.follow_up.what || "Vet follow-up", repeat: "none" });
+  for (const v of rec.vaccinations || []) if (v.next_due && v.next_due >= today) out.push({ date: v.next_due, title: `${v.name} vaccination due`, repeat: "yearly" });
+  return out.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date));
+}
+
+function recordDetails(e) {
+  const r = e.extra && e.extra.record, sn = e.extra && e.extra.seen;
+  if (!r && !(sn && sn.health_notes && sn.health_notes.length)) return "";
+  const li = (a) => a.map((x) => `<li><span>${esc(x)}</span></li>`).join("");
+  const rows = r ? [
+    r.clinic && `Clinic: ${r.clinic}`, r.reason && `Why: ${r.reason}`, r.weight_g && `Weight: ${(r.weight_g / 1000).toFixed(2)} kg`,
+    ...r.findings.map((f) => `Found: ${f}`), ...r.medications.map((m) => `Medicine: ${m.name}, ${m.dose}${m.until ? ` until ${m.until}` : ""}`),
+    ...r.vaccinations.map((v) => `Vaccination: ${v.name}${v.given ? `, given ${v.given}` : ""}${v.next_due ? `, next due ${v.next_due}` : ""}`),
+    r.follow_up && `Follow-up: ${r.follow_up.what} on ${r.follow_up.date}`].filter(Boolean) : sn.health_notes;
+  const dates = recordDates(r);
+  return `<details class="how"><summary>${r ? "What it says" : "What FurSight noticed"}</summary><ol>${li(rows)}</ol>
+    ${dates.map((d) => `<button class="btn ghost small" data-remind='${esc(JSON.stringify(d))}' style="margin-top:6px">Remind me: ${esc(d.title)}, ${esc(FSCal.day(d.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }))}</button>`).join("")}</details>`;
+}
+function remindButtons(root) {
+  for (const b of root.querySelectorAll("[data-remind]")) b.onclick = async () => {
+    const d = JSON.parse(b.dataset.remind);
+    b.disabled = true;
+    try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "event", title: d.title, pet: me.pets[0].name, extra: { date: d.date, repeat: d.repeat } }) }); b.textContent = "On the calendar"; }
+    catch (err) { b.disabled = false; toast(err.message); }
+  };
+}
+
+function uploadPage() {
+  stopCam();
+  const p = me.pets[0], items = [];
+  $app.innerHTML = `<div class="stack pop">
+    <div class="row" style="justify-content:space-between"><h1>Add to ${esc(p.name)}'s record</h1><button class="btn ghost small" id="upBack" style="flex:none;width:auto">Done</button></div>
+    <p class="muted">Old photos and videos, vet letters, invoices, vaccination cards, lab results. Photos of paper work too.</p>
+    <label class="btn sky" for="upFiles">Choose photos, videos or PDFs</label>
+    <input id="upFiles" type="file" multiple accept="image/*,video/*,application/pdf,.pdf" class="hidden">
+    <div id="upList" class="stack"></div>
+    <button class="btn" id="upSave" disabled>Save to the diary</button>
+    <p class="when">Videos keep four still frames, not the video. PDFs keep their first page as a picture; FurSight reads up to four.</p></div>`;
+  const $list = document.getElementById("upList"), $save = document.getElementById("upSave");
+  document.getElementById("upBack").onclick = () => { history.replaceState(null, "", location.pathname); tab = "today"; render(); };
+  document.getElementById("upFiles").onchange = async (ev) => {
+    for (const f of [...ev.target.files].slice(0, 12)) {
+      const kind = /pdf/.test(f.type) || /\.pdf$/i.test(f.name) ? "record" : f.type.startsWith("video") ? "video" : "photo";
+      const it = { f, kind, id: "u" + items.length, understand: true, status: "Reading…" };
+      items.push(it);
+      $list.insertAdjacentHTML("beforeend", `<div class="card stack" id="${it.id}"><div class="row" style="align-items:flex-start">
+        <div class="upthumb"></div><div style="flex:1;min-width:0"><h3 style="overflow-wrap:anywhere">${esc(f.name)}</h3>
+        <select data-k="kind">${Object.entries(UPKIND).map(([k, w]) => `<option value="${k}" ${k === kind ? "selected" : ""}>${w}</option>`).join("")}</select></div></div>
+        <div class="row"><div><label>Date</label><input type="date" data-k="date" value="${ymd(f.lastModified || Date.now())}" max="${ymd(Date.now())}"></div></div>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:800;cursor:pointer"><input type="checkbox" data-k="understand" checked style="width:22px;height:22px;flex:none;margin:0">Understand it with Muse Spark</label>
+        <input data-k="note" placeholder="Anything to add? (optional)" maxlength="200">
+        <div class="when" data-k="status">Reading…</div><div data-k="result"></div></div>`);
+      const $c = document.getElementById(it.id), q = (k) => $c.querySelector(`[data-k="${k}"]`);
+      q("kind").onchange = () => (it.kind = q("kind").value);
+      q("date").onchange = () => (it.dateTouched = true);
+      try {
+        if (kind === "record" && /pdf/.test(f.type + f.name)) { const r = await pdfPages(f); it.images = r.pages; it.keep = r.pages[0]; it.pages = r.total; }
+        else if (kind === "video") { const r = await videoFrames(f); it.images = r.frames; it.keep = r.sheet; it.secs = r.secs; }
+        else { it.keep = await shrink(f, 1400); it.images = [it.keep]; }
+        $c.querySelector(".upthumb").innerHTML = `<img src="${it.keep}" alt="">`;
+        q("status").textContent = kind === "video" ? `${it.secs} s video, 4 frames` : it.pages ? `${it.pages} page${it.pages === 1 ? "" : "s"}` : "Ready";
+        it.ready = true;
+      } catch (err) { it.failed = true; q("status").textContent = err.message || "Couldn't read this file"; }
+      $save.disabled = !items.some((x) => x.ready && !x.saved);
+    }
+    ev.target.value = "";
+  };
+  $save.onclick = async () => {
+    $save.disabled = true;
+    for (const it of items.filter((x) => x.ready && !x.saved)) {
+      const $c = document.getElementById(it.id), q = (k) => $c.querySelector(`[data-k="${k}"]`);
+      const note = q("note").value.trim();
+      let u = null;
+      if (q("understand").checked) {
+        q("status").textContent = "Muse Spark is reading it…";
+        try { u = await api("/api/understand", { kind: it.kind, images: it.images, note, pet: { name: p.name, species: p.species, breed: p.breed, notes: p.notes } }); }
+        catch (err) { q("status").textContent = "Couldn't read it (" + err.message + "), saving it as it is"; }
+      }
+      // the date it says beats the file's date, unless you picked one
+      const date = !it.dateTouched && u && /^\d{4}-\d{2}-\d{2}$/.test(u.date) && u.date <= ymd(Date.now()) ? u.date : q("date").value;
+      q("date").value = date;
+      const record = it.kind === "record" && u ? trimRecord(u.record) : undefined;
+      const entry = { kind: it.kind, pet: p.name, image: it.keep, at: FSCal.day(date).getTime(),
+        title: (u && u.title) || `${UPKIND[it.kind]}: ${it.f.name.replace(/\.[^.]+$/, "")}`.slice(0, 120),
+        note: [u && u.summary, note && `You said: ${note}`].filter(Boolean).join(" ").slice(0, 1200),
+        ...(u && u.verdict === "vet" ? { verdict: "vet" } : u && u.verdict === "watch" ? { verdict: "caution" } : {}),
+        extra: { uploaded: true, understood: !!u, file: it.f.name.slice(0, 60), ...(it.pages ? { pages: it.pages } : {}), ...(it.secs ? { secs: it.secs } : {}), ...(record ? { record } : {}), ...(u && it.kind !== "record" ? { seen: { doing: String(u.seen.doing || "").slice(0, 160), pose: u.seen.pose, health_notes: (u.seen.health_notes || []).slice(0, 5).map((x) => String(x).slice(0, 160)) } } : {}) } };
+      q("status").textContent = "Saving…";
+      try { const saved = await hub("/diary", { method: "POST", body: JSON.stringify(entry) }); it.saved = true;
+        q("status").textContent = `Saved to ${new Date(entry.at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
+        q("result").innerHTML = `<h3>${esc(entry.title)}</h3>${entry.note ? `<p class="muted">${esc(entry.note)}</p>` : ""}${recordDetails({ ...saved, extra: entry.extra })}`;
+        const det = q("result").querySelector("details"); if (det) det.open = true;
+        remindButtons(q("result"));
+      } catch (err) { q("status").textContent = err.message; }
+    }
+    $save.disabled = !items.some((x) => x.ready && !x.saved);
+  };
 }
 
 // What the Ask agent did before it answered: each look, each check that stopped an answer, and any question it

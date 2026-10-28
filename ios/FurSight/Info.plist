@@ -26,7 +26,9 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>FurSight uses the camera to check whether a food or plant is safe for your pet.</string>
+	<string>FurSight uses the camera to check whether a food or plant is safe for your pet, and to add photos and videos to their record.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>FurSight records sound when you film a video for your pet's record.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Nunito-800.ttf</string>

@@ -17,7 +17,7 @@ const { run, user } = require("../lib/agent");
 const { lookup } = require("../lib/verdict");
 const { handler, image, text, bad, household } = require("../lib/http");
 const { pet: readPet, describe } = require("../lib/pet");
-const { context, camFrame, camView, recent, addDiary } = require("../lib/hub");
+const { context, camFrame, camView, recent, uploads, addDiary } = require("../lib/hub");
 const FSCal = require("../public/calendar.js");
 const FSTray = require("../public/tray.js");
 const FSRoutine = require("../public/routines.js");
@@ -215,6 +215,21 @@ module.exports = handler(async (body, req) => {
       return { output: { id: "log", saved: true, title: ent.title, on_never_list: ent.verdict ? ent.note : null }, step: { tool: "diary", label: `Added to the diary: ${ent.title}`, detail: ent.verdict ? ent.note : undefined } };
     },
   };
+  if (ctx) tools.read_vet_records = {
+    description: `${p.name}'s vet records and history the owner uploaded: visits, findings, medications, vaccinations with when they're next due, weights the vet wrote down, and old photos and videos, each already read by FurSight. Use it for anything about his health history, past vet visits, medicines or jabs.`,
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    async run() {
+      const list = await uploads(home.token).catch(() => []);
+      if (!list.length) return { output: { records: [], note: "Nothing uploaded yet." }, step: { tool: "records", label: "No vet records uploaded yet" } };
+      const out = list.slice(0, 20).map((e, i) => {
+        const id = "r" + (i + 1), x = e.extra || {};
+        seen.set(id, { kind: "record", what: e.title });
+        return { id, kind: e.kind, date: new Date(e.at).toISOString().slice(0, 10), title: e.title, summary: (e.note || "").slice(0, 300), ...(x.record ? { record: x.record } : {}), ...(x.seen ? { seen: x.seen } : {}) };
+      });
+      const recs = out.filter((r) => r.kind === "record").length;
+      return { output: { records: out }, step: { tool: "records", label: `Read his records: ${recs} vet record${recs === 1 ? "" : "s"}, ${out.length - recs} ${out.length - recs === 1 ? "photo or video" : "photos and videos"}` } };
+    },
+  };
   if (ctx) tools.read_diary = {
     description: `Read ${p.name}'s diary: food checks, questions, photos, daily care ticks, things the owner added, and notes from every device. "food" entries are foods the owner CHECKED, not things ${p.name} ate. "log" entries are things the owner says happened (a treat they gave, a flop they saw).`,
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
@@ -266,7 +281,7 @@ module.exports = handler(async (body, req) => {
       properties: {
         answer: { type: "string", description: "spoken style, at most 45 words, no lists, no markdown" },
         verdict: { type: "string", enum: ["safe", "caution", "toxic", "vet", "none"], description: "only for safety or health questions; vet = see a vet today" },
-        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"tray\", \"activity\", \"calendar\", \"reminder\", \"done\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
+        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"tray\", \"activity\", \"calendar\", \"reminder\", \"done\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", vet record ids like \"r1\", food ids like \"food:grapes\"" },
         about: { type: "string", description: "short name of the thing in the photo the answer is about, or empty" },
         box: { type: "array", items: { type: "integer" }, description: "[x_min,y_min,x_max,y_max] 0-1000 of that thing in the photo, or []" },
       },
