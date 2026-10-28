@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3DBE6B">
 <title>FurSight</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
 <style>
@@ -44,7 +45,6 @@
 
   /* top bar + pet header */
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 20px; }
-  .brand i { width: 30px; height: 30px; border-radius: 10px; background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); display: grid; place-items: center; }
   .pet { display: flex; gap: 14px; align-items: center; }
   .pet img, .pet .ph { width: 76px; height: 76px; border-radius: 22px; object-fit: cover; background: var(--line); border: 3px solid var(--card); box-shadow: 0 4px 0 var(--line); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -298,7 +298,7 @@ function editPet() {
 function welcome() {
   $app.innerHTML = `<div class="hero center stack pop">
     <div class="beanbox">${bean("idle", 150)}</div>
-    <h1>FurSight</h1>
+    <h1>${wordmark()}</h1>
     <p class="muted">Rabbits hide illness. FurSight notices.<br>It notices, your vet decides.</p>
   </div>
   <div class="stack" style="margin-top:28px">
@@ -336,7 +336,7 @@ async function linkThis(kind) {
 
 function addPet() {
   $app.innerHTML = `<div class="stack pop">
-    <div class="brand"><i></i>FurSight</div>
+    <div class="brand">${wordmark()}</div>
     <h1>Who are we looking after?</h1>
     <p class="muted">Take a clear photo of your pet. FurSight works out what they are and writes a care plan you can check.</p>
     <label class="card center" style="cursor:pointer;padding:26px">

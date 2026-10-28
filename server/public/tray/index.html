@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FurSight Tray</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
 <style>
   :root {
@@ -70,7 +71,7 @@ async function hub(path, opt = {}) {
 
 async function link() {
   $app.innerHTML = `<div class="sim">Simulated FurSight Tray · prototype</div>
-    <div class="card center"><div style="display:grid;place-items:center">${bean("idle", 90)}</div><h1>FurSight Tray</h1>
+    <div class="card center"><div style="display:grid;place-items:center">${bean("idle", 90)}</div><h1>${wordmark(" Tray")}</h1>
     <p class="muted">On your phone, open FurSight, go to <b>Devices</b> and enter this code.</p><div class="code" id="code">····</div></div>`;
   const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind: "tray", name: "FurSight Tray" }) });
   $("code").textContent = s.code;
@@ -218,7 +219,7 @@ function render() {
   alertOnce(s);
   climateAlert();
   $app.innerHTML = `<div class="sim">${real ? "FurSight Tray · connected over Bluetooth" : "Simulated FurSight Tray · prototype · the real one is a scale under the tray"}</div>
-    <div class="row" style="justify-content:space-between"><div><h1>FurSight Tray</h1><p class="muted">${esc(p.name)}'s litter tray</p></div><div id="bn">${bean(s.status === "vet" ? "toxic" : s.status === "watch" ? "caution" : "idle", 70)}</div></div>
+    <div class="row" style="justify-content:space-between"><div><h1>${wordmark(" Tray")}</h1><p class="muted">${esc(p.name)}'s litter tray</p></div><div id="bn">${bean(s.status === "vet" ? "toxic" : s.status === "watch" ? "caution" : "idle", 70)}</div></div>
     <div class="scale" id="reading">${(base + s.today.output_g).toLocaleString()} g<small id="who">${onTray ? p.name + " is on the tray" : "tray and litter"}</small></div>
     <div class="card">
       <div class="row" style="justify-content:space-between"><h2>Today</h2><span class="pill s-${s.status}">${word}</span></div>

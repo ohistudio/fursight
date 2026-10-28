@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FurSight Wrapped</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&display=swap">
 <style>
   :root { --ink: #2B2A33; }
@@ -114,7 +115,7 @@ async function build() {
         ${checks.length ? `<div><b>${checks.length}</b><span>foods checked</span></div>` : ""}
         ${asks ? `<div><b>${asks}</b><span>questions asked</span></div>` : ""}
       </div>
-      <div style="font-size:13px;color:#6B6977">FurSight · it notices, your vet decides${tray.simulated || a.simulated ? " · includes simulated data" : ""}</div></div>
+      <div style="font-size:13px;color:#6B6977">${wordmark()} · it notices, your vet decides${tray.simulated || a.simulated ? " · includes simulated data" : ""}</div></div>
     <p class="rise" style="text-align:center;align-self:center;font-size:15px">Screenshot to share</p>` });
   return S;
 }
