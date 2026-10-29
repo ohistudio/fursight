@@ -115,7 +115,7 @@ async function hop(spot, ms, r, hops = 3) {
   let landed = 0;
   await tween(ms, r, (k) => {
     const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, ph = (k * hops) % 1;
-    if (Math.floor(k * hops + .5) > landed) { landed++; sfx("hop", .5); }
+    if (Math.floor(k * hops + .5) > landed) { landed++; sfx("hop", 1.4); }
     bun.x = x0 + (x1 - x0) * e; bun.y = y0 + (y1 - y0) * e;
     bun.lift = Math.sin(ph * Math.PI) * 26; bun.sy = ph < .12 || ph > .9 ? .9 : 1.04; bun.sx = 2 - bun.sy;
   });
@@ -162,7 +162,7 @@ async function story(r) {
   await hop("avo", 1300, r, 3);
   pose("standing"); show("avoglow"); sfx("warn", .55);
   await Promise.all([nod(2600, r), caption("You'd think avocado is good for him. It can be fatal.", 2600, r)]);
-  pose("side"); await hop("hay", 1800, r, 4);
+  pose("bum"); await hop("hay", 1800, r, 4);
   pose("eating"); sfx("munch", .6);
   await Promise.all([nod(2400, r), caption("Hay should be most of what he eats. Less hay is the first sign.", 2400, r)]);
   show("cablering", false); show("avoglow", false);
@@ -173,9 +173,9 @@ async function story(r) {
   show("cam1"); sfx("click", .7); await wait(500, r);
   await caption("A cam on his pen, for his hay, food and water.", 1900, r);
   show("cam2"); sfx("click", .7); await wait(300, r);
-  pose("bum");
+  pose("side");
   await Promise.all([hop("away", 1800, r, 3), caption("A cam that follows him when he roams.", 1800, r)]);
-  pose("bum", 1);
+  pose("loaf", 1);
   show("trayscale"); sfx("click", .7); await wait(300, r); show("traytop"); show("traykg"); sfx("click", .5);
   await caption("And a litter tray that weighs him every visit.", 2000, r);
 
@@ -204,7 +204,7 @@ async function story(r) {
   show("cardWeek"); sfx("whoosh", .6); await Promise.all([breathe(3000, r), caption("And every week, his week on a card: flops, weight, the lot.", 3000, r)]);
   show("cardWeek", false);
   pose("stretch");
-  await Promise.all([breathe(2600, r), caption("Treat him. Without the worry.", 2600, r)]);
+  await Promise.all([breathe(2600, r), caption("Treat them. Without the worry.", 2600, r)]);
   $("capText").classList.remove("on");
 
   // the kit, and what it would cost as a product
@@ -221,7 +221,7 @@ async function story(r) {
   await wait(5600, r);
   extra(""); await wait(500, r);
   music(false); sfx("end", .7);
-  card(`<div class="plate"><h1>FurSight</h1><p>Spoil him. Worry less.</p></div>`);
+  card(`<div class="plate"><h1>FurSight</h1><p>Spoil them. Worry less.</p></div>`);
 }
 
 async function play() {

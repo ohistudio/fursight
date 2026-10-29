@@ -110,7 +110,7 @@
 
     // footer
     g.fillStyle = "#6B6977"; g.font = "800 24px Nunito, sans-serif";
-    g.fillText(`FurSight · spoil him, worry less${simulated ? " · includes simulated data" : ""}`, 100, cy + ch - 40);
+    g.fillText(`FurSight · spoil them, worry less${simulated ? " · includes simulated data" : ""}`, 100, cy + ch - 40);
     return { png: c.toDataURL("image/png"), layout };
   }
 
@@ -161,7 +161,7 @@
       <div class="card"><h5>${escH(L.title)}</h5>
         <div class="tiles">${(L.tiles || []).map((t, i) => `<div class="tile" style="--d:${0.5 + i * 0.12}s"><b data-to="${escH(t.big)}">${escH(t.big)}</b><span>${escH(t.label)}</span></div>`).join("")}</div>
         <div class="hl">${(L.highlights || []).slice(0, 2).map((h, i) => `<div style="--d:${1 + i * 0.15}s">${escH(h)}</div>`).join("")}</div>
-        <div class="foot">FurSight · spoil him, worry less${L.simulated ? " · includes simulated data" : ""}</div></div></div></div>`;
+        <div class="foot">FurSight · spoil them, worry less${L.simulated ? " · includes simulated data" : ""}</div></div></div></div>`;
     // once it's on the page: fit the 1080 px card to its box, and play it
     setTimeout(() => { const box = document.getElementById(id); if (box) { const inner = box.firstElementChild, fit = () => { inner.style.transform = `scale(${box.clientWidth / 1080})`; }; fit(); if (window.ResizeObserver) new ResizeObserver(fit).observe(box); play(box); } }, 0);
     return el;

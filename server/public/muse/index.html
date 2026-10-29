@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FurSight Models</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root { --ink: #2B2A33; --muted: #6B6977; --grape: #9B6CF0; --grape-lip: #7A4ED1; --bg: #F6F5F9; --line: #E4E0EC;
+          --fern: #3DBB6E; --sun: #FFB23F; --coral: #FF5A6A; --sky: #2EA8F5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: Nunito, system-ui, sans-serif; color: var(--ink); }
+  #stage { position: absolute; inset: 0; display: grid; place-items: center; }
+  #frame { position: relative; width: min(100vw, 177.78vh); aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden;
+           background: radial-gradient(circle at 20% 10%, #FFFFFF 0, transparent 40%), var(--bg); }
+  /* a slide: chip and title at the top, what goes in on the left, what comes back on the right */
+  .slide { position: absolute; inset: 0; padding: 3.2cqw 4cqw 0; opacity: 0; transition: opacity .6s ease; }
+  .slide.on { opacity: 1; }
+  .chip { display: inline-flex; align-items: center; gap: .6cqw; background: #FFFFFF; border-radius: 99px; padding: .5cqw 1.3cqw .5cqw .7cqw;
+          font-weight: 900; font-size: 1.35cqw; box-shadow: 0 .25cqw 0 rgba(43,42,51,.08); }
+  .chip i { width: 1.3cqw; height: 1.3cqw; border-radius: 50%; background: var(--grape); }
+  .chip.sam i { background: var(--sky); } .chip.voice i { background: var(--sun); } .chip.img i { background: var(--fern); }
+  h2 { margin: 1.1cqw 0 0; font-size: 3.4cqw; font-weight: 900; letter-spacing: -.01em; }
+  .sub { margin: .3cqw 0 0; font-size: 1.5cqw; font-weight: 800; color: var(--muted); }
+  .row { position: absolute; left: 4cqw; right: 4cqw; top: 18.5cqw; bottom: 8.5cqw; display: grid; grid-template-columns: 1fr 4cqw 1.25fr; grid-template-rows: 100%; align-items: center; gap: 1.2cqw; }
+  .pane { position: relative; height: 100%; display: grid; place-items: center; }
+  .lab { position: absolute; top: -1.9cqw; left: 0; font-size: 1.1cqw; font-weight: 900; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .arrow { font-size: 3.4cqw; font-weight: 900; color: var(--grape); text-align: center; }
+  /* things that appear one beat at a time */
+  [data-s] { opacity: 0; transform: translateY(1cqw) scale(.98); transition: opacity .5s ease, transform .5s cubic-bezier(.2,.9,.3,1); }
+  [data-s].in { opacity: 1; transform: none; }
+  .card { background: #FFFFFF; border-radius: 1.6cqw; box-shadow: 0 .4cqw 0 rgba(43,42,51,.08); padding: 1.4cqw 1.6cqw; }
+  pre.json { margin: 0; font: 500 1.18cqw/1.5 "JetBrains Mono", ui-monospace, monospace; color: #3A3946; white-space: pre-wrap; }
+  pre.json b { color: var(--grape-lip); font-weight: 700; } pre.json em { font-style: normal; color: #1E8F52; } pre.json u { text-decoration: none; color: #D93545; }
+  .photo { position: relative; height: 100%; max-height: 100%; aspect-ratio: 3 / 4; border-radius: 1.6cqw; overflow: hidden; box-shadow: 0 .4cqw 0 rgba(43,42,51,.10); }
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .box { position: absolute; border: .3cqw dashed var(--grape); border-radius: .8cqw; background: rgba(155,108,240,.10); }
+  .box span { position: absolute; left: -.3cqw; top: -2.2cqw; background: var(--grape); color: #FFFFFF; font-size: 1cqw; font-weight: 900; padding: .2cqw .6cqw; border-radius: .5cqw; white-space: nowrap; }
+  .result { display: flex; align-items: center; gap: 1cqw; margin-top: 1cqw; }
+  .pill { display: inline-flex; align-items: center; gap: .5cqw; border-radius: 99px; padding: .45cqw 1.1cqw; font-weight: 900; font-size: 1.2cqw; background: #F1EEF6; }
+  .pill.bad { background: #FFE3E6; color: #C42536; } .pill.mid { background: #FFF1D9; color: #A86A00; } .pill.ok { background: #DDF5E6; color: #1E8F52; }
+  .stack { display: grid; gap: 1cqw; width: 100%; }
+  .tool { display: flex; align-items: center; gap: .8cqw; font: 700 1.15cqw "JetBrains Mono", monospace; background: #FFFFFF; border-radius: 1cqw; padding: .6cqw 1cqw; box-shadow: 0 .25cqw 0 rgba(43,42,51,.06); }
+  .tool small { font: 800 1cqw Nunito, sans-serif; color: var(--muted); margin-left: auto; }
+  .tool i { width: 1cqw; height: 1cqw; border-radius: 50%; background: var(--grape); flex: none; }
+  .tool.sam i { background: var(--sky); }
+  .bubble { background: var(--ink); color: #FFFFFF; font-weight: 900; font-size: 1.6cqw; border-radius: 1.4cqw 1.4cqw 1.4cqw .3cqw; padding: 1cqw 1.4cqw; }
+  .answer { background: #FFFFFF; font-weight: 800; font-size: 1.45cqw; border-radius: 1.4cqw 1.4cqw .3cqw 1.4cqw; padding: 1cqw 1.4cqw; box-shadow: 0 .3cqw 0 rgba(43,42,51,.08); }
+  .sticker { filter: drop-shadow(0 .3cqw 0 rgba(43,42,51,.12)); }
+  .wave { display: flex; align-items: center; gap: .35cqw; height: 6cqw; }
+  .wave b { width: .55cqw; border-radius: 1cqw; background: var(--sun); animation: wv 1s ease-in-out infinite; }
+  @keyframes wv { 50% { transform: scaleY(.35); } }
+  .cost { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4cqw; position: absolute; left: 4cqw; right: 4cqw; top: 16cqw; }
+  .cost .card b { display: block; font-size: 3.2cqw; font-weight: 900; color: var(--grape-lip); margin: .4cqw 0; }
+  .cost .card p { margin: 0; font-size: 1.25cqw; font-weight: 800; color: var(--muted); line-height: 1.35; }
+  .cost .card h4 { margin: 0; font-size: 1.4cqw; font-weight: 900; }
+  .note { position: absolute; left: 4cqw; right: 4cqw; top: 33cqw; text-align: center; font-size: 1.3cqw; font-weight: 800; color: var(--muted); }
+  /* the captions, the title and the end card: as in the intro */
+  #cap { position: absolute; left: 7%; right: 7%; bottom: 2.4cqw; text-align: center; pointer-events: none; }
+  #cap span { display: inline-block; background: #FFFFFF; color: var(--ink); font-weight: 900; font-size: 2.3cqw; line-height: 1.2; padding: .32em .8em; border-radius: 999px;
+              box-shadow: 0 .18em 0 rgba(43,42,51,.14); opacity: 0; transform: translateY(14px) scale(.98); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.9,.3,1); }
+  #cap span.on { opacity: 1; transform: none; }
+  .centre { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .plate { background: #FFFFFF; padding: 2cqw 4cqw 2.4cqw; border-radius: 2.4cqw; box-shadow: 0 .4cqw 0 rgba(43,42,51,.10); }
+  .plate h1 { margin: 0; font-size: 6.4cqw; font-weight: 900; letter-spacing: -.01em; }
+  .plate p { margin: .4cqw 0 0; font-size: 2cqw; font-weight: 800; }
+  .chips { display: flex; gap: 1cqw; justify-content: center; margin-top: 1.6cqw; flex-wrap: wrap; }
+  #go { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(246,245,249,.75); cursor: pointer; z-index: 5; }
+  #go span { background: var(--grape); color: #FFFFFF; font: 900 2.4cqw Nunito, sans-serif; padding: .5em 1.2em; border-radius: 999px; box-shadow: 0 .15em 0 var(--grape-lip); }
+  #hint { position: absolute; right: 14px; bottom: 10px; font: 800 12px Nunito, sans-serif; color: #B3AEC0; }
+  @media (prefers-reduced-motion: reduce) { [data-s], .slide, #cap span { transition: none; } .wave b { animation: none; } }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame">
+
+<!-- 0: title -->
+<section class="slide" id="s0"><div class="centre"><div>
+  <div class="plate"><h1>Inside FurSight</h1><p>the Meta models behind it, with real examples</p></div>
+  <div class="chips">
+    <span class="chip" data-s="1"><i></i>Muse Spark</span><span class="chip sam" data-s="1"><i></i>SAM 3.1</span>
+    <span class="chip voice" data-s="1"><i></i>Muse Voice Transcribe</span><span class="chip img" data-s="1"><i></i>Muse Image</span>
+  </div></div></div></section>
+
+<!-- 1: food check -->
+<section class="slide" id="s1">
+  <span class="chip"><i></i>Muse Spark · food check</span>
+  <h2>Can he eat this?</h2><p class="sub">From the glasses, the phone or Quest. One picture in, a verdict for each food out.</p>
+  <div class="row">
+    <div class="pane"><span class="lab">In</span>
+      <svg viewBox="0 0 300 300" style="height:100%" data-s="1">
+        <rect width="300" height="300" rx="24" fill="#EDE7F7"/>
+        <path d="M40 300 C60 230 90 200 130 196 L190 190 C210 188 214 214 196 220 L150 232 C200 236 236 250 260 300 Z" fill="#F2C9A5" stroke="#2B2A33" stroke-width="4"/>
+        <g transform="translate(160 132) rotate(-18)"><path d="M0 -62 C38 -62 56 -14 56 14 C56 48 30 62 0 62 C-30 62 -56 48 -56 14 C-56 -14 -38 -62 0 -62 Z" fill="#3E6B2A" stroke="#2B2A33" stroke-width="4"/>
+          <path d="M0 -50 C28 -50 45 -12 45 14 C45 40 24 50 0 50 C-24 50 -45 40 -45 14 C-45 -12 -28 -50 0 -50 Z" fill="#C9DB7A"/><circle cx="0" cy="18" r="21" fill="#8A5A2B" stroke="#2B2A33" stroke-width="3"/></g>
+        <g data-s="2"><rect x="92" y="56" width="138" height="152" rx="12" fill="rgba(255,90,106,.12)" stroke="#FF5A6A" stroke-width="5" stroke-dasharray="10 7"/>
+          <rect x="92" y="28" width="96" height="24" rx="7" fill="#FF5A6A"/><text x="140" y="45" text-anchor="middle" font-family="Nunito" font-weight="900" font-size="15" fill="#fff">avocado</text></g>
+      </svg></div>
+    <div class="arrow" data-s="2">→</div>
+    <div class="pane"><span class="lab">Out (structured JSON, trimmed)</span>
+      <div class="stack">
+        <div class="card" data-s="2"><pre class="json">{ <b>"food"</b>: "avocado",
+  <b>"verdict"</b>: <u>"toxic"</u>,
+  <b>"reason"</b>: "Persin can be fatal to rabbits.",
+  <b>"instead"</b>: "a sprig of coriander",
+  <b>"wait_days"</b>: 0, <b>"held"</b>: true,
+  <b>"box"</b>: [190, 180, 760, 690] }</pre></div>
+        <div class="result" data-s="3"><span class="pill">Safety list check</span><span class="pill bad">✕ Don't</span><span style="font-size:1.2cqw;font-weight:800;color:var(--muted)">our species list can make a verdict stricter, never softer</span></div>
+        <div class="result" data-s="4"><span class="pill mid">! Strawberry: small treat only</span><span class="pill">wait_days 3 → calendar: "OK again Sun"</span></div>
+      </div></div>
+  </div></section>
+
+<!-- 2: pet cam pose -->
+<section class="slide" id="s2">
+  <span class="chip"><i></i>Muse Spark · the pet cam</span>
+  <h2>What is he doing?</h2><p class="sub">When he settles, the pet cam sends one frame. His day builds itself.</p>
+  <div class="row">
+    <div class="pane"><span class="lab">In: one pet cam frame</span>
+      <div class="photo" data-s="1"><img src="/demo/xiaosi.jpg" alt="Xiaosi on the floor">
+        <div class="box" data-s="2" style="left:31%;top:10%;width:31%;height:38%"><span>Xiaosi · SAM 3.1</span></div></div></div>
+    <div class="arrow" data-s="2">→</div>
+    <div class="pane"><span class="lab">Out</span>
+      <div class="stack">
+        <div class="card" data-s="3"><pre class="json">{ <b>"visible"</b>: true,
+  <b>"pose"</b>: <em>"loaf"</em>,
+  <b>"chewing_what"</b>: "",
+  <b>"caption"</b>: "Xiaosi doing a perfect loaf" }</pre></div>
+        <div class="card" data-s="4" style="display:flex;gap:1.2cqw;align-items:center"><img class="sticker" src="/demo/story/loaf.png" alt="" style="width:9cqw">
+          <div><div style="font-weight:900;font-size:1.5cqw">Xiaosi doing a perfect loaf</div><div style="font-weight:800;font-size:1.1cqw;color:var(--muted)">diary · pet cam · 14:02 · 1 of 17 loafs today</div></div></div>
+      </div></div>
+  </div></section>
+
+<!-- 3: stickers -->
+<section class="slide" id="s3">
+  <span class="chip sam"><i></i>SAM 3.1 · stickers</span>
+  <h2>Every moment, a sticker</h2><p class="sub">SAM 3.1 cuts him out of the frame from a one-word prompt: "rabbit".</p>
+  <div class="row">
+    <div class="pane"><span class="lab">In: the frame + "rabbit"</span>
+      <div class="photo" data-s="1"><img src="/demo/xiaosi.jpg" alt=""><div class="box" data-s="2" style="left:31%;top:10%;width:31%;height:38%;border-color:var(--sky);background:rgba(46,168,245,.12)"><span style="background:var(--sky)">mask</span></div></div></div>
+    <div class="arrow" data-s="2">→</div>
+    <div class="pane"><span class="lab">Out: his outline, so we can make</span>
+      <div style="display:flex;gap:2cqw;align-items:flex-end;justify-content:center">
+        <img class="sticker" data-s="3" src="/demo/xiaosi-sticker.png" alt="" style="height:20cqw">
+        <img class="sticker" data-s="4" src="/demo/story/stretch.png" alt="" style="width:13cqw">
+        <img class="sticker" data-s="4" src="/demo/story/bum.png" alt="" style="width:11cqw">
+      </div></div>
+  </div></section>
+
+<!-- 4: hay and bowls -->
+<section class="slide" id="s4">
+  <span class="chip"><i></i>Muse Spark + <span style="color:var(--sky)">SAM 3.1</span> · hay and bowls</span>
+  <h2>Is he eating his hay?</h2><p class="sub">Spark reads each level; SAM measures the hay pile, so a shrinking pile shows up in numbers.</p>
+  <div class="row">
+    <div class="pane"><span class="lab">In: the pen cam, every few hours</span>
+      <svg viewBox="0 0 320 300" style="height:100%" data-s="1"><rect width="320" height="300" rx="24" fill="#E2F3E8"/>
+        <g data-s="1"><rect x="30" y="40" width="140" height="18" rx="6" fill="#CBBFDC"/><g stroke="#D9A21E" stroke-width="7" stroke-linecap="round"><path d="M50 60 L56 128"/><path d="M68 60 L62 118"/><path d="M84 60 L92 132"/><path d="M100 60 L96 112"/><path d="M118 60 L124 126"/><path d="M136 60 L130 108"/><path d="M152 60 L156 120"/></g></g>
+        <ellipse cx="240" cy="110" rx="50" ry="22" fill="#FFB23F" stroke="#2B2A33" stroke-width="4"/><ellipse cx="240" cy="106" rx="34" ry="12" fill="#B07B3A"/>
+        <ellipse cx="200" cy="220" rx="56" ry="24" fill="#2EA8F5" stroke="#2B2A33" stroke-width="4"/><ellipse cx="200" cy="216" rx="38" ry="12" fill="#BFE5FB"/>
+        <g data-s="2"><rect x="38" y="52" width="128" height="88" rx="10" fill="rgba(46,168,245,.12)" stroke="#2EA8F5" stroke-width="4" stroke-dasharray="9 6"/></g>
+      </svg></div>
+    <div class="arrow" data-s="2">→</div>
+    <div class="pane"><span class="lab">Out</span>
+      <div class="stack">
+        <div class="card" data-s="3"><pre class="json">{ <b>"hay"</b>:   { "level": 55, "note": "rack half full" },
+  <b>"food"</b>:  { "level": 70, "note": "pellets left" },
+  <b>"water"</b>: { "level": 35, "note": "bowl a third full" } }</pre></div>
+        <div class="result" data-s="4"><span class="pill">SAM hay area: 8.2% → 4.6% since 8am</span><span class="pill ok">✓ Hay 44% gone</span></div>
+      </div></div>
+  </div></section>
+
+<!-- 5: Ask -->
+<section class="slide" id="s5">
+  <span class="chip"><i></i>Muse Spark · the Ask agent</span>
+  <h2>Just ask</h2><p class="sub">Spark is given 17 tools and picks what to check. The checks live in the tools, so it can't skip them.</p>
+  <div class="row">
+    <div class="pane"><span class="lab">In</span>
+      <div class="stack"><div class="bubble" data-s="1">What's he doing right now?</div>
+        <div style="font-weight:800;font-size:1.15cqw;color:var(--muted)" data-s="1">asked on the Ray-Ban Display</div></div></div>
+    <div class="arrow" data-s="2">→</div>
+    <div class="pane"><span class="lab">The agent works it out</span>
+      <div class="stack">
+        <div class="tool sam" data-s="2"><i></i>find_pet()<small>SAM 3.1 checks each cam: pen cam, by the hay</small></div>
+        <div class="tool" data-s="3"><i></i>look_through_pet_cams("pen")<small>a fresh close look</small></div>
+        <div class="tool" data-s="3"><i></i>check_activity("today")<small>17 loafs, 3 flops</small></div>
+        <div class="answer" data-s="4" style="display:flex;gap:1cqw;align-items:center"><img class="sticker" src="/demo/story/eating.png" alt="" style="width:7cqw"><span>He's at the hay rack having a munch. Busy day: 3 big flops so far.</span></div>
+      </div></div>
+  </div></section>
+
+<!-- 6: voice -->
+<section class="slide" id="s6">
+  <span class="chip voice"><i></i>Muse Voice Transcribe + <span style="color:var(--grape)">Muse Spark</span> · notes</span>
+  <h2>Say it, it's logged</h2><p class="sub">Hold to speak on Quest. Voice Transcribe hears it; Spark sorts it into the diary and calendar.</p>
+  <div class="row">
+    <div class="pane"><span class="lab">In: spoken on Quest</span>
+      <div class="stack" style="justify-items:center"><div class="wave" data-s="1"><b style="height:30%"></b><b style="height:70%;animation-delay:.1s"></b><b style="height:100%;animation-delay:.2s"></b><b style="height:55%;animation-delay:.3s"></b><b style="height:85%;animation-delay:.4s"></b><b style="height:40%;animation-delay:.5s"></b><b style="height:75%;animation-delay:.6s"></b><b style="height:35%;animation-delay:.7s"></b></div>
+        <div class="bubble" data-s="2">"Gave him a strawberry and brushed his coat"</div></div></div>
+    <div class="arrow" data-s="2">→</div>
+    <div class="pane"><span class="lab">Out</span>
+      <div class="stack">
+        <div class="card" data-s="3"><pre class="json">{ <b>"actions"</b>: [
+  { "type": <em>"fed"</em>, "food": "strawberry", "amount": "small",
+    "verdict": "caution", "wait_days": 3 },
+  { "type": <em>"care"</em>, "item": "Brush his coat" } ] }</pre></div>
+        <div class="result" data-s="4"><span class="pill ok">✓ Brushing ticked</span><span class="pill mid">Strawberry logged · OK again Sun</span></div>
+      </div></div>
+  </div></section>
+
+<!-- 7: the week -->
+<section class="slide" id="s7">
+  <span class="chip"><i></i>Muse Spark · <span style="color:var(--fern)">Muse Image</span> · his week</span>
+  <h2>His week, in his words</h2><p class="sub">Spark writes the week from his numbers and nicknames. Muse Image redraws a photo of him for the Wrapped poster.</p>
+  <div class="row">
+    <div class="pane"><span class="lab">In: the week's numbers</span>
+      <div class="card" data-s="1"><pre class="json">{ "weight": "1.10 kg, steady",
+  "flops": 17, "loafing": "14 h 54",
+  "tray_visits": 9, "hay": "most days 40%+",
+  "nicknames": ["your nicknames for him"] }</pre></div></div>
+    <div class="arrow" data-s="2">→</div>
+    <div class="pane"><span class="lab">Out</span>
+      <div class="card" data-s="2" style="display:flex;gap:1.4cqw;align-items:center">
+        <div style="display:grid;gap:.4cqw"><img class="sticker" src="/demo/story/stretch.png" alt="" style="width:11cqw"><img class="sticker" src="/demo/story/alert.png" alt="" style="width:7cqw;justify-self:end"></div>
+        <div><div style="font-weight:900;font-size:2cqw">Xiaosi's big flop week</div>
+          <div style="font-weight:800;font-size:1.3cqw;color:var(--muted);margin-top:.5cqw">17 flops, a steady 1.10 kg and nearly 15 hours of loafing. Hay was on point all week.</div></div></div></div>
+  </div></section>
+
+<!-- 8: cost -->
+<section class="slide" id="s8">
+  <span class="chip"><i></i>What it costs to run</span>
+  <h2>Cheap enough to be a product</h2><p class="sub">Measured while building FurSight. The examples on the slides before are illustrative, in the shape each feature returns.</p>
+  <div class="cost">
+    <div class="card" data-s="1"><h4>Muse Spark</h4><b>$0.0046</b><p>to look at one picture. $1.25 in / $4.25 out per million tokens</p></div>
+    <div class="card" data-s="1"><h4>SAM 3.1</h4><b>~$0.0002</b><p>a picture, worked out from our tracking test</p></div>
+    <div class="card" data-s="2"><h4>A day, per rabbit</h4><b>~$0.27</b><p>about 20 pet cam looks, 8 hay checks, 4 questions, 2 food checks</p></div>
+    <div class="card" data-s="3"><h4>With the on-cam model</h4><b>~$4–6</b><p>a month: a small model trained on his footage watches first, the AI only when it's unsure</p></div>
+  </div>
+  <div class="note" data-s="3">SAM pricing isn't published; our figure comes from what the test run cost.</div>
+</section>
+
+<!-- 9: end -->
+<section class="slide" id="s9"><div class="centre"><div class="plate"><h1>FurSight</h1><p>Spoil them. Worry less.</p></div></div></section>
+
+<div id="cap"><span id="capText"></span></div>
+<div id="go"><span>▶ Play with sound</span></div>
+</div></div>
+<div id="hint">R or click to replay · M mutes</div>
+<script>
+// The Meta models FurSight uses, one slide each, in the intro's style (and with its sounds, ../intro/sfx/).
+// The JSON is the shape each route asks for (server/routes), trimmed to the fields worth showing.
+const $ = (id) => document.getElementById(id);
+let run = 0;
+const wait = (ms, r) => new Promise((ok, no) => setTimeout(() => (r === run ? ok() : no("stop")), ms));
+const caption = async (text, ms, r) => {
+  const c = $("capText"); c.classList.remove("on"); await wait(220, r);
+  c.textContent = text; c.classList.toggle("on", !!text); await wait(ms, r);
+};
+
+const AC = new (window.AudioContext || window.webkitAudioContext)(), master = AC.createGain(); master.connect(AC.destination);
+const buf = {};
+["pop", "chime", "click", "whoosh", "ping", "title", "end", "bed", "warn"].forEach((n) => fetch(`/intro/sfx/${n}.mp3`).then((x) => x.arrayBuffer()).then((a) => AC.decodeAudioData(a)).then((b) => (buf[n] = b)).catch(() => {}));
+let bed = null;
+function sfx(n, vol = 0.7, loop = false) {
+  if (!buf[n]) return null;
+  const src = AC.createBufferSource(), g = AC.createGain(); src.buffer = buf[n]; src.loop = loop; g.gain.value = vol;
+  src.connect(g).connect(master); src.start(); return { src, g };
+}
+function music(on) {
+  if (bed) { const b = bed; b.g.gain.setTargetAtTime(0, AC.currentTime, .4); setTimeout(() => b.src.stop(), 2000); bed = null; }
+  if (on) bed = sfx("bed", 0.14, true);
+}
+
+// each slide: [step to reveal, caption, how long, sound]
+const SLIDES = [
+  [[0, "", 1600, "title"], [1, "Four Meta models, each doing one job.", 2600, "pop"]],
+  [[1, "Hold up a food. Muse Spark looks at it.", 2600, "click"], [2, "It answers in JSON: what it is, how safe, why, and where.", 3400, "chime"],
+   [3, "Then our safety list checks it. It can only get stricter.", 3200, "warn"], [4, "Treats get a wait, and it goes on his calendar.", 3200, "chime"]],
+  [[1, "The pet cam sends a frame when he settles.", 2600, "click"], [2, "SAM 3.1 finds him in it.", 2200, "pop"],
+   [3, "Spark says what he's doing, in a line about him.", 3000, "chime"], [4, "And it lands in his diary, with a sticker.", 2800, "ping"]],
+  [[1, "SAM 3.1 also cuts him out.", 2200, "click"], [2, "One word, \"rabbit\", and it returns his outline.", 2800, "pop"],
+   [3, "So every moment becomes a sticker.", 2400, "pop"], [4, "For alerts, his diary and his week.", 2400, "pop"]],
+  [[1, "The pen cam checks his hay, food and water.", 2600, "click"], [2, "SAM measures the hay pile.", 2200, "pop"],
+   [3, "Spark reads each level.", 2400, "chime"], [4, "Less hay than usual is an early warning.", 3000, "chime"]],
+  [[1, "Ask anything, from the glasses, Quest or phone.", 2800, "click"], [2, "Spark picks the tools it needs.", 2400, "pop"],
+   [3, "It looks through the cams and checks his day.", 2600, "pop"], [4, "And answers with a sticker of what he's up to.", 3200, "ping"]],
+  [[1, "Hold to speak on Quest.", 2200, "click"], [2, "Muse Voice Transcribe turns it into words.", 2800, "pop"],
+   [3, "Spark splits it into a treat and a care task.", 2800, "chime"], [4, "The treat goes on the calendar; the brushing gets ticked.", 3200, "chime"]],
+  [[1, "Every week, his numbers and nicknames go in.", 2800, "click"], [2, "Spark writes his week, starring his stickers.", 3400, "whoosh"]],
+  [[1, "Each look costs a fraction of a cent.", 2800, "pop"], [2, "About 27 cents a day today.", 2600, "pop"], [3, "Less with a small model on the cam.", 3400, "chime"]],
+  [[0, "", 3000, "end"]],
+];
+
+async function story(r) {
+  document.querySelectorAll(".slide").forEach((s) => s.classList.remove("on"));
+  document.querySelectorAll("[data-s]").forEach((e) => e.classList.remove("in"));
+  music(true);
+  for (let i = 0; i < SLIDES.length; i++) {
+    const sl = $("s" + i); sl.classList.add("on"); if (i) sfx("whoosh", .5);
+    await wait(500, r);
+    for (const [step, text, ms, sound] of SLIDES[i]) {
+      sl.querySelectorAll(`[data-s="${step}"]`).forEach((e) => e.classList.add("in"));
+      if (sound) sfx(sound, sound === "title" || sound === "end" ? .6 : .55);
+      if (i === SLIDES.length - 1) music(false);
+      await caption(text, ms, r);
+    }
+    if (i < SLIDES.length - 1) { $("capText").classList.remove("on"); sl.classList.remove("on"); await wait(500, r); }
+  }
+}
+async function play() {
+  $("go").style.display = "none"; AC.resume();
+  const r = ++run; music(false);
+  try { await story(r); } catch (e) { if (e !== "stop") console.error(e); }
+}
+$("s0").classList.add("on");
+$("go").addEventListener("click", play);
+$("frame").addEventListener("click", (e) => { if (e.target.closest("#go")) return; if ($("go").style.display === "none") play(); });
+addEventListener("keydown", (e) => {
+  if (e.key === "r" || e.key === "R") play();
+  if (e.key === "m" || e.key === "M") master.gain.value = master.gain.value ? 0 : 1;
+});
+</script>
+</body>
+</html>
