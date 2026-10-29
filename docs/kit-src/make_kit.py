@@ -20,7 +20,7 @@ out = []
 def add(s): out.append(s)
 
 # ---------------------------------------------------------------- isometric helpers (room units, then screen)
-OX, OY, SC = 470, 470, 0.98
+OX, OY, SC = 446, 478, 0.92
 def iso(x, y, z=0, ox=None, oy=None, sc=None):
     ox = OX if ox is None else ox; oy = OY if oy is None else oy; sc = SC if sc is None else sc
     return (ox + (x - y) * C30 * sc, oy + (x + y) * S30 * sc - z * sc)
@@ -61,13 +61,13 @@ def camera(x, y, z, lens, lens_lip, facing="down"):
     return (f'<g transform="translate({sx - 26:.1f} {sy - 18:.1f})"><rect width="52" height="32" rx="10" fill="{INK}"/><circle cx="34" cy="16" r="10" fill="{lens}"/>'
             f'<circle cx="34" cy="16" r="4.5" fill="{lens_lip}"/><circle cx="10" cy="9" r="3" fill="{CORAL}"/></g>')
 
-def sticker_b64():
-    im = Image.open(os.path.join(ROOT, "server/public/demo/xiaosi-sticker-3.png"))
-    im.thumbnail((180, 180))
+def sticker_b64(name="xiaosi-sticker-3.png", box=180):
+    im = Image.open(os.path.join(ROOT, "server/public/demo", name))
+    im.thumbnail((box, box))
     b = io.BytesIO(); im.save(b, "PNG", optimize=True)
     return im.size, base64.b64encode(b.getvalue()).decode()
 
-W, D, H = 600, 430, 300          # room
+W, D, H = 700, 430, 300          # room (wider than the pen: floor to roam on)
 PX0, PY0, PX1, PY1, PH = 70, 110, 470, 390, 64   # the pen
 
 # ================================================================ document
@@ -77,6 +77,7 @@ add('<title>The FurSight kit: two pet cams, the FurSight Tray and the app</title
 add(f'''<defs>
   <pattern id="planks" width="44" height="44" patternUnits="userSpaceOnUse" patternTransform="matrix(0.866 0.5 -0.866 0.5 0 0)"><rect width="44" height="44" fill="#EFE8F7"/><path d="M0 43.5H44" stroke="#E1D7EE" stroke-width="2"/><path d="M22 0V44" stroke="#E7DFF2" stroke-width="1.4"/></pattern>
   <pattern id="litter" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#E9DCC2"/><circle cx="2" cy="2" r="1.3" fill="#D3C19E"/><circle cx="6" cy="6" r="1.2" fill="#D3C19E"/></pattern>
+  <marker id="arrs" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2FA8F5"/></marker>
   <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="{GRAPE_LIP}"/></marker>
   <filter id="lift" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="0" flood-color="{INK}" flood-opacity=".10"/></filter>
   <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="{INK}" flood-opacity=".22"/></filter>
@@ -98,20 +99,20 @@ add(poly([(0, 0, 0), (0, D, 0), (0, D, 14), (0, 0, 14)], "#DED4EC"))
 # window on the back wall, with light falling on the floor
 add(poly([(300, 0, 120), (440, 0, 120), (440, 0, 250), (300, 0, 250)], "#E7F5FE", "#CFE6F6", 4))
 add(line((370, 0, 120), (370, 0, 250), "#CFE6F6", 4) + line((300, 0, 185), (440, 0, 185), "#CFE6F6", 4))
-add(poly([(300, 0, 0), (440, 0, 0), (500, 120, 0), (360, 120, 0)], "#FFFFFF", extra='opacity=".45"'))
+add(poly([(300, 0, 0), (440, 0, 0), (600, 220, 0), (460, 220, 0)], "#FFFFFF", extra='opacity=".5"'))
 # a plant by the wall
-add(prism(540, 22, 0, 572, 54, 34, "#C7B9DD", "#B6A6D0", "#A894C6", stroke="none"))
-add(ellipse_at(556, 38, 34, 32, FERN, extra='opacity=".9"') + ellipse_at(548, 30, 58, 22, FERN_LIP) + ellipse_at(562, 44, 72, 16, FERN))
+add(prism(640, 22, 0, 672, 54, 34, "#C7B9DD", "#B6A6D0", "#A894C6", stroke="none"))
+add(ellipse_at(656, 38, 34, 32, FERN, extra='opacity=".9"') + ellipse_at(648, 30, 58, 22, FERN_LIP) + ellipse_at(662, 44, 72, 16, FERN))
 add('</g>')
 
 # ---------------------------------------------------------------- a lamp and its cable: what the room check finds
 add('<g class="b6">')
-add(ellipse_at(560, 250, 0, 20, "#C9BFDA") + line((560, 250, 0), (560, 250, 170), "#B9AECB", 5))
-lx, ly = iso(560, 250, 190)
+add(ellipse_at(670, 405, 0, 18, "#C9BFDA") + line((670, 405, 0), (670, 405, 150), "#B9AECB", 5))
+lx, ly = iso(670, 405, 170)
 add(f'<path d="M{lx - 26:.1f} {ly + 22:.1f} L{lx - 14:.1f} {ly - 12:.1f} H{lx + 14:.1f} L{lx + 26:.1f} {ly + 22:.1f} Z" fill="{SUN}" stroke="{INK}" stroke-width="2"/>')
-cable = [iso(560, 250, 0), iso(585, 300, 0), iso(560, 360, 0), iso(600, 400, 0)]
+cable = [iso(670, 405, 0), iso(620, 430, 0), iso(560, 400, 0), iso(520, 428, 0)]
 add(f'<path d="M{cable[0][0]:.1f} {cable[0][1]:.1f} C{cable[1][0]:.1f} {cable[1][1]:.1f} {cable[2][0]:.1f} {cable[2][1]:.1f} {cable[3][0]:.1f} {cable[3][1]:.1f}" stroke="{INK}" stroke-width="3" fill="none"/>')
-cx, cy = iso(575, 330, 0)
+cx, cy = iso(580, 412, 0)
 add(f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="46" ry="26" fill="none" stroke="{CORAL}" stroke-width="3.5" stroke-dasharray="6 5" class="ring"/>')
 add('</g>')
 
@@ -184,10 +185,21 @@ add(camera(270, 250, 284, FERN, FERN_LIP))
 add('</g>')
 
 # ---------------------------------------------------------------- cam 2: on a shelf on the left wall, watching the room
+# him, roaming free in the window light (out of the pen)
+(rw_, rh_), rb64 = sticker_b64("xiaosi-sticker-2.png", 150)
+fx, fy = iso(570, 140, 0)
+add(f'<g class="b8"><ellipse cx="{fx:.1f}" cy="{fy:.1f}" rx="30" ry="8" fill="{INK}" opacity=".12"/>'
+    f'<image href="data:image/png;base64,{rb64}" xlink:href="data:image/png;base64,{rb64}" x="{fx - rw_ * 0.42:.1f}" y="{fy - rh_ * 0.8:.1f}" width="{rw_ * 0.8:.1f}" height="{rh_ * 0.8:.1f}" class="bun"/></g>')
 add('<g class="b8">')
 add(prism(0, 300, 196, 34, 380, 204, "#CBBFDD", "#B6A9CC", "#A99BC2", stroke="none"))
-add(cone((20, 340, 214), [(W, 40, 0), (W, D, 0), (260, D, 0)], SKY, "b8c"))
-add(camera(20, 340, 222, SKY, SKY_LIP, facing="side"))
+add(cone((22, 340, 222), [(W, 40, 0), (W, D, 0), (260, D, 0)], SKY, "b8c sweepA"))             # the whole room
+add(cone((22, 340, 222), [(510, 80, 0), (640, 80, 0), (640, 200, 0), (510, 200, 0)], SKY, "b8c sweepB"))   # following him
+# the pan-tilt camera: a base, a round head, the lens turned towards him, and pan arrows round it
+px_, py_ = iso(22, 340, 222)
+add(f'<g transform="translate({px_:.1f} {py_:.1f})">'
+    f'<ellipse cx="0" cy="16" rx="18" ry="7" fill="#45434F"/><rect x="-7" y="2" width="14" height="14" fill="#45434F"/>'
+    f'<circle cx="0" cy="-4" r="19" fill="{INK}"/><circle cx="9" cy="-1" r="9" fill="{SKY}"/><circle cx="10" cy="-1" r="4" fill="{SKY_LIP}"/><circle cx="-9" cy="-14" r="2.6" fill="{CORAL}"/>'
+    f'<path d="M-30 6 A31 13 0 0 0 30 6" fill="none" stroke="{SKY}" stroke-width="3" marker-end="url(#arrs)" marker-start="url(#arrs)" class="pan"/></g>')
 add('</g>')
 
 # ---------------------------------------------------------------- callouts on the room
@@ -200,11 +212,11 @@ def callout(n, colour, text_col, title, sub, at, box, cls):
             f'<circle cx="{bxx + 22:.1f}" cy="{byy + 24:.1f}" r="13" fill="{colour}"/><text x="{bxx + 22:.1f}" y="{byy + 29:.1f}" text-anchor="middle" font-size="14" font-weight="900" fill="{text_col}">{n}</text>'
             f'<text x="{bxx + 44:.1f}" y="{byy + 21:.1f}" font-size="15.5" font-weight="900" fill="{INK}">{title}</text>'
             f'<text x="{bxx + 44:.1f}" y="{byy + 39:.1f}" font-size="12.5" font-weight="800" fill="{MUTED}">{sub}</text></g>')
-add(callout(1, FERN, "#fff", "FurSight Cam: overhead", "poses, flops, hay and bowls", (270, 250, 300), (560, 150), "b7"))
-add(callout(2, SKY, "#fff", "FurSight Cam: the room", "roaming, chewing, room checks", (20, 340, 236), (40, 300), "b8"))
+add(callout(1, FERN, "#fff", "FurSight Cam: his pen", "hay, food, water, poses and flops", (270, 250, 300), (560, 150), "b7"))
+add(callout(2, SKY, "#fff", "FurSight Cam: pan and tilt", "follows him when he roams free", (22, 340, 246), (40, 300), "b8"))
 add(callout(3, GRAPE, "#fff", "FurSight Tray", "his weight, droppings, temperature", (TX0, TY1, 20), (40, 760), "b3"))
 add(callout(4, SUN, INK, "Hay, food and water", "in view, so FurSight sees them go", (HX1, HY1, 74), (700, 250), "b4"))
-add(callout(5, CORAL, "#fff", "Room check", "rings what he could chew", (575, 330, 0), (700, 966), "b6"))
+add(callout(5, CORAL, "#fff", "Room check", "rings what he could chew", (580, 412, 0), (700, 966), "b6"))
 
 # ================================================================ right column: inside the Tray (exploded)
 add('<g class="b9">')
@@ -274,8 +286,8 @@ add('</g>')
 add(f'<path class="b10 flow" d="M984 794 H1034" stroke="{GRAPE_LIP}" stroke-width="3.5" fill="none" marker-end="url(#arr)"/>')
 
 # footnote
-add(f'<g class="b0"><text x="48" y="1042" font-size="14" font-weight="700" fill="{MUTED}">Schematic, not to scale. In the hackathon build the cams are any webcam or old phone running the FurSight cam page;</text>'
-    f'<text x="48" y="1064" font-size="14" font-weight="700" fill="{MUTED}">the Tray\'s scale and sensors are simulated in the app, and labelled as simulated wherever they show.</text></g>')
+add(f'<g class="b0"><text x="48" y="1042" font-size="14" font-weight="700" fill="{MUTED}">Schematic, not to scale. In the hackathon build the cams are any webcam or old phone running the FurSight cam page (following him</text>'
+    f'<text x="48" y="1064" font-size="14" font-weight="700" fill="{MUTED}">uses digital zoom); the Tray\'s scale and sensors are simulated in the app, and labelled as simulated wherever they show.</text></g>')
 add('</svg>')
 
 svg = "\n".join(out)
