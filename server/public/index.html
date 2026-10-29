@@ -94,6 +94,18 @@
   .flame { font-size: 30px; font-weight: 900; color: var(--sun-lip); }
   .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
   .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
+  .month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; text-align: center; }
+  .month b { font-size: 12px; color: var(--muted); padding: 4px 0; }
+  .month .day { aspect-ratio: 1; border: 0; border-radius: 12px; background: var(--bg); font: 800 15px Nunito, sans-serif; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0; min-width: 0; }
+  .month .day span { display: flex; gap: 2px; height: 6px; }
+  .month .day i, .legend i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .month .day.today { box-shadow: inset 0 0 0 2px var(--sky); }
+  .month .day.sel { background: var(--sky); color: #fff; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--muted); font-weight: 800; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .btn.monthnav { width: 44px; flex: none; padding-left: 0; padding-right: 0; }
+  .chip.pick { cursor: pointer; border: 0; font: inherit; }
+  select { font: 800 16px Nunito, sans-serif; padding: 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
   .camgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
   .camgrid .cam img { cursor: zoom-in; }
   .how { margin-top: 8px; }
@@ -125,11 +137,13 @@
 <nav id="tabs" class="hidden"><div class="in">
   <button data-tab="today"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="4"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Diary</button>
   <button data-tab="care"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>Care</button>
+  <button data-tab="calendar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="4"/><path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"/></svg>Calendar</button>
   <button data-tab="cam"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="3"/><path d="M8 21h8"/><circle cx="16.5" cy="9" r="1.2" fill="currentColor"/></svg>Pet cam</button>
   <button data-tab="devices"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg>Devices</button>
 </div></nav>
 
 <script src="/bean.js"></script>
+<script src="/calendar.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -184,7 +198,7 @@ async function render() {
   if (!me.pets.length) { $tabs.classList.add("hidden"); return addPet(); }
   $tabs.classList.remove("hidden");
   for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
-  ({ today, care, cam, devices })[tab]();
+  ({ today, care, calendar, cam, devices })[tab]();
 }
 $tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.tab; store.set("fs.tab", tab); render(); });
 
@@ -311,7 +325,7 @@ async function makeRecap(btn) {
 async function today() {
   $app.innerHTML = `<div class="stack">${header()}<button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
-  const { entries } = await hub("/diary?limit=80");
+  const entries = (await hub("/diary?limit=80")).entries.filter((e) => e.kind !== "event" && e.kind !== "event-cancel");
   const $l = document.getElementById("list");
   if (!entries.length) {
     $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
@@ -376,6 +390,67 @@ async function care() {
     try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "care", title: el.dataset.item, pet: p.name }) }); } catch (e) { el.classList.remove("done"); return toast(e.message); }
     care();
   };
+}
+
+// ---------------------------------------------------------------- calendar: the month at a glance, plus reminders
+
+let calMonth = null, calDay = null;
+const SUGGEST = [["Vet check-up", "yearly"], ["Vaccinations (RHDV2, myxo)", "yearly"], ["Nail trim", "6weeks"], ["Weigh-in", "weekly"], ["Deep clean", "weekly"]];
+async function calendar() {
+  const p = me.pets[0], items = careItems(p), today = FSCal.key(new Date());
+  calDay = calDay || today;
+  calMonth = calMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  $app.innerHTML = `<div class="stack">${header()}<div id="cal"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  const { entries } = await hub("/diary?limit=200");
+  const evs = FSCal.events(entries), diary = entries.filter((e) => e.kind !== "event" && e.kind !== "event-cancel");
+  const byDay = new Map();
+  for (const e of diary) { const k = FSCal.key(new Date(e.at)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
+  const careDone = (k) => items.length && items.every((i) => (byDay.get(k) || []).some((e) => e.kind === "care" && e.title === i));
+  // Monday-first month grid
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), first = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate();
+  let cells = "";
+  for (let i = 0; i < first; i++) cells += `<div></div>`;
+  for (let d = 1; d <= n; d++) {
+    const k = FSCal.key(new Date(y, m, d, 12)), list = byDay.get(k) || [];
+    const dots = [careDone(k) ? "fern" : "", list.some((e) => e.verdict === "toxic" || e.verdict === "vet") ? "coral" : list.some((e) => e.verdict === "caution") ? "sun" : list.length ? "sky" : "", evs.some((ev) => FSCal.on(ev, k)) ? "grape" : ""].filter(Boolean);
+    cells += `<button class="day ${k === today ? "today" : ""} ${k === calDay ? "sel" : ""}" data-day="${k}">${d}<span>${dots.map((c) => `<i style="background:var(--${c})"></i>`).join("")}</span></button>`;
+  }
+  const sel = FSCal.day(calDay), dayEvs = evs.filter((ev) => FSCal.on(ev, calDay)), dayDiary = byDay.get(calDay) || [];
+  const word = (e) => ({ safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet" }[e.verdict] || { care: "Care", ask: "Question", food: "Food check", photo: "Photo", recap: "Week card" }[e.kind] || cap(e.kind));
+  const up = FSCal.upcoming(entries, 60).slice(0, 6);
+  const nice = (k) => FSCal.day(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  document.getElementById("cal").innerHTML = `<div class="stack">
+    <div class="card pop">
+      <div class="row" style="justify-content:space-between"><button class="btn ghost small monthnav" id="prev" aria-label="Previous month">‹</button><h2 style="white-space:nowrap">${calMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h2><button class="btn ghost small monthnav" id="next" aria-label="Next month">›</button></div>
+      <div class="month">${["M", "T", "W", "T", "F", "S", "S"].map((d) => `<b>${d}</b>`).join("")}${cells}</div>
+      <div class="legend"><span><i style="background:var(--fern)"></i>care done</span><span><i style="background:var(--sky)"></i>diary</span><span><i style="background:var(--coral)"></i>a don't</span><span><i style="background:var(--grape)"></i>reminder</span></div>
+    </div>
+    <div class="card stack pop"><h3>${sel.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</h3>
+      ${dayEvs.map((ev) => `<div class="row"><span class="chip" style="background:var(--grape);color:#fff;border:0">Reminder</span><b style="flex:1;min-width:0">${esc(ev.title)}</b><span class="when">${FSCal.REPEATS[ev.extra.repeat || "none"]}</span></div>`).join("")}
+      ${dayDiary.length ? dayDiary.slice(0, 12).map((e) => `<div class="row" style="gap:10px"><span class="when" style="width:44px;flex:none">${new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span style="flex:1;min-width:0"><b>${esc(e.title || word(e))}</b> <span class="muted">· ${esc(word(e))}</span></span></div>`).join("") : dayEvs.length ? "" : `<p class="muted">Nothing on this day.</p>`}
+    </div>
+    <div class="card stack pop"><h3>Coming up</h3>
+      ${up.length ? up.map((u) => `<div class="row"><span class="chip">${nice(u.date)}</span><b style="flex:1;min-width:0">${esc(u.title)}</b><button class="btn ghost small" data-cancel="${u.id}" title="Remove this reminder${u.repeat !== "none" ? " and its repeats" : ""}">Remove</button></div>`).join("") : `<p class="muted">No reminders yet. Add one below, or ask FurSight to remind you.</p>`}
+    </div>
+    <div class="card stack pop"><h3>Add a reminder</h3>
+      <div class="chips">${SUGGEST.map(([t, r]) => `<button class="chip pick" data-t="${esc(t)}" data-r="${r}">${esc(t)}</button>`).join("")}</div>
+      <input id="evTitle" placeholder="What, e.g. Nail trim" maxlength="80">
+      <div class="row"><input id="evDate" type="date" value="${calDay}"><select id="evRepeat">${Object.entries(FSCal.REPEATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
+      <button class="btn grape" id="evAdd" disabled>Add to ${esc(p.name)}'s calendar</button>
+    </div></div>`;
+  document.getElementById("prev").onclick = () => { calMonth = new Date(y, m - 1, 1); calendar(); };
+  document.getElementById("next").onclick = () => { calMonth = new Date(y, m + 1, 1); calendar(); };
+  for (const b of document.querySelectorAll("[data-day]")) b.onclick = () => { calDay = b.dataset.day; calendar(); };
+  const $t = document.getElementById("evTitle"), $add = document.getElementById("evAdd");
+  $t.oninput = () => ($add.disabled = !$t.value.trim());
+  for (const b of document.querySelectorAll(".pick")) b.onclick = () => { $t.value = b.dataset.t; document.getElementById("evRepeat").value = b.dataset.r; $add.disabled = false; };
+  $add.onclick = async () => {
+    $add.disabled = true;
+    const date = document.getElementById("evDate").value || calDay, repeat = document.getElementById("evRepeat").value;
+    try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "event", title: $t.value.trim(), pet: p.name, extra: { date, repeat } }) }); toast("Added for " + nice(date)); calDay = date; calendar(); }
+    catch (e) { toast(e.message); $add.disabled = false; }
+  };
+  for (const b of document.querySelectorAll("[data-cancel]")) b.onclick = async () => { b.disabled = true; await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "event-cancel", title: "", extra: { of: b.dataset.cancel } }) }); calendar(); };
 }
 
 function devices() {

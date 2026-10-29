@@ -17,7 +17,8 @@ const { run, user } = require("../lib/agent");
 const { lookup } = require("../lib/verdict");
 const { handler, image, text, bad, household } = require("../lib/http");
 const { pet: readPet, describe } = require("../lib/pet");
-const { context, camFrame, camView } = require("../lib/hub");
+const { context, camFrame, camView, recent, addDiary } = require("../lib/hub");
+const FSCal = require("../public/calendar.js");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -133,12 +134,34 @@ module.exports = handler(async (body, req) => {
         step: { tool: "weather", label: `Checked the weather at home: ${Math.round(r.current.temperature_2m)}°C now, up to ${Math.round(max)}°C` } };
     },
   };
+  if (ctx) tools.read_calendar = {
+    description: `${p.name}'s calendar: reminders the owner set (vet visits, vaccinations, nail trims, weigh-ins) for the next 60 days.`,
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    async run() {
+      const up = FSCal.upcoming(await recent(home.token, 200).catch(() => []), 60).slice(0, 15);
+      seen.set("calendar", { kind: "calendar" });
+      return { output: { id: "calendar", today: FSCal.key(new Date()), upcoming: up.map((u) => ({ date: u.date, title: u.title, repeat: u.repeat })) },
+        step: { tool: "calendar", label: up.length ? `Read the calendar: next is ${up[0].title}, ${FSCal.day(up[0].date).toDateString().slice(0, 10)}` : "Read the calendar: nothing coming up" } };
+    },
+  };
+  if (ctx) tools.add_reminder = {
+    description: `Put a reminder on ${p.name}'s calendar, only when the owner asks for one. date is YYYY-MM-DD (today is ${FSCal.key(new Date())}, a ${new Date().toLocaleDateString("en-GB", { weekday: "long" })}).`,
+    parameters: { type: "object", properties: { title: { type: "string" }, date: { type: "string" }, repeat: { type: "string", enum: Object.keys(FSCal.REPEATS) } }, required: ["title", "date", "repeat"], additionalProperties: false },
+    async run({ title, date, repeat }) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date)) || FSCal.day(date) < FSCal.day(FSCal.key(new Date()))) return { output: { error: "date must be YYYY-MM-DD, today or later" } };
+      const t = text(title, 80).replace(/^./, (c) => c.toUpperCase());
+      const e = await addDiary(home.token, { kind: "event", title: t, pet: p.name, extra: { date, repeat: FSCal.REPEATS[repeat] ? repeat : "none" } });
+      if (!e) return { output: { error: "Couldn't save the reminder." } };
+      seen.set("reminder", { kind: "calendar" });
+      return { output: { id: "reminder", saved: true, date, repeat }, step: { tool: "calendar", label: `Added a reminder: ${t}, ${FSCal.day(date).toDateString().slice(0, 10)}${repeat !== "none" ? ", " + FSCal.REPEATS[repeat].toLowerCase() : ""}` } };
+    },
+  };
   if (ctx) tools.read_diary = {
     description: `Read ${p.name}'s diary: food checks, questions, photos, daily care ticks and notes from every device. "food" entries are foods the owner CHECKED, not things ${p.name} ate.`,
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;
-      const list = (ctx.today.length && d === 1 ? ctx.today : await require("../lib/hub").recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap");
+      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && !["recap", "event", "event-cancel"].includes(e.kind));
       const out = list.slice(0, 25).map((e, i) => {
         const id = "d" + (seen.size + i + 1);
         seen.set(id, { kind: e.kind, what: e.title });
@@ -184,7 +207,7 @@ module.exports = handler(async (body, req) => {
       properties: {
         answer: { type: "string", description: "spoken style, at most 45 words, no lists, no markdown" },
         verdict: { type: "string", enum: ["safe", "caution", "toxic", "vet", "none"], description: "only for safety or health questions; vet = see a vet today" },
-        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
+        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"calendar\", \"reminder\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
         about: { type: "string", description: "short name of the thing in the photo the answer is about, or empty" },
         box: { type: "array", items: { type: "integer" }, description: "[x_min,y_min,x_max,y_max] 0-1000 of that thing in the photo, or []" },
       },
