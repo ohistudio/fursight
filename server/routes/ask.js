@@ -64,7 +64,7 @@ module.exports = handler(async (body, req) => {
   // the pet cams: each one is "cam1", "cam2"... (its room name says where); pictures are cited by that id
   const cams = ctx ? ctx.cams.slice(0, 4).map((c, i) => ({ ...c, id: "cam" + (i + 1) })) : [];
   const camName = (n) => (/\bcam(era)?$/i.test(n) ? n : n + " cam");   // "the Simulated pet cam", not "...cam cam"
-  const shots = new Map();   // picture id -> { image, room, found }, newest last
+  const pictures = new Map();   // picture id -> { image, room, found }, newest last (not "shots": a tool has its own)
   const camList = cams.map((c) => `${c.id} "${c.name}"`).join(", ");
   const camById = (id) => cams.find((c) => c.id === id || c.name.toLowerCase() === String(id || "").toLowerCase());
   // the visible part of the full picture -> a view; box is 0-1 of what the camera showed under `from`
@@ -79,7 +79,7 @@ module.exports = handler(async (body, req) => {
       const which = cam === "all" || !camById(cam) ? cams : [camById(cam)];
       const shots = await Promise.all(which.map(async (c) => ({ c, f: await camFrame(c.channel) })));
       const got = shots.filter((s) => s.f);
-      for (const s of got) { seen.set(s.c.id, { kind: "cam", what: s.c.name }); shots.set(s.c.id, { image: s.f, room: s.c.name, found: null }); }
+      for (const s of got) { seen.set(s.c.id, { kind: "cam", what: s.c.name }); pictures.set(s.c.id, { image: s.f, room: s.c.name, found: null }); }
       if (got.length) looked = "pet cam";
       if (!got.length) return { output: { error: "The pet cams are off or not sending right now." }, step: { tool: "cam", label: `Tried the pet cam${which.length > 1 ? "s" : ""}: off` } };
       return { output: { looked: got.map((s) => ({ id: s.c.id, room: s.c.name })), off: shots.filter((s) => !s.f).map((s) => s.c.id) },
@@ -110,8 +110,8 @@ module.exports = handler(async (body, req) => {
       const close = await camFrame(hit.c.channel, 4000, Date.now());
       const id = hit.c.id + "z";
       seen.set(id, { kind: "cam", what: hit.c.name + " close-up" });
-      shots.set(hit.c.id, { image: hit.f, room: hit.c.name, found: true });
-      if (close) shots.set(id, { image: close, room: hit.c.name, found: true });
+      pictures.set(hit.c.id, { image: hit.f, room: hit.c.name, found: true });
+      if (close) pictures.set(id, { image: close, room: hit.c.name, found: true });
       return { output: { found: true, cam: hit.c.id, room: hit.c.name, zoom: v.z, close_up: close ? id : null },
         images: close ? [hit.f, close] : [hit.f], imageNote: `Found on ${hit.c.id} (${hit.c.name}): the wide view${close ? `, then zoomed in ${v.z}× (cite as "${id}")` : ""}:`,
         step: { tool: "find", label: `Found ${p.name} on the ${camName(hit.c.name)}${close ? `, zoomed in ${Math.round(v.z * 10) / 10}×` : ""}`, detail: `SAM looked at ${on.length} cam${on.length > 1 ? "s" : ""}` } };
@@ -130,7 +130,7 @@ module.exports = handler(async (body, req) => {
       if (!f) return { output: { error: "That cam didn't send a picture." } };
       const id = c.id + "z" + Math.round(v.z * 10);
       seen.set(id, { kind: "cam", what: `${c.name}: ${what}` });
-      shots.set(id, { image: f, room: c.name, found: null });
+      pictures.set(id, { image: f, room: c.name, found: null });
       return { output: { id, zoom: v.z }, images: [f], imageNote: `${c.name}, ${v.z}× on ${text(what, 40)} (cite as "${id}"):`,
         step: { tool: "zoom", label: full ? `Zoomed the ${camName(c.name)} back out` : `Zoomed the ${camName(c.name)} in on ${text(what, 40)}` } };
     },
@@ -361,8 +361,8 @@ Answers: short and spoken, at most 45 words, no lists, no markdown, no em dashes
   if (!r.result) return { question, answer: `I couldn't work that out just now. If you're worried about ${p.name}, call your vet.`, about: "", box: null, verdict: "none", looked, steps: ordered, needs: null, turns: r.turns, ms, asr_ms };
   const box = looked === "photo" && Array.isArray(r.result.box) && r.result.box.length === 4 ? r.result.box : null;
   // the picture to show: one the answer cites (where he was found first), else the last close-up of him
-  const cited = (r.result.evidence || []).filter((id) => shots.has(id)).map((id) => shots.get(id));
-  const all = [...shots.values()];
+  const cited = (r.result.evidence || []).filter((id) => pictures.has(id)).map((id) => pictures.get(id));
+  const all = [...pictures.values()];
   // ...or, if it looked through a pet cam at all, the last picture it saw there (unless it looked and he wasn't in view)
   const snapshot = cited.find((x) => x.found) || cited[cited.length - 1] || [...all].reverse().find((x) => x.found) || [...all].reverse().find((x) => x.found !== false) || null;
   return { question, answer: r.result.answer, about: r.result.about || "", box, verdict: r.result.verdict || "none", evidence: r.result.evidence, looked, steps: ordered, needs: null, snapshot, turns: r.turns, ms, asr_ms };
