@@ -363,6 +363,7 @@ Answers: short and spoken, at most 45 words, no lists, no markdown, no em dashes
   // the picture to show: one the answer cites (where he was found first), else the last close-up of him
   const cited = (r.result.evidence || []).filter((id) => shots.has(id)).map((id) => shots.get(id));
   const all = [...shots.values()];
-  const snapshot = cited.find((x) => x.found) || cited[cited.length - 1] || [...all].reverse().find((x) => x.found) || null;
+  // ...or, if it looked through a pet cam at all, the last picture it saw there (unless it looked and he wasn't in view)
+  const snapshot = cited.find((x) => x.found) || cited[cited.length - 1] || [...all].reverse().find((x) => x.found) || [...all].reverse().find((x) => x.found !== false) || null;
   return { question, answer: r.result.answer, about: r.result.about || "", box, verdict: r.result.verdict || "none", evidence: r.result.evidence, looked, steps: ordered, needs: null, snapshot, turns: r.turns, ms, asr_ms };
 });
