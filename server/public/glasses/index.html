@@ -461,7 +461,7 @@ function camLoop() {
     try { if (camRtc) camRtc.message(JSON.parse(e.data)); } catch (er) {}
   };
   camSock.onclose = () => { camSock = null; if (camRtc) { camRtc.stop(); camRtc = null; vid.hidden = true; $("camImg").hidden = false; } if (camAlive && !opened) poll(); else if (camAlive) setTimeout(() => { camAlive = false; clearInterval(status); camLoop(); }, 1500); };
-  setTimeout(() => { if (!opened && camSock) camSock.close(); }, 4000);
+  setTimeout(() => { if (!opened && camSock) camSock.close(); }, 9000);
   async function poll() {
     const viewer = "glasses" + Math.random().toString(36).slice(2, 8);
     while (camAlive && PAGES[page] === "cam") {

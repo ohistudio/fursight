@@ -26,11 +26,12 @@
   /* chunky cards and buttons with a lip, like keys */
   .card { background: var(--card); border: 2px solid var(--line); border-bottom-width: 5px; border-radius: 20px; padding: 16px; }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; padding: 12px 18px;
-         border: 0; border-radius: 16px; font: 900 17px Nunito, sans-serif; color: #fff; background: var(--fern); box-shadow: 0 5px 0 var(--fern-lip);
+         border: 0; border-radius: 16px; font: 900 17px Nunito, sans-serif; color: var(--ink); background: var(--fern); box-shadow: 0 5px 0 var(--fern-lip);
          cursor: pointer; transition: transform .08s, box-shadow .08s; text-decoration: none; }
   .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--fern-lip); }
   .btn.sky { background: var(--sky); box-shadow: 0 5px 0 var(--sky-lip); } .btn.sky:active { box-shadow: 0 1px 0 var(--sky-lip); }
-  .btn.grape { background: var(--grape); box-shadow: 0 5px 0 var(--grape-lip); } .btn.grape:active { box-shadow: 0 1px 0 var(--grape-lip); }
+  /* text stays readable: ink on the bright fills, white only on a deeper grape */
+  .btn.grape { background: var(--grape-lip); color: #fff; box-shadow: 0 5px 0 #5B35A8; } .btn.grape:active { box-shadow: 0 1px 0 #5B35A8; }
   .btn.ghost { background: var(--card); color: var(--ink); border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
   .btn.ghost:active { box-shadow: 0 0 0 var(--line); }
   .btn.small { min-height: 42px; width: auto; font-size: 15px; padding: 8px 14px; border-radius: 13px; }
@@ -60,7 +61,7 @@
   /* diary */
   .entry { display: flex; gap: 12px; align-items: flex-start; }
   .entry img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; flex: none; background: var(--line); }
-  .badge { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 900; }
+  .badge { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink); font-weight: 900; }
   .v-safe { background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); } .v-caution { background: var(--sun); box-shadow: 0 3px 0 var(--sun-lip); }
   .v-toxic, .v-vet { background: var(--coral); box-shadow: 0 3px 0 var(--coral-lip); } .v-other { background: var(--sky); box-shadow: 0 3px 0 var(--sky-lip); }
   .vword { font-weight: 900; font-size: 14px; }
@@ -96,7 +97,7 @@
   .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
   .row > svg.bean { flex: none; }
   .hz { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
-  .hz i { width: 26px; height: 26px; border-radius: 50%; color: #fff; font-style: normal; font-weight: 900; display: grid; place-items: center; }
+  .hz i { width: 26px; height: 26px; border-radius: 50%; color: var(--ink); font-style: normal; font-weight: 900; display: grid; place-items: center; }
   .moment { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; }
   .moment.noimg { grid-template-columns: 1fr; }
   .moment.sticker img { object-fit: contain; border-radius: 0; transform: rotate(-4deg); }
@@ -119,10 +120,10 @@
   .chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
   .chart .ax { font: 800 10px Nunito, sans-serif; fill: var(--muted); } .chart .so { font-style: italic; }
   table.act tr.unseen td { color: var(--muted); font-style: italic; }
-  .chip.pick.on { background: var(--grape); color: #fff; }
+  .chip.pick.on { background: var(--grape-lip); color: #fff; }
   .upthumb { width: 72px; height: 72px; flex: none; border-radius: 14px; overflow: hidden; background: var(--line); }
   .upthumb img { width: 100%; height: 100%; object-fit: cover; }
-  #logForm .pick.on { background: var(--grape); color: #fff; border-color: var(--grape); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
+  #logForm .pick.on { background: var(--grape-lip); color: #fff; border-color: var(--grape-lip); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
   #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: #fff; font: 800 13px Nunito, sans-serif; padding: 6px 10px; border-radius: 10px; opacity: 0; transition: opacity .12s; max-width: 260px; }
   .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tstats b { display: block; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; } .tstats span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
@@ -134,7 +135,7 @@
   .month .day span { display: flex; gap: 2px; height: 6px; }
   .month .day i, .legend i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .month .day.today { box-shadow: inset 0 0 0 2px var(--sky); }
-  .month .day.sel { background: var(--sky); color: #fff; }
+  .month .day.sel { background: var(--sky); color: var(--ink); }
   .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--muted); font-weight: 800; }
   .legend span { display: flex; align-items: center; gap: 5px; }
   .btn.monthnav { width: 44px; flex: none; padding-left: 0; padding-right: 0; }
@@ -151,8 +152,8 @@
   .how ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
   .how li { display: flex; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink); }
   .how li i { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--line); color: var(--muted); font-style: normal; font-weight: 900; font-size: 11px; display: grid; place-items: center; }
-  .how li.check i { background: var(--coral); color: #fff; } .how li.ok i, .how li:last-child:not(.check) i { background: var(--fern); color: #fff; }
-  .how li.ask i { background: var(--grape); color: #fff; } .how li.warn i { background: var(--sun); color: #fff; }
+  .how li.check i { background: var(--coral); color: var(--ink); } .how li.ok i, .how li:last-child:not(.check) i { background: var(--fern); color: var(--ink); }
+  .how li.ask i { background: var(--grape-lip); color: #fff; } .how li.warn i { background: var(--sun); color: var(--ink); }
   .how small { color: var(--muted); font-size: 12px; }
   .recap img { width: 100%; border-radius: 16px; display: block; margin-bottom: 12px; }
   .center { text-align: center; }
@@ -951,8 +952,8 @@ async function calendar() {
       <div class="legend"><span><i style="background:var(--fern)"></i>care done</span><span><i style="background:var(--sky)"></i>diary</span><span><i style="background:var(--coral)"></i>a don't</span><span><i style="background:var(--grape)"></i>reminder</span><span><i style="background:var(--sun)"></i>grooming due</span></div>
     </div>
     <div class="card stack pop"><h3>${sel.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</h3>
-      ${dueOn(calDay).map((r) => `<div class="row"><span class="chip" style="background:var(--sun);color:#fff;border:0;flex:none">Due</span><b style="flex:1;min-width:0">${esc(r.title)}</b><span class="when" style="flex:none">${FSRoutine.when(r)}</span></div>`).join("")}
-      ${dayEvs.map((ev) => `<div class="row"><span class="chip" style="background:var(--grape);color:#fff;border:0">Reminder</span><b style="flex:1;min-width:0">${esc(ev.title)}</b><span class="when">${FSCal.REPEATS[ev.extra.repeat || "none"]}</span></div>`).join("")}
+      ${dueOn(calDay).map((r) => `<div class="row"><span class="chip" style="background:var(--sun);color:var(--ink);border:0;flex:none">Due</span><b style="flex:1;min-width:0">${esc(r.title)}</b><span class="when" style="flex:none">${FSRoutine.when(r)}</span></div>`).join("")}
+      ${dayEvs.map((ev) => `<div class="row"><span class="chip" style="background:var(--grape-lip);color:#fff;border:0">Reminder</span><b style="flex:1;min-width:0">${esc(ev.title)}</b><span class="when">${FSCal.REPEATS[ev.extra.repeat || "none"]}</span></div>`).join("")}
       ${dayDiary.length ? dayDiary.slice(0, 12).map((e) => `<div class="row" style="gap:10px"><span class="when" style="width:44px;flex:none">${new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span style="flex:1;min-width:0"><b>${esc(e.title || word(e))}</b> <span class="muted">· ${esc(word(e))}</span></span></div>`).join("") : dayEvs.length || dueOn(calDay).length ? "" : `<p class="muted">Nothing on this day.</p>`}
     </div>
     <div class="card stack pop"><h3>Coming up</h3>
@@ -1080,7 +1081,7 @@ function cam() {
       try { const m = JSON.parse(e.data); if (rtc && rtc.message(m)) return; if (m.view) showView(m.view); } catch (er) {}
     };
     ws.onclose = () => { clearInterval(beat); if (alive && !opened) poll(); else if (alive) setTimeout(() => { if (alive) { stopCam(); cam(); } }, 1500); };
-    setTimeout(() => { if (!opened) ws.close(); }, 4000);
+    setTimeout(() => { if (!opened) ws.close(); }, 9000);
     async function poll() {
       const me_ = Math.random().toString(36).slice(2, 10);
       while (alive) {
@@ -1124,23 +1125,32 @@ async function beCam() {
   connect();
   // the clock runs in a worker: Chrome slows timers on a page in the background to once a second (once a
   // minute after a while), which would freeze the video when this window isn't in front
+  // frames straight from the camera track: Chrome stops updating a <video> in a hidden tab, which froze the
+  // stream as soon as you switched away from this page. The <video> stays as the preview (and the fallback).
+  let frame = null, reading = true;
+  if (window.MediaStreamTrackProcessor) {
+    const reader = new MediaStreamTrackProcessor({ track: stream.getVideoTracks()[0] }).readable.getReader();
+    (async () => { while (reading) { const { value, done } = await reader.read(); if (done) break; const old = frame; frame = value; if (old) old.close(); } if (frame) frame.close(); })().catch(() => {});
+  }
+  const src = () => frame ? { img: frame, w: frame.displayWidth, h: frame.displayHeight } : { img: v, w: v.videoWidth, h: v.videoHeight };
   const ticker = new Worker(URL.createObjectURL(new Blob(["setInterval(() => postMessage(0), 1000 / 15)"], { type: "text/javascript" })));
   timer = { stop: () => ticker.terminate() };
   ticker.onmessage = () => {
     const st = document.getElementById("st"), onVideo = rtc ? rtc.count() : 0;
     if (st) st.innerHTML = (viewers ? `<b></b>live to ${viewers}${onVideo ? ` (${onVideo} on video)` : ""}` : "ready, nobody watching") + (view.z > 1 ? ` · ${view.z}× zoom` : "");
-    if (!ws || ws.readyState !== 1 || !viewers || !v.videoWidth) return;
+    const f = src();
+    if (!ws || ws.readyState !== 1 || !viewers || !f.w) return;
     // the full picture is the centre square; the view crops into it (digital zoom, from full resolution)
-    const s = Math.min(v.videoWidth, v.videoHeight), cs = s / view.z;
-    const sx = (v.videoWidth - s) / 2 + view.x * s - cs / 2, sy = (v.videoHeight - s) / 2 + view.y * s - cs / 2;
-    g.drawImage(v, sx, sy, cs, cs, 0, 0, 480, 480);   // the video track is this canvas, so it's drawn 15 times a second
+    const s = Math.min(f.w, f.h), cs = s / view.z;
+    const sx = (f.w - s) / 2 + view.x * s - cs / 2, sy = (f.h - s) / 2 + view.y * s - cs / 2;
+    g.drawImage(f.img, sx, sy, cs, cs, 0, 0, 480, 480);   // the video track is this canvas, so it's drawn 15 times a second
     // pictures only for watchers not on video, at most 6 a second, and skipped when the uplink is behind
     if (!jpeg || Date.now() - lastJpeg < 160 || ws.bufferedAmount > 24 * 1024) return;
     lastJpeg = Date.now();
     c.toBlob((b) => b && ws.readyState === 1 && ws.send(b), "image/jpeg", 0.65);
   };
   const watch = watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
-  camStop = () => { alive = false; timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
+  camStop = () => { alive = false; reading = false; timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { stopCam(); render(); };
 }
 

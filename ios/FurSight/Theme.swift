@@ -36,12 +36,15 @@ struct Card: ViewModifier {
 }
 extension View { func card(_ tint: Color = .line) -> some View { modifier(Card(tint: tint)) } }
 
+// Text on a button must be easy to read: ink on the bright fills (green, amber, blue, coral), white only on
+// grape, which is drawn a shade deeper so white text has the contrast it needs.
 struct ChunkyButton: ButtonStyle {
     var color: Color = .fern, lip: Color = .fernLip
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label.font(.nunito(17)).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 54)
-            .background(RoundedRectangle(cornerRadius: 16).fill(color))
-            .background(RoundedRectangle(cornerRadius: 16).fill(lip).offset(y: configuration.isPressed ? 1 : 5))
+        let deep = color == .grape
+        configuration.label.font(.nunito(17)).foregroundStyle(deep ? Color.white : Color.ink).frame(maxWidth: .infinity, minHeight: 54)
+            .background(RoundedRectangle(cornerRadius: 16).fill(deep ? Color.grapeLip : color))
+            .background(RoundedRectangle(cornerRadius: 16).fill(deep ? Color(hex: 0x5B35A8) : lip).offset(y: configuration.isPressed ? 1 : 5))
             .offset(y: configuration.isPressed ? 4 : 0)
             .animation(.spring(response: 0.15, dampingFraction: 0.6), value: configuration.isPressed)
     }
