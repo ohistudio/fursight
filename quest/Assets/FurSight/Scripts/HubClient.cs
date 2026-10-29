@@ -12,6 +12,8 @@ namespace FurSight
     // card ("enter K7Q2 in the FurSight app"); once your phone enters it, the hub hands this headset its own key,
     // which is kept on the device. From then on the pet comes from the household (name, species, breed, notes),
     // the pet cam list too, and every check, answer and photo is written to the shared diary.
+    // Already linked: a card says which pet at launch. To link a different household: U in the editor, or hold
+    // the left thumbstick down for 3 seconds.
     public class HubClient : MonoBehaviour
     {
         public string hub = "https://fursight-cam.wibble-crossplay.workers.dev";
@@ -27,12 +29,38 @@ namespace FurSight
         IEnumerator Start()
         {
             yield return null;   // let the camera rig settle so the card lands in front of you
-            if (Linked) yield return Refresh(); else yield return Link();
+            if (!Linked) { yield return Link(); yield break; }
+            yield return Refresh();
+            var pet = PetProfile.Current;
+            if (Me != null && pet != null)
+            {
+                var head = Camera.main.transform;
+                var card = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked",
+                    $"Looking after {pet.petName} together.", "<color=#9A98A6>To link another household, hold the left thumbstick for 3 seconds" + (Application.isEditor ? " (U)" : "") + ".</color>");
+                yield return new WaitForSeconds(6f);
+                if (card != null) card.Dismiss();
+            }
+        }
+
+        float _held;
+        void Update()
+        {
+            // relink: hold the left thumbstick in, or U in the editor
+            _held = OVRInput.Get(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.LTouch) ? _held + Time.deltaTime : 0f;
+            bool u = UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.uKey.wasPressedThisFrame;
+            if ((_held > 3f || u) && !_linking) { _held = 0f; Debug.Log("[FurSight] relinking"); Unlink(); }
         }
 
         // ---------------------------------------------------------------- linking
 
+        bool _linking;
         IEnumerator Link()
+        {
+            _linking = true;
+            try { yield return LinkSteps(); } finally { _linking = false; }
+        }
+
+        IEnumerator LinkSteps()
         {
             var start = Send("POST", "/hub/link/start", new { kind = "quest", name = SystemInfo.deviceModel.Contains("Quest") ? SystemInfo.deviceModel : "Quest" }, false);
             yield return start.SendWebRequest();
@@ -51,7 +79,7 @@ namespace FurSight
                 if (poll.result != UnityWebRequest.Result.Success) continue;
                 var p = JObject.Parse(poll.downloadHandler.text);
                 string status = (string)p["status"];
-                if (status == "expired") { _codeCard.Dismiss(); yield return Link(); yield break; }
+                if (status == "expired") { _codeCard.Dismiss(); yield return LinkSteps(); yield break; }
                 if (status != "linked") continue;
                 PlayerPrefs.SetString("fs.hubToken", (string)p["token"]);
                 PlayerPrefs.Save();
