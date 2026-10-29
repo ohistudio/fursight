@@ -70,6 +70,7 @@ def sticker_b64(name="xiaosi-sticker-3.png", box=180):
 W, D, H = 700, 430, 300          # room (wider than the pen: floor to roam on)
 PX0, PY0, PX1, PY1, PH = 70, 110, 470, 390, 64   # the pen
 
+# ==== end of helpers (make_intro.py reuses everything above this line) ====
 # ================================================================ document
 add('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1600 1080" width="1600" height="1080" '
     'font-family="Nunito, \'Avenir Next\', \'Segoe UI\', system-ui, sans-serif">')

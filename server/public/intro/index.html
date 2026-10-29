@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FurSight Intro</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+<style>
+  :root { --ink: #2B2A33; --muted: #6B6977; --grape: #9B6CF0; --grape-lip: #7A4ED1; --bg: #F6F5F9; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: Nunito, system-ui, sans-serif; }
+  #stage { position: absolute; inset: 0; display: grid; place-items: center; }
+  #frame { position: relative; width: min(100vw, 177.78vh); aspect-ratio: 16 / 9; }
+  #scene svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #scene svg g { transition: opacity .6s ease; }
+  #dim { position: absolute; inset: 0; background: #2B2A33; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+  /* the words: one line at a time, bottom centre */
+  #cap { position: absolute; left: 50%; bottom: 5.5%; transform: translateX(-50%); max-width: 86%; text-align: center; pointer-events: none; }
+  #cap span { display: inline-block; background: #FFFFFF; color: var(--ink); font-weight: 900; font-size: clamp(16px, 2.6vw, 44px); line-height: 1.2;
+              padding: .32em .8em; border-radius: 999px; box-shadow: 0 .18em 0 rgba(43,42,51,.14); opacity: 0; transform: translateY(14px) scale(.98); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.9,.3,1); }
+  #cap span.on { opacity: 1; transform: none; }
+  #cap span.dark { background: var(--ink); color: #FFFFFF; }
+  /* the title and the end card */
+  #card { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s ease; }
+  #card.on { opacity: 1; }
+  #card h1 { margin: 0; font-size: clamp(36px, 7vw, 120px); font-weight: 900; color: var(--ink); letter-spacing: -.01em; }
+  #card p { margin: .3em 0 0; font-size: clamp(16px, 2.2vw, 36px); font-weight: 800; color: var(--muted); }
+  #card .dot { color: #FFB3D4; }
+  #hint { position: absolute; right: 14px; bottom: 10px; font: 800 12px Nunito, sans-serif; color: #B3AEC0; }
+  @media (prefers-reduced-motion: reduce) { #cap span, #scene svg g { transition: none; } }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="cap"><span id="capText"></span></div></div></div>
+<div id="hint">R or click to replay</div>
+<script>
+// FurSight's intro: Xiaosi's story in the kit schematic's style. He had GI stasis; since then every treat feels
+// like a risk; he roams, chews cables, finds chocolate. Then the kit arrives and each worry gets an answer.
+// The scene (props in groups, his stickers, where he goes) comes from docs/kit-src/make_intro.py.
+const $ = (id) => document.getElementById(id);
+let S, run = 0;
+const wait = (ms, r) => new Promise((ok, no) => setTimeout(() => (r === run ? ok() : no("stop")), ms));
+const show = (id, on = true) => { const el = $(id); if (el) el.setAttribute("opacity", on ? "1" : "0"); };
+const caption = async (text, ms, r, dark = false) => {
+  const c = $("capText"); c.classList.remove("on"); await wait(220, r);
+  c.textContent = text; c.classList.toggle("dark", dark); c.classList.add("on"); await wait(ms, r);
+};
+const card = (html) => { $("card").innerHTML = html; $("card").classList.toggle("on", !!html); };
+
+// ---------------------------------------------------------------- Xiaosi: one sticker, moved and posed
+let bun = { x: 0, y: 0, face: 1, pose: "side", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 };
+function draw() {
+  const st = S.stickers[bun.pose], k = 0.62 * bun.size, w = st.w * k, h = st.h * k;
+  const img = $("bun");
+  if (img.getAttribute("href") !== st.src) { img.setAttribute("href", st.src); img.setAttributeNS("http://www.w3.org/1999/xlink", "href", st.src); }
+  img.setAttribute("width", w); img.setAttribute("height", h); img.setAttribute("x", -w / 2); img.setAttribute("y", -h + 6);
+  img.setAttribute("transform", `translate(0 ${-bun.lift}) rotate(${bun.tilt}) scale(${bun.face * bun.sx} ${bun.sy})`);
+  $("bunshadow").setAttribute("rx", 34 * bun.size * (1 - bun.lift / 120)); $("bunshadow").setAttribute("opacity", 0.14 * (1 - bun.lift / 90));
+  $("bunwrap").setAttribute("transform", `translate(${bun.x} ${bun.y})`);
+}
+const tween = (ms, r, step) => new Promise((ok, no) => {
+  const t0 = performance.now();
+  (function f(t) { if (r !== run) return no("stop"); const k = Math.min(1, (t - t0) / ms); step(k); draw(); k < 1 ? requestAnimationFrame(f) : ok(); })(t0);
+});
+// hop to a spot: little arcs, squash on landing, facing the way he's going
+async function hop(spot, ms, r, hops = 3) {
+  const [x0, y0] = [bun.x, bun.y], [x1, y1] = S.spots[spot];
+  bun.face = x1 < x0 ? -1 : 1;
+  await tween(ms, r, (k) => {
+    const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, ph = (k * hops) % 1;
+    bun.x = x0 + (x1 - x0) * e; bun.y = y0 + (y1 - y0) * e;
+    bun.lift = Math.sin(ph * Math.PI) * 26; bun.sy = ph < .12 || ph > .9 ? .9 : 1.04; bun.sx = 2 - bun.sy;
+  });
+  bun.lift = 0; bun.sx = bun.sy = 1;
+}
+const breathe = (ms, r) => tween(ms, r, (k) => { const s = Math.sin(k * Math.PI * 2 * ms / 1800); bun.sy = 1 - s * .025; bun.sx = 1 + s * .02; });
+const nod = (ms, r) => tween(ms, r, (k) => { bun.tilt = Math.max(0, Math.sin(k * Math.PI * 2 * ms / 500)) * 9 * bun.face; });
+const chew = (ms, r) => tween(ms, r, (k) => { bun.tilt = Math.sin(k * Math.PI * 2 * ms / 160) * 3; bun.sy = 1 + Math.sin(k * Math.PI * 2 * ms / 160) * .02; });
+const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 1.08 - (k - .7) / .3 * .08; });
+
+// ---------------------------------------------------------------- the story
+async function story(r) {
+  for (const id of ["cablering", "chocglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardChoc", "cardHay", "cardTray", "cardBerry", "berry", "berryq"]) show(id, false);
+  $("dim").style.opacity = 0; card(""); $("capText").classList.remove("on");
+  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "sit", lift: 0, tilt: 0, sx: 1, sy: 1, size: 0 }); draw();
+
+  card(`<div><h1>FurSight</h1><p>a story about Xiaosi</p></div>`); await wait(2200, r); card("");
+  await pop(r);
+  await caption("Meet Xiaosi.", 1800, r);
+  await Promise.all([breathe(2200, r), caption("He loves a treat. We love giving him one.", 2200, r)]);
+
+  // the scare
+  bun.pose = "hunch"; draw(); $("dim").style.opacity = .42;
+  await Promise.all([breathe(3000, r), caption("A few months ago, he got GI stasis. His gut just stopped.", 3000, r, true)]);
+  await caption("Rabbits hide illness until it's serious.", 2400, r, true);
+  $("dim").style.opacity = 0; bun.pose = "sit"; draw();
+  show("berry"); await wait(500, r); show("berryq");
+  await caption("Since then, every treat feels like a risk.", 2600, r);
+  show("berryq", false);
+
+  // and he gets into everything
+  bun.pose = "side"; draw();
+  await caption("And when he roams free...", 900, r);
+  await hop("gate", 1300, r, 3); await hop("cable", 1100, r, 2);
+  show("cablering");
+  await Promise.all([chew(2000, r), caption("...cables look like chew toys.", 2000, r)]);
+  await hop("choc", 1300, r, 3);
+  show("chocglow");
+  await Promise.all([nod(2200, r), caption("And chocolate is toxic to rabbits.", 2200, r)]);
+  await hop("hay", 1800, r, 4);
+  bun.pose = "back"; draw();
+  await Promise.all([nod(2400, r), caption("Hay should be most of what he eats. Less hay is the first sign.", 2400, r)]);
+  show("cablering", false); show("chocglow", false);
+
+  // the kit
+  bun.pose = "sit"; draw();
+  await caption("So we built FurSight.", 1600, r, true);
+  show("cam1"); await wait(500, r);
+  await caption("A cam on his pen, for his hay, food and water.", 1900, r);
+  show("cam2"); await wait(400, r);
+  await caption("A cam that follows him when he roams.", 1800, r);
+  show("trayscale"); await wait(300, r); show("traytop");
+  await caption("And a litter tray that weighs him every visit.", 2000, r);
+
+  // and each worry gets an answer
+  show("cardBerry"); await caption("It remembers every treat, and when he can have the next.", 2600, r);
+  show("cardChoc"); show("chocglow"); await caption("It checks food before you share it.", 2000, r);
+  show("cardCable"); show("cablering"); await caption("It spots what he could chew.", 1800, r);
+  show("cardHay"); show("cardTray"); await caption("And it notices when something changes.", 2400, r);
+
+  for (const id of ["cardBerry", "cardChoc", "cardCable", "cardHay", "cardTray", "cablering", "chocglow"]) show(id, false);
+  await Promise.all([breathe(2200, r), caption("Treat him. Without the worry.", 2200, r)]);
+  $("capText").classList.remove("on");
+  card(`<div style="background:rgba(246,245,249,.92);padding:40px 60px;border-radius:40px"><h1>FurSight</h1><p>It notices. Your vet decides.</p></div>`);
+}
+
+async function play() {
+  const r = ++run;
+  try { await story(r); } catch (e) { if (e !== "stop") console.error(e); }
+}
+Promise.all([fetch("intro.svg").then((x) => x.text()), fetch("scene.json").then((x) => x.json())]).then(([svg, scene]) => {
+  $("scene").innerHTML = svg; S = scene; play();
+});
+addEventListener("keydown", (e) => { if (e.key === "r" || e.key === "R") play(); });
+$("stage").addEventListener("click", play);
+</script>
+</body>
+</html>

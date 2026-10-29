@@ -6,7 +6,11 @@ A rabbit care kit and app: pet cams watch how he rests, flops and eats his hay, 
 
 ![The FurSight kit: two pet cams, the FurSight Tray and the app](docs/kit.svg)
 
-More on the kit: [fursight-seven.vercel.app/kit](https://fursight-seven.vercel.app/kit/). Try it without the kit or a rabbit: open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
+![Concept render of the FurSight Tray](docs/tray-concept.jpg)
+
+*The FurSight Tray, a concept render (not a photo).*
+
+More on the kit: [fursight-seven.vercel.app/kit](https://fursight-seven.vercel.app/kit/). As a product, with rough costs, the subscription and the AI per household: [docs/product.md](docs/product.md). Try it without the kit or a rabbit: open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
 
 Built for the Meta Global AI Developer Hackathon (Indie track, Build for Your World) on the Meta Model API:
 
