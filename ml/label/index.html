@@ -73,7 +73,7 @@ async function load() {
   $("acts").innerHTML = S.ACTIVITIES.map((a) => `<button class="opt act" data-a="${a}">${a[0].toUpperCase() + a.slice(1)} <kbd>${AKEYS[a]}</kbd></button>`).join("");
   for (const b of document.querySelectorAll("[data-p]")) b.onclick = () => { cur.posture = b.dataset.p; paint(); };
   for (const b of document.querySelectorAll("[data-a]")) b.onclick = () => toggle(b.dataset.a);
-  const f = [["todo", "To review"], ["all", "All"], ["unsure", "Spark unsure"], ["other", "Not Xiaosi"], ...S.POSTURES.map((p) => ["p:" + p, `${NAME[p]} (${count((l) => (l.reviewed ? l.posture : l.spark && l.spark.posture) === p)})`]), ...S.ACTIVITIES.map((a) => ["a:" + a, `${a[0].toUpperCase() + a.slice(1)} (${count((l) => (l.reviewed ? l.activity || [] : (l.spark && l.spark.activity) || []).includes(a))})`])];
+  const f = [["todo", "To review"], ["all", "All"], ["new", `Your videos and photos (${S.items.filter((i) => i.id.startsWith("xs-")).length})`], ["unsure", "Spark unsure"], ["other", "Not Xiaosi"], ...S.POSTURES.map((p) => ["p:" + p, `${NAME[p]} (${count((l) => (l.reviewed ? l.posture : l.spark && l.spark.posture) === p)})`]), ...S.ACTIVITIES.map((a) => ["a:" + a, `${a[0].toUpperCase() + a.slice(1)} (${count((l) => (l.reviewed ? l.activity || [] : (l.spark && l.spark.activity) || []).includes(a))})`])];
   $("filter").innerHTML = f.map(([k, w]) => `<option value="${k}">${w}</option>`).join("");
   $("filter").onchange = () => { pick(); show(); };
   pick(); show(); progress();
@@ -84,6 +84,7 @@ function pick() {
   const k = $("filter").value;
   list = S.items.filter((i) => { const l = L(i.id);
     if (k === "todo") return !l.reviewed;
+    if (k === "new") return i.id.startsWith("xs-");
     if (k === "unsure") return l.spark && l.spark.sure !== "high" && !l.reviewed;
     if (k === "other") return l.reviewed ? !l.him : l.spark && !l.spark.is_xiaosi;
     // your label if you've reviewed it, otherwise Spark's
