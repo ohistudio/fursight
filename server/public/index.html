@@ -1309,6 +1309,7 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
   $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2>${clip ? `<span class="chip" style="justify-self:start">Playing a recording: ${esc(clip.name)}</span>` : ""}<p class="muted">Leave this open near ${esc(me.pets[0].name)}, with his hay, food bowl and water in view. It only sends pictures while someone is watching, and checks the hay and bowls every couple of hours.</p>
     <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>
     <p class="muted center" id="act" style="font-size:14px">Watching for ${esc(me.pets[0].name)}</p>
+    ${clip ? "" : `<button class="btn ghost small" id="diaryToggle" style="justify-self:center"></button>`}
     <button class="btn ghost" id="stop">Stop being a pet cam</button></div>`;
   let clipFrames = null, clipT0 = 0;
   let ws, stream, timer, viewers = 0, jpeg = 0, alive = true, wake, rtc = null, lastJpeg = 0, view = { z: 1, x: 0.5, y: 0.5 };
@@ -1371,10 +1372,29 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
   const levelShot = () => { const f = src(); if (!f.w) return null; const sq = Math.min(f.w, f.h), lc = document.createElement("canvas"); lc.width = lc.height = 768;
     lc.getContext("2d").drawImage(f.img, (f.w - sq) / 2, (f.h - sq) / 2, sq, sq, 0, 0, 768, 768); return lc.toDataURL("image/jpeg", 0.8); };
   const checkLevels = () => { const image = levelShot(); if (image) api("/api/levels", { image }).catch(() => {}); };
-  const levelsFirst = clip ? 0 : setTimeout(checkLevels, 60e3), levelsEvery = clip ? 0 : setInterval(checkLevels, 2 * 36e5);
-  // a recording doesn't keep his diary: what it shows didn't happen now
-  const watch = clip ? 0 : watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
-  camStop = () => { alive = false; reading = false; clearTimeout(levelsFirst); clearInterval(levelsEvery); if (clipFrames) clipFrames.forEach((b) => b.close()); timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
+  // Keeps his diary: with two cams on one pen, only one should log his poses, time on the move and hay checks,
+  // or everything counts twice. On by default for the household's only (or first) cam; both still stream.
+  let levelsFirst = 0, levelsEvery = 0, watch = 0;
+  const others = me.cams.filter((x) => x.channel !== channel).length;
+  let keepDiary = !clip && (store.get("fs.camDiary") !== null ? store.get("fs.camDiary") === "1" : others === 0);
+  const startDiary = () => {
+    levelsFirst = setTimeout(checkLevels, 60e3); levelsEvery = setInterval(checkLevels, 2 * 36e5);
+    watch = watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
+  };
+  const stopDiary = () => { clearTimeout(levelsFirst); clearInterval(levelsEvery); clearInterval(watch); levelsFirst = levelsEvery = watch = 0; };
+  const showDiary = () => {
+    const b = document.getElementById("diaryToggle"), a = document.getElementById("act");
+    if (b) b.textContent = keepDiary ? "Keeps his diary: on" : "Keeps his diary: off (another cam does)";
+    if (a && !keepDiary) a.textContent = "Streaming only: another cam keeps his diary";
+  };
+  if (keepDiary) startDiary();
+  showDiary();
+  if (document.getElementById("diaryToggle")) document.getElementById("diaryToggle").onclick = () => {
+    keepDiary = !keepDiary; store.set("fs.camDiary", keepDiary ? "1" : "0");
+    if (keepDiary) startDiary(); else stopDiary();
+    showDiary(); toast(keepDiary ? "This cam keeps his diary" : "Streaming only");
+  };
+  camStop = () => { alive = false; reading = false; stopDiary(); if (clipFrames) clipFrames.forEach((b) => b.close()); timer.stop(); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { store.set("fs.camOn", null); stopCam(); render(); };
 }
 
