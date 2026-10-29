@@ -13,19 +13,27 @@ async function context(token) {
   const [me, diary] = await Promise.all([get("/me", token), get("/diary?limit=30", token)]);
   const start = new Date(); start.setHours(0, 0, 0, 0);
   const today = diary.entries.filter((e) => e.at >= start.getTime() - 6 * 3600e3).slice(0, 15);   // today, plus late last night
-  return { pet: me.pets[0] || null, cams: me.cams || [], today };
+  return { pet: me.pets[0] || null, cams: me.cams || [], today, home: me.home || null };
 }
 
 // The relay only sends while someone watches: asking for a frame wakes the camera, so keep asking for a
 // couple of seconds until one is fresh. Returns a JPEG data URL, or null if the camera is off.
-async function camFrame(channel, waitMs = 3500) {
+// notBefore: only accept a frame taken after this time (say, after changing the zoom).
+async function camFrame(channel, waitMs = 3500, notBefore = 0) {
   const viewer = "server" + Math.random().toString(36).slice(2, 8), until = Date.now() + waitMs;
   while (Date.now() < until) {
     const r = await fetch(`${HUB}/c/${channel}/frame.jpg?v=${viewer}&t=${Date.now()}`).catch(() => null);
-    if (r && r.status === 200 && Number(r.headers.get("x-frame-age")) < 4000) return "data:image/jpeg;base64," + Buffer.from(await r.arrayBuffer()).toString("base64");
+    const age = r ? Number(r.headers.get("x-frame-age")) : Infinity;
+    if (r && r.status === 200 && age < 4000 && Date.now() - age > notBefore) return "data:image/jpeg;base64," + Buffer.from(await r.arrayBuffer()).toString("base64");
     await new Promise((ok) => setTimeout(ok, 350));
   }
   return null;
+}
+
+// a pet cam's digital zoom: { z: 1-4, x, y } with the centre as 0-1 of the full picture
+async function camView(channel, view) {
+  const r = await fetch(`${HUB}/c/${channel}/view`, view ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(view) } : {}).catch(() => null);
+  return r && r.ok ? r.json() : { z: 1, x: 0.5, y: 0.5 };
 }
 
 // the pet's photo as a data URL (for Muse Image), or null
@@ -41,4 +49,4 @@ async function addDiary(token, entry) {
   return r.ok ? r.json() : null;
 }
 
-module.exports = { context, camFrame, petPhoto, recent, addDiary };
+module.exports = { context, camFrame, camView, petPhoto, recent, addDiary };

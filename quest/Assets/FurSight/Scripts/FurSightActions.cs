@@ -117,7 +117,7 @@ namespace FurSight
             {
                 string tool = (string)s["tool"], label = (string)s["label"] ?? "";
                 if ((string)s["kind"] == "check") stopped++;
-                string name = tool == "cam" && !label.EndsWith("off") ? "pet cam" : tool == "diary" ? "diary" : tool == "care" ? "care plan" : tool == "food" ? "safety list" : null;
+                string name = (tool == "cam" || tool == "find" || tool == "zoom") && !label.EndsWith("off") ? "pet cam" : tool == "diary" ? "diary" : tool == "care" ? "care plan" : tool == "food" ? "safety list" : null;
                 if (name != null && !used.Contains(name)) used.Add(name);
             }
             string line = used.Count > 0 ? "Looked at " + string.Join(", ", used) : "";

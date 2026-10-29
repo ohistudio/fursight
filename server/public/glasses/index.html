@@ -305,7 +305,7 @@ function say(text) {
 let pending = null;
 // one short line of what the agent did: "pet cam · diary · safety list · a check stopped 1 answer"
 function how(steps) {
-  const short = { cam: "pet cam", diary: "diary", care: "care plan", food: "safety list", photo: "photo" };
+  const short = { cam: "pet cam", find: "pet cam", zoom: "pet cam", diary: "diary", care: "care plan", food: "safety list", photo: "photo", weather: "weather" };
   const used = [...new Set((steps || []).filter((s) => short[s.tool] && !/off$/.test(s.label)).map((s) => short[s.tool]))];
   const checks = (steps || []).filter((s) => s.kind === "check").length;
   return [used.length ? "Looked at " + used.join(", ") : "", checks ? `${checks} answer${checks > 1 ? "s" : ""} stopped by a check` : ""].filter(Boolean).join(" · ");

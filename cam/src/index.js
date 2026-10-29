@@ -5,6 +5,8 @@
 //   WS  /c/<channel>/send?k=  webcam page -> binary JPEG frames; gets {viewers:n} back
 //   WS  /c/<channel>/watch    glasses page <- binary JPEG frames
 //   GET /c/<channel>/frame.jpg  latest frame, for a browser that can't hold a socket
+//   GET|POST /c/<channel>/view  the camera's digital zoom { z: 1-4, x, y } (centre, 0-1 of the full picture);
+//                             a watcher can also send {"view":{...}} on its socket. The webcam page crops to it.
 //
 // A channel id is 16 random characters and is the only way to see the camera, so it's never listed.
 // The first webcam page to send on a channel claims it with its key; nobody else can send there.
@@ -36,7 +38,7 @@ export default {
     if (url.pathname === "/g/icon.png") return new Response(ICON, { headers: { "content-type": "image/png", "cache-control": "public, max-age=86400", "access-control-allow-origin": "*" } });
     let m = url.pathname.match(/^\/g\/([A-Za-z0-9]{16})$/);
     if (m) return html(GLASSES);
-    m = url.pathname.match(/^\/c\/([A-Za-z0-9]{16})\/(send|watch|frame\.jpg)$/);
+    m = url.pathname.match(/^\/c\/([A-Za-z0-9]{16})\/(send|watch|frame\.jpg|view)$/);
     if (!m || !ID.test(m[1])) return new Response("not found", { status: 404 });
     return env.CHANNELS.get(env.CHANNELS.idFromName(m[1])).fetch(req);
   },
@@ -50,6 +52,19 @@ export class Channel {
     this.frame = null;   // latest JPEG (ArrayBuffer)
     this.at = 0;         // when it arrived
     this.pollers = new Map();
+    this.view = { z: 1, x: 0.5, y: 0.5 };
+    ctx.blockConcurrencyWhile(async () => { this.view = (await ctx.storage.get("view")) || this.view; });
+  }
+
+  // zoom 1-4, centre kept so the crop stays inside the picture; tell the camera and everyone watching
+  setView(v) {
+    const z = Math.max(1, Math.min(4, Number(v.z) || 1)), half = 0.5 / z;
+    const clamp = (n) => Math.max(half, Math.min(1 - half, Number.isFinite(Number(n)) ? Number(n) : 0.5));
+    this.view = { z: Math.round(z * 100) / 100, x: Math.round(clamp(v.x) * 1000) / 1000, y: Math.round(clamp(v.y) * 1000) / 1000 };
+    this.ctx.storage.put("view", this.view);
+    const msg = JSON.stringify({ view: this.view });
+    for (const ws of [...this.sockets("send"), ...this.sockets("watch")]) { try { ws.send(msg); } catch (e) {} }
+    return this.view;
   }
 
   sockets(tag) { return this.ctx.getWebSockets(tag); }
@@ -70,15 +85,22 @@ export class Channel {
     const url = new URL(req.url);
     const what = url.pathname.split("/")[3];
 
+    if (what === "view") {
+      const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "content-type", "content-type": "application/json" };
+      if (req.method === "OPTIONS") return new Response(null, { headers: { ...cors, "access-control-allow-methods": "GET, POST" } });
+      const v = req.method === "POST" ? this.setView(await req.json().catch(() => ({}))) : this.view;
+      return new Response(JSON.stringify(v), { headers: cors });
+    }
+
     if (what === "frame.jpg") {
       const who = url.searchParams.get("v") || "anon";
       const isNew = !this.pollers.has(who);
       this.pollers.set(who, Date.now());
       if (isNew) { this.tellSender(); this.ctx.storage.setAlarm(Date.now() + POLL_SEEN + 500); }
       // the web app and glasses app live on another site, so frames say they may be read from anywhere
-      const cors = { "access-control-allow-origin": "*", "access-control-expose-headers": "x-frame-age" };
+      const cors = { "access-control-allow-origin": "*", "access-control-expose-headers": "x-frame-age, x-view" };
       if (!this.frame) return new Response(null, { status: 204, headers: { "cache-control": "no-store", ...cors } });
-      return new Response(this.frame, { headers: { "content-type": "image/jpeg", "cache-control": "no-store", "x-frame-age": String(Date.now() - this.at), ...cors } });
+      return new Response(this.frame, { headers: { "content-type": "image/jpeg", "cache-control": "no-store", "x-frame-age": String(Date.now() - this.at), "x-view": JSON.stringify(this.view), ...cors } });
     }
 
     if (req.headers.get("Upgrade") !== "websocket") return new Response("expected a websocket", { status: 426 });
@@ -94,9 +116,10 @@ export class Channel {
     this.ctx.acceptWebSocket(pair[1], [what]);
     if (what === "watch") {
       if (this.frame) pair[1].send(this.frame);
+      pair[1].send(JSON.stringify({ view: this.view }));
       queueMicrotask(() => this.tellSender());
     } else {
-      pair[1].send(JSON.stringify({ viewers: this.viewers() }));
+      pair[1].send(JSON.stringify({ viewers: this.viewers(), view: this.view }));
     }
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
@@ -109,6 +132,7 @@ export class Channel {
   webSocketMessage(ws, data) {
     const [tag] = this.ctx.getTags(ws);
     if (data === "ping") { try { ws.send("pong"); } catch (e) {} return; }
+    if (tag === "watch" && typeof data === "string") { try { const m = JSON.parse(data); if (m.view) this.setView(m.view); } catch (e) {} return; }
     if (tag !== "send" || typeof data === "string" || data.byteLength > 512 * 1024) return;
     this.frame = data; this.at = Date.now();
     for (const v of this.sockets("watch")) { try { v.send(data); } catch (e) {} }
