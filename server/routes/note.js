@@ -93,14 +93,14 @@ A question ("can he have apple?") is not a fed action. Prefer care or routine ov
       } else if (a.type === "note" || a.type === "care" || a.type === "routine") {
         const ent = FSActivity.entry(p, "note", text(a.title, 60) || said.slice(0, 60));
         await addDiary(home.token, ent);
-        done.push({ type: "note", title: ent.title, said: `Kept as a note.` });
+        done.push({ type: "note", title: ent.title, said: `Kept as a note: ${ent.title}.` });
       }
     } catch (e) { done.push({ type: a.type, title: a.food || a.title || a.item, said: `Couldn't save this one: ${e.message}` }); }
   }
   if (!done.length) {
     const ent = FSActivity.entry(p, "note", said.slice(0, 60));
     await addDiary(home.token, ent);
-    done.push({ type: "note", title: ent.title, said: "Kept as a note." });
+    done.push({ type: "note", title: ent.title, said: `Kept as a note: ${ent.title}.` });
   }
   return { done, said: done.map((d) => d.said).join(" ") };
 });
