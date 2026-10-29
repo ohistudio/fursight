@@ -430,6 +430,7 @@ async function today() {
     all = all.concat(list = (await hub(`/diary?limit=200&before=${list[list.length - 1].at}&kinds=${kinds.join(",")}`)).entries);
   const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind))).slice(0, 80);
   const $l = document.getElementById("list");
+  if (!$l) return;   // you've moved to another tab while this loaded
   if (!entries.length) {
     $l.innerHTML = kinds ? `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>None yet</h3><p class="muted">Add old photos, videos and vet papers and FurSight keeps them with ${esc(me.pets[0].name)}'s diary.</p></div>`
       : `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
@@ -1039,8 +1040,10 @@ function cam() {
       <label class="btn ghost" for="roomPhoto">Check a photo of a room</label><input id="roomPhoto" type="file" accept="image/*" class="hidden">
       <div id="roomOut"></div></div>
     ${cams.length ? "" : `<div class="card center stack pop"><h3>No pet cam yet</h3><p class="muted">Any old laptop or phone with a camera can watch ${esc(me.pets[0].name)}'s space. Open FurSight on it and use it as a pet cam.</p></div>`}
-    <button class="btn sky" id="be">${store.get("fs.camName") ? `Start the ${esc(store.get("fs.camName"))} cam again` : "Use this device as a pet cam"}</button></div>`;
+    <button class="btn sky" id="be">${store.get("fs.camName") ? `Start the ${esc(store.get("fs.camName"))} cam again` : "Use this device as a pet cam"}</button>
+    <label class="btn ghost small" for="clip" style="justify-self:center">For a demo: play a video as the pet cam</label><input id="clip" type="file" accept="video/*" class="hidden"></div>`;
   document.getElementById("be").onclick = () => beCam(!!store.get("fs.camName"));
+  document.getElementById("clip").onchange = (e) => e.target.files[0] && beCam(!!store.get("fs.camName"), e.target.files[0]);
   for (const b of document.querySelectorAll("[data-room]")) b.onclick = () => roomCheck({ cam: true, channel: b.dataset.room });
   document.getElementById("roomPhoto").onchange = async (e) => e.target.files[0] && roomCheck({ image: await shrink(e.target.files[0]) });
   // frames pushed over a socket per camera (no round trip per picture); polling if a socket won't open
@@ -1099,22 +1102,31 @@ function cam() {
 // this browser becomes a pet cam: camera on, register with the household, send to the relay while watched
 // A device that was a pet cam goes back to being one after a reload or a restart (fs.camOn), with the same name
 // and channel, so viewers reconnect and no new camera is added.
-async function beCam(resume = false) {
+// clip: a video file to play instead of the camera (for recording a demo); it goes through everything the camera
+// would, and the page says it's a recording.
+async function beCam(resume = false, clip = null) {
   stopCam();
   const name = (resume && store.get("fs.camName")) || prompt("Name this camera", store.get("fs.camName") || `${me.pets[0].name}'s pen`); if (!name) return render();
-  store.set("fs.camName", name); store.set("fs.camOn", "1");
+  store.set("fs.camName", name); if (!clip) store.set("fs.camOn", "1");   // a clip can't carry on after a reload
   let channel = store.get("fs.camChannel"), key = store.get("fs.camKey");
   const rnd = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"[b % 56]).join("");
   if (!channel || !key) { channel = rnd(16); key = rnd(24); store.set("fs.camChannel", channel); store.set("fs.camKey", key); }
   await hub("/cams/" + channel, { method: "PUT", body: JSON.stringify({ name }) });
   $tabs.classList.add("hidden");
-  $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2><p class="muted">Leave this open near ${esc(me.pets[0].name)}. It only sends pictures while someone is watching.</p>
+  $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2>${clip ? `<span class="chip" style="justify-self:start">Playing a recording: ${esc(clip.name)}</span>` : ""}<p class="muted">Leave this open near ${esc(me.pets[0].name)}. It only sends pictures while someone is watching.</p>
     <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>
     <p class="muted center" id="act" style="font-size:14px">Watching for ${esc(me.pets[0].name)}</p>
     <button class="btn ghost" id="stop">Stop being a pet cam</button></div>`;
   let ws, stream, timer, viewers = 0, jpeg = 0, alive = true, wake, rtc = null, lastJpeg = 0, view = { z: 1, x: 0.5, y: 0.5 };
   try { wake = await navigator.wakeLock?.request("screen"); } catch (e) {}
-  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false }); }
+  if (clip) {
+    const player = document.createElement("video");
+    Object.assign(player, { src: URL.createObjectURL(clip), loop: true, muted: true, playsInline: true });
+    try { await player.play(); stream = player.captureStream ? player.captureStream() : player.mozCaptureStream(); }
+    catch (e) { toast("Couldn't play that video here (try Chrome)"); return render(); }
+    clip.player = player;   // keep it playing
+  }
+  else try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false }); }
   catch (e) { toast("Couldn't open the camera"); return render(); }
   const v = document.getElementById("v"); v.srcObject = stream;
   const c = document.createElement("canvas"); c.width = c.height = 480; const g = c.getContext("2d");
@@ -1153,7 +1165,8 @@ async function beCam(resume = false) {
     lastJpeg = Date.now();
     c.toBlob((b) => b && ws.readyState === 1 && ws.send(b), "image/jpeg", 0.65);
   };
-  const watch = watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
+  // a recording doesn't keep his diary: what it shows didn't happen now
+  const watch = clip ? 0 : watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
   camStop = () => { alive = false; reading = false; timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { store.set("fs.camOn", null); stopCam(); render(); };
 }
