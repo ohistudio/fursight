@@ -1,3 +1,4 @@
+import MWDATCore
 import SwiftUI
 import UserNotifications
 
@@ -7,6 +8,12 @@ import UserNotifications
 struct FurSightApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var session = Session.shared
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        // Ray-Ban Display through the Device Access Toolkit (set up once, before anything asks for the glasses)
+        do { try Wearables.configure() } catch { NSLog("[FurSight] Wearables SDK: \(error)") }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -14,6 +21,13 @@ struct FurSightApp: App {
                 if session.linked { MainView() } else { LinkView() }
             }
             .environmentObject(session)
+            // Meta AI hands control back here after you connect the glasses
+            .onOpenURL { url in
+                guard URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(where: { $0.name == "metaWearablesAction" }) == true else { return }
+                Task { _ = try? await Wearables.shared.handleUrl(url) }
+            }
+            // let go of the glasses before iOS suspends the app (holding them trips the watchdog)
+            .onChange(of: scenePhase) { _, phase in if phase == .background { GlassesManager.shared.stop() } }
             .preferredColorScheme(.light)   // the app's colours are made for light: in Dark Mode unset text went white on white
             .tint(.grape)
         }
@@ -49,8 +63,8 @@ struct MainView: View {
         TabView {
             TodayView().tabItem { Label("Today", systemImage: "sun.max.fill") }
             AskView().tabItem { Label("Ask", systemImage: "bubble.left.and.text.bubble.right.fill") }
-            StatsView().tabItem { Label("Stats", systemImage: "chart.bar.fill") }
             FoodView().tabItem { Label("Food check", systemImage: "camera.fill") }
+            GlassesView(wearables: WearablesViewModel(wearables: Wearables.shared)).tabItem { Label("Glasses", systemImage: "eyeglasses") }
             WebTab().tabItem { Label("More", systemImage: "square.grid.2x2.fill") }
         }
     }

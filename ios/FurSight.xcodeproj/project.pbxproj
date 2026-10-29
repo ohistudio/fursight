@@ -9,18 +9,27 @@
 /* Begin PBXBuildFile section */
 		016CA0A3F04F3F32F685D12E /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE70F44C1F5C4BD30FF105FF /* TodayView.swift */; };
 		07A0A3500131D0BCDB581728 /* WebTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A36415DD3DAFF689BC6F356 /* WebTab.swift */; };
+		0BE30459ACCC9D4BE610D871 /* MWDATCamera in Frameworks */ = {isa = PBXBuildFile; productRef = 842BEBD72D1A2AD275FA04B6 /* MWDATCamera */; };
 		1A98F18C9B87C94B4C7E1714 /* AskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 425BB047E2CEF1A38929420A /* AskView.swift */; };
+		2D7EC8635A47D016D23AFD79 /* GlassesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1763011FD1AA11D284D5319A /* GlassesView.swift */; };
 		2F5644C7B7F0A1E8F8DFD292 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47A778C477B76BAC7D31162B /* NotificationService.swift */; };
+		31DBE6B4ABA8E48DD54EBE65 /* MWDATCore in Frameworks */ = {isa = PBXBuildFile; productRef = 02D93F7D8DA4616A8F100D00 /* MWDATCore */; };
+		359197955ED258294F4C07F9 /* FoodCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71F0505B4990E155503503E /* FoodCheck.swift */; };
 		4662C64B40BB6EB85C581A4B /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB47E5313091B76D55BDF20E /* StatsView.swift */; };
 		473C4730A141CE0E35B42D8A /* FurSightNotify.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		564322E743440BD7978BF8EA /* GlassesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E905EFA893EE992AA0824B /* GlassesManager.swift */; };
 		78226A09A3AB8769BB034FB6 /* API.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC624E3422B5793BFD23B28 /* API.swift */; };
 		8222348CBFA39D7C19274830 /* FoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14919DCBC6166FE1262413 /* FoodView.swift */; };
+		8BA610F768EBE0E285F52132 /* FurSightDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C714A0A8553DE9D552C5569E /* FurSightDisplay.swift */; };
+		8F9CC49F47724E297B888F4E /* DeviceSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3C6C9F2507B2258BFF1BFB /* DeviceSessionManager.swift */; };
 		97DF3E8BAB08550B72856DDF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2196AD68290A9ADF9BC341E /* Theme.swift */; };
 		A0FED1C30CF1916790751EC7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B16E12425DEFC6CB0B878F32 /* Assets.xcassets */; };
 		A90D442809C72FD5A214EB63 /* FurSightApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */; };
 		C6D071D8B9CEC1D9897F1C93 /* Nunito-800.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8583F6F10EB8ECBC0C1DE059 /* Nunito-800.ttf */; };
+		D2466C93971E6B7F52ED2D32 /* MWDATDisplay in Frameworks */ = {isa = PBXBuildFile; productRef = 2B03A44332C95A3BDB144F11 /* MWDATDisplay */; };
 		D45FB92B4394ED0287C49098 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 9D732289DF18D3692759629C /* OFL.txt */; };
 		E45CA93CADC60F9A9CD1EB09 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F19D8F5344D2E39D85A054F5 /* LogView.swift */; };
+		E94BDAF2D281186BE03C552A /* WearablesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A953BD38AAD02233683A511 /* WearablesViewModel.swift */; };
 		F722484F4EB1777B6B56A855 /* Nunito-900.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 847362D05B546CE9AB660E15 /* Nunito-900.ttf */; };
 /* End PBXBuildFile section */
 
@@ -49,26 +58,45 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		01E905EFA893EE992AA0824B /* GlassesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesManager.swift; sourceTree = "<group>"; };
+		1763011FD1AA11D284D5319A /* GlassesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassesView.swift; sourceTree = "<group>"; };
 		3C14919DCBC6166FE1262413 /* FoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodView.swift; sourceTree = "<group>"; };
 		425BB047E2CEF1A38929420A /* AskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskView.swift; sourceTree = "<group>"; };
 		47A778C477B76BAC7D31162B /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		6A36415DD3DAFF689BC6F356 /* WebTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebTab.swift; sourceTree = "<group>"; };
 		6BA01F7B2E769544DFB8CCED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7A953BD38AAD02233683A511 /* WearablesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearablesViewModel.swift; sourceTree = "<group>"; };
 		847362D05B546CE9AB660E15 /* Nunito-900.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-900.ttf"; sourceTree = "<group>"; };
 		8583F6F10EB8ECBC0C1DE059 /* Nunito-800.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-800.ttf"; sourceTree = "<group>"; };
 		8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = FurSightNotify.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8E3C6C9F2507B2258BFF1BFB /* DeviceSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSessionManager.swift; sourceTree = "<group>"; };
 		9D732289DF18D3692759629C /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		9E49662168F5B0A3BB3BE0D7 /* FurSight.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FurSight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EC624E3422B5793BFD23B28 /* API.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = API.swift; sourceTree = "<group>"; };
+		A71F0505B4990E155503503E /* FoodCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodCheck.swift; sourceTree = "<group>"; };
 		AE70F44C1F5C4BD30FF105FF /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		B16E12425DEFC6CB0B878F32 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BB47E5313091B76D55BDF20E /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FurSightApp.swift; sourceTree = "<group>"; };
 		C6E81CC2719C38F24AF9BE30 /* FurSight.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FurSight.entitlements; sourceTree = "<group>"; };
+		C714A0A8553DE9D552C5569E /* FurSightDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FurSightDisplay.swift; sourceTree = "<group>"; };
 		E2196AD68290A9ADF9BC341E /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F19D8F5344D2E39D85A054F5 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
 		F830D04ED96D187E6937789B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E520CD9998CF34278F595009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				31DBE6B4ABA8E48DD54EBE65 /* MWDATCore in Frameworks */,
+				0BE30459ACCC9D4BE610D871 /* MWDATCamera in Frameworks */,
+				D2466C93971E6B7F52ED2D32 /* MWDATDisplay in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		5DA6E1FC718EE1042B8FD731 /* NotifyService */ = {
@@ -80,12 +108,25 @@
 			path = NotifyService;
 			sourceTree = "<group>";
 		};
+		65FE8014E4BD46B9147E29EC /* Glasses */ = {
+			isa = PBXGroup;
+			children = (
+				8E3C6C9F2507B2258BFF1BFB /* DeviceSessionManager.swift */,
+				C714A0A8553DE9D552C5569E /* FurSightDisplay.swift */,
+				01E905EFA893EE992AA0824B /* GlassesManager.swift */,
+				1763011FD1AA11D284D5319A /* GlassesView.swift */,
+				7A953BD38AAD02233683A511 /* WearablesViewModel.swift */,
+			);
+			path = Glasses;
+			sourceTree = "<group>";
+		};
 		A1E9201D447150A088FAAD91 /* FurSight */ = {
 			isa = PBXGroup;
 			children = (
 				9EC624E3422B5793BFD23B28 /* API.swift */,
 				425BB047E2CEF1A38929420A /* AskView.swift */,
 				B16E12425DEFC6CB0B878F32 /* Assets.xcassets */,
+				A71F0505B4990E155503503E /* FoodCheck.swift */,
 				3C14919DCBC6166FE1262413 /* FoodView.swift */,
 				C6E81CC2719C38F24AF9BE30 /* FurSight.entitlements */,
 				BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */,
@@ -96,6 +137,7 @@
 				AE70F44C1F5C4BD30FF105FF /* TodayView.swift */,
 				6A36415DD3DAFF689BC6F356 /* WebTab.swift */,
 				E6ADCDB0B0E5BC9D641ABAAD /* Fonts */,
+				65FE8014E4BD46B9147E29EC /* Glasses */,
 			);
 			path = FurSight;
 			sourceTree = "<group>";
@@ -154,6 +196,7 @@
 			buildPhases = (
 				0C2C6F6B823524ADF94A92A0 /* Sources */,
 				109D21F474F19839CECF6593 /* Resources */,
+				E520CD9998CF34278F595009 /* Frameworks */,
 				869A55DD0CD72F3524F22C4F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -163,6 +206,9 @@
 			);
 			name = FurSight;
 			packageProductDependencies = (
+				02D93F7D8DA4616A8F100D00 /* MWDATCore */,
+				842BEBD72D1A2AD275FA04B6 /* MWDATCamera */,
+				2B03A44332C95A3BDB144F11 /* MWDATDisplay */,
 			);
 			productName = FurSight;
 			productReference = 9E49662168F5B0A3BB3BE0D7 /* FurSight.app */;
@@ -196,6 +242,9 @@
 			);
 			mainGroup = DA7F5FA96FB448369550493C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				59AA386449107A84026B589E /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B7B868B14A6CA8C58F4E26B4 /* Products */;
 			projectDirPath = "";
@@ -228,12 +277,18 @@
 			files = (
 				78226A09A3AB8769BB034FB6 /* API.swift in Sources */,
 				1A98F18C9B87C94B4C7E1714 /* AskView.swift in Sources */,
+				8F9CC49F47724E297B888F4E /* DeviceSessionManager.swift in Sources */,
+				359197955ED258294F4C07F9 /* FoodCheck.swift in Sources */,
 				8222348CBFA39D7C19274830 /* FoodView.swift in Sources */,
 				A90D442809C72FD5A214EB63 /* FurSightApp.swift in Sources */,
+				8BA610F768EBE0E285F52132 /* FurSightDisplay.swift in Sources */,
+				564322E743440BD7978BF8EA /* GlassesManager.swift in Sources */,
+				2D7EC8635A47D016D23AFD79 /* GlassesView.swift in Sources */,
 				E45CA93CADC60F9A9CD1EB09 /* LogView.swift in Sources */,
 				4662C64B40BB6EB85C581A4B /* StatsView.swift in Sources */,
 				97DF3E8BAB08550B72856DDF /* Theme.swift in Sources */,
 				016CA0A3F04F3F32F685D12E /* TodayView.swift in Sources */,
+				E94BDAF2D281186BE03C552A /* WearablesViewModel.swift in Sources */,
 				07A0A3500131D0BCDB581728 /* WebTab.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -261,6 +316,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLIENT_TOKEN = PLACEHOLDER_CLIENT_TOKEN;
 				CODE_SIGN_ENTITLEMENTS = FurSight/FurSight.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -269,6 +325,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				META_APP_ID = PLACEHOLDER_META_APP_ID;
 				PRODUCT_BUNDLE_IDENTIFIER = studio.ohi.fursight;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -328,7 +385,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -404,7 +461,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -436,6 +493,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLIENT_TOKEN = PLACEHOLDER_CLIENT_TOKEN;
 				CODE_SIGN_ENTITLEMENTS = FurSight/FurSight.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -444,6 +502,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				META_APP_ID = PLACEHOLDER_META_APP_ID;
 				PRODUCT_BUNDLE_IDENTIFIER = studio.ohi.fursight;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -481,6 +540,35 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		59AA386449107A84026B589E /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/meta-wearables-dat-ios";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		02D93F7D8DA4616A8F100D00 /* MWDATCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59AA386449107A84026B589E /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCore;
+		};
+		2B03A44332C95A3BDB144F11 /* MWDATDisplay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59AA386449107A84026B589E /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATDisplay;
+		};
+		842BEBD72D1A2AD275FA04B6 /* MWDATCamera */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59AA386449107A84026B589E /* XCRemoteSwiftPackageReference "meta-wearables-dat-ios" */;
+			productName = MWDATCamera;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 43B923AF05114D8ABD633867 /* Project object */;
 }

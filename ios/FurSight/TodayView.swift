@@ -7,6 +7,7 @@ struct TodayView: View {
     @State private var error: String?
     @State private var loading = true
     @State private var wrapped = false
+    @State private var charts = false
     @State private var logging = false
     @State private var uploading = false
 
@@ -50,6 +51,7 @@ struct TodayView: View {
                         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { uploading = false } } }
                 }
             }
+            .sheet(isPresented: $charts) { StatsView() }
             .sheet(isPresented: $logging) { LogView(pet: data.obj("pet")?.str("name") ?? "him") { Task { await load() } }.presentationDetents([.medium, .large]) }
             .onReceive(NotificationCenter.default.publisher(for: .fursightRefresh)) { _ in Task { await load() } }
         }
@@ -157,6 +159,8 @@ struct TodayView: View {
             }
             Button { logging = true } label: { Label("Add a note", systemImage: "square.and.pencil") }
                 .buttonStyle(ChunkyButton(color: .grape, lip: .grapeLip))
+            Button { charts = true } label: { Label("His week in charts", systemImage: "chart.bar.fill") }
+                .buttonStyle(ChunkyButton(color: .white, lip: .line))
             if a["simulated"] as? Bool == true { Text("Includes simulated days").font(.nunito(12)).foregroundStyle(Color.muted) }
         }.card()
     }

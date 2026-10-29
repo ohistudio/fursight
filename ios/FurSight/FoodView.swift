@@ -6,8 +6,12 @@ import UIKit
 // FurSight checks it. Each food gets a label pinned on it, like the Quest cards: the verdict badge, what it thinks
 // the food is, and the verdict in its colour. Tap a label for the details: why, how much, when he last had it, and
 // "We fed him this", which puts the day it's OK again on the calendar. The safety list has the last word.
+// With the glasses on (Glasses tab), the picture is the glasses camera and the verdict shows on the lens too;
+// a check started from the lens shows up here with its labels.
 struct FoodView: View {
     @StateObject private var camera = CameraFeed()
+    private var glasses = GlassesManager.shared
+    private var onGlasses: Bool { glasses.phase == .ready || glasses.phase == .checking }
     @State private var still: UIImage?                 // the frame being checked (the screen holds it)
     @State private var items: [[String: Any]] = []
     @State private var selected = 0
@@ -17,13 +21,16 @@ struct FoodView: View {
     @State private var fed: [String: String] = [:]      // food -> what saving "We fed him this" said
     @State private var feeding: String?
     @State private var picking = false
-    @State private var pet: [String: Any]?             // fetched once, not before every check (each request costs seconds from far away)
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 Color.black.ignoresSafeArea()
                 if let still { Image(uiImage: still).resizable().scaledToFill().frame(width: geo.size.width, height: geo.size.height).clipped() }
+                else if onGlasses {
+                    if let f = glasses.currentFrame { Image(uiImage: f).resizable().scaledToFill().frame(width: geo.size.width, height: geo.size.height).clipped() }
+                    else { Text("Waiting for the glasses camera…").font(.nunito(16)).foregroundStyle(.white) }
+                }
                 else if camera.available { CameraPreview(session: camera.session).ignoresSafeArea() }
                 else { noCamera }
 
@@ -56,11 +63,13 @@ struct FoodView: View {
             .onTapGesture { if still == nil { snap() } }   // tap the live picture to check it
         }
         .onAppear {
-            camera.start()
-            // the pet ahead of the first check
-            if pet == nil { Task { if let p = try? await API.hub("/me").arr("pets").first { pet = p; if !p.str("name").isEmpty { petName = p.str("name") } } } }
+            if !onGlasses { camera.start() }
+            Task { await FoodCheck.loadPet(); petName = FoodCheck.petName }   // the pet ahead of the first check
         }
         .onDisappear { camera.stop() }
+        .onChange(of: onGlasses) { _, on in if on { camera.stop() } else { camera.start() } }
+        // a check made from the lens: show it here with its labels
+        .onChange(of: glasses.results) { _, _ in if let r = glasses.lastResult { show(r) } }
         .fullScreenCover(isPresented: $picking) { CameraPicker { img in picking = false; if let img { check(img) } }.ignoresSafeArea() }
     }
 
@@ -69,7 +78,10 @@ struct FoodView: View {
     private var header: some View {
         HStack(spacing: 10) {
             Bean(mood: checking ? "thinking" : mood, size: 52)
-            Text("Can \(petName) eat this?").font(.nunito(22)).foregroundStyle(Color.ink)
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Can \(petName) eat this?").font(.nunito(22)).foregroundStyle(Color.ink)
+                if onGlasses { Label("Glasses camera", systemImage: "eyeglasses").font(.nunito(13)).foregroundStyle(Color.grapeLip) }
+            }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
@@ -88,8 +100,8 @@ struct FoodView: View {
     private var controls: some View {
         HStack(spacing: 10) {
             if still == nil {
-                Button { snap() } label: { Label("Check this", systemImage: "camera.viewfinder") }.buttonStyle(ChunkyButton())
-                    .disabled(!camera.available)
+                Button { snap() } label: { Label("Check this", systemImage: onGlasses ? "eyeglasses" : "camera.viewfinder") }.buttonStyle(ChunkyButton())
+                    .disabled(onGlasses ? glasses.currentFrame == nil : !camera.available)
                 Button { picking = true } label: { Image(systemName: "photo.on.rectangle") }
                     .buttonStyle(ChunkyButton(color: .white, lip: .line)).frame(width: 64)
             } else if !checking {
@@ -161,7 +173,7 @@ struct FoodView: View {
     // ---------------------------------------------------------------- checking
 
     private func snap() {
-        guard !checking, let img = camera.frame() else { return }
+        guard !checking, let img = onGlasses ? glasses.currentFrame : camera.frame() else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         check(img)
     }
@@ -170,28 +182,22 @@ struct FoodView: View {
 
     func check(_ img: UIImage) {
         still = img; items = []; fed = [:]; checking = true; error = nil; selected = 0
-        let small = img.resized(768)   // plenty to read a label; a smaller upload answers sooner
-        guard let jpeg = small.jpegData(compressionQuality: 0.72) else { return }
-        let url = "data:image/jpeg;base64," + jpeg.base64EncodedString()
         Task {
             do {
-                if self.pet == nil { self.pet = (try await API.hub("/me")).arr("pets").first ?? [:] }
-                let pet = self.pet ?? [:]
-                if !pet.str("name").isEmpty { petName = pet.str("name") }
-                let r = try await API.server("api/food", ["image": url, "pet": ["name": pet.str("name"), "species": pet.str("species"), "breed": pet.str("breed"), "notes": pet.str("notes")], "tz": TimeZone.current.secondsFromGMT() / 60])
-                let found = r.arr("items")
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
-                    items = found
-                    selected = (r["held"] as? Int).map { min($0, max(0, found.count - 1)) } ?? 0
-                }
-                let v = found.map { $0.str("verdict") }
-                UINotificationFeedbackGenerator().notificationOccurred(v.contains("toxic") ? .error : v.contains("caution") ? .warning : .success)
-                for i in found {
-                    _ = try? await API.hub("/diary", method: "POST", body: ["kind": "food", "title": i.str("food").capitalized, "note": i.str("reason"), "verdict": i.str("verdict"), "image": url])
-                }
+                let r = try await FoodCheck.run(img)
+                petName = FoodCheck.petName
+                show(r)
+                if onGlasses { await glasses.showVerdict(r) }   // the lens shows the food being held
             } catch { if let m = error.shown { self.error = m } }
             checking = false
         }
+    }
+
+    private func show(_ r: FoodCheck.Result) {
+        still = r.image; error = nil; fed = [:]
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) { items = r.items; selected = r.held }
+        let v = r.items.map { $0.str("verdict") }
+        UINotificationFeedbackGenerator().notificationOccurred(v.contains("toxic") ? .error : v.contains("caution") ? .warning : .success)
     }
 
     // saved with when he can have it again; that day goes on the calendar
@@ -199,8 +205,7 @@ struct FoodView: View {
         let food = i.str("food")
         feeding = food; defer { feeding = nil }
         do {
-            let r = try await API.server("api/fed", ["food": food, "verdict": i.str("verdict"), "wait_days": i["wait_days"] as? Int ?? 3, "tz": TimeZone.current.secondsFromGMT() / 60])
-            fed[food] = r.str("said")
+            fed[food] = try await FoodCheck.fed(i).said
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch { if let m = error.shown { self.error = m } }
     }
