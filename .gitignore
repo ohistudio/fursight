@@ -8,3 +8,6 @@ DerivedData/
 xcuserdata/
 *.xcuserstate
 .secrets*
+ios/build/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/

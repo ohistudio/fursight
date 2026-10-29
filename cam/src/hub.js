@@ -13,6 +13,7 @@
 //   PUT  /hub/cams/:channel               (token) {name}              -> cam      (a webcam registering itself)
 //   PUT  /hub/home                        (token) {lat, lng, radius?} -> home     (where "home" is, for home/away)
 //   DELETE /hub/devices/:id               (token)                     -> ok
+//   PUT  /hub/push                        (token) {token, sandbox}    -> ok       (an iPhone's notification token)
 //   POST /hub/link/start                  {kind, name}                -> { code, nonce }  (a device wants in)
 //   GET  /hub/link/poll?code=&nonce=                                  -> { status: waiting|linked|expired, token? }
 //   POST /hub/link/claim                  (token) {code}              -> { device }       (the phone says yes)
@@ -69,7 +70,22 @@ export class Household {
       CREATE TABLE IF NOT EXISTS pets (id TEXT PRIMARY KEY, data TEXT, photo BLOB, updated INTEGER);
       CREATE TABLE IF NOT EXISTS cams (channel TEXT PRIMARY KEY, name TEXT, device TEXT, updated INTEGER);
       CREATE TABLE IF NOT EXISTS diary (id TEXT PRIMARY KEY, at INTEGER, data TEXT, image BLOB);
-      CREATE INDEX IF NOT EXISTS diary_at ON diary(at);`);
+      CREATE INDEX IF NOT EXISTS diary_at ON diary(at);
+      CREATE TABLE IF NOT EXISTS push (device TEXT PRIMARY KEY, token TEXT, sandbox INTEGER);`);
+  }
+
+  // Something worth a phone notification just landed in the diary: a flop moment, a warning, a tray alert, or a
+  // "don't" / "see a vet". The Vercel server holds the Apple push key, so ask it to send to every other iPhone.
+  notify(id, e, from) {
+    const worth = ["moment", "warning", "alert"].includes(e.kind) || ["toxic", "vet"].includes(e.verdict) || (e.kind === "droppings" && e.verdict && e.verdict !== "safe");
+    if (!worth || !this.env.NOTIFY_URL) return;
+    const targets = this.all("SELECT token, sandbox FROM push WHERE device != ?", from).map((r) => ({ token: r.token, sandbox: !!r.sandbox }));
+    if (!targets.length) return;
+    const pet = this.one("SELECT data FROM pets ORDER BY updated DESC LIMIT 1");
+    const name = pet ? JSON.parse(pet.data).name : "FurSight";
+    const body = e.kind === "moment" ? e.title : e.kind === "alert" ? `${e.title}. ${e.note || ""}`.trim() : e.verdict === "vet" ? `${e.title}: see a vet today` : e.verdict === "toxic" ? `${e.title}: don't` : `${e.title}${e.note ? ". " + e.note : ""}`;
+    this.ctx.waitUntil(fetch(this.env.NOTIFY_URL, { method: "POST", headers: { "content-type": "application/json", "x-hub-key": this.env.HUB_KEY },
+      body: JSON.stringify({ targets, title: name, body: body.slice(0, 180), entry: id, kind: e.kind }) }).catch(() => {}));
   }
 
   one(q, ...a) { const r = this.sql.exec(q, ...a).toArray(); return r[0]; }
@@ -128,6 +144,7 @@ export class Household {
       if (image === false) return err("image must be a JPEG data URL under 1.5 MB");
       const id = Date.now().toString(36) + rand(4), at = Number(b.at) || Date.now();
       this.sql.exec("INSERT INTO diary VALUES (?, ?, ?, ?)", id, at, JSON.stringify(entry), image);
+      this.notify(id, entry, device);
       return json({ id, at, ...entry, has_image: !!image });
     }
     if (p === "/diary" && m === "GET") {
@@ -154,9 +171,16 @@ export class Household {
       this.sql.exec("INSERT OR REPLACE INTO meta VALUES ('home', ?)", JSON.stringify(home));
       return json(home);
     }
+    if (p === "/push" && m === "PUT") {
+      const b = await req.json().catch(() => ({}));
+      if (!/^[0-9a-f]{32,200}$/i.test(String(b.token || ""))) return err("token must be the device's APNs token in hex");
+      this.sql.exec("INSERT OR REPLACE INTO push VALUES (?, ?, ?)", device, b.token, b.sandbox ? 1 : 0);
+      return json({ ok: true });
+    }
     if ((mm = p.match(/^\/devices\/([A-Za-z0-9]{12})$/)) && m === "DELETE") {
       this.sql.exec("DELETE FROM devices WHERE id = ?", mm[1]);
       this.sql.exec("DELETE FROM cams WHERE device = ?", mm[1]);
+      this.sql.exec("DELETE FROM push WHERE device = ?", mm[1]);
       return json({ ok: true });
     }
     if (p === "/link/claim" && m === "POST") {

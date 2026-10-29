@@ -111,8 +111,18 @@ async function start() {
   render();
 }
 
+// when the status turns to watch or vet, log one alert (that's what sends the phone notification)
+function alertOnce(s) {
+  const k = FSTray.key(new Date()) + s.status;
+  if ((s.status === "watch" || s.status === "vet") && store.get("fs.trayAlert") !== k) {
+    store.set("fs.trayAlert", k);
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "alert", title: "Litter tray", note: s.reasons[0] || "", verdict: s.status === "vet" ? "vet" : "caution", pet: me.pets[0].name, extra: { sim: true } }) }).catch(() => {});
+  }
+}
+
 function render() {
   const p = me.pets[0], s = FSTray.summary(entries), word = { normal: "All normal", watch: "Worth watching", vet: "Talk to your vet", none: "Learning his normal" }[s.status];
+  alertOnce(s);
   $app.innerHTML = `<div class="sim">Simulated FurSight Tray · prototype · the real one is a scale under the tray</div>
     <div class="row" style="justify-content:space-between"><div><h1>FurSight Tray</h1><p class="muted">${esc(p.name)}'s litter tray</p></div><div id="bn">${bean(s.status === "vet" ? "toxic" : s.status === "watch" ? "caution" : "idle", 70)}</div></div>
     <div class="scale" id="reading">${(base + s.today.output_g).toLocaleString()} g<small id="who">${onTray ? p.name + " is on the tray" : "tray and litter"}</small></div>
