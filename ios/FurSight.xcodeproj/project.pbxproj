@@ -11,6 +11,7 @@
 		07A0A3500131D0BCDB581728 /* WebTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A36415DD3DAFF689BC6F356 /* WebTab.swift */; };
 		1A98F18C9B87C94B4C7E1714 /* AskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 425BB047E2CEF1A38929420A /* AskView.swift */; };
 		2F5644C7B7F0A1E8F8DFD292 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47A778C477B76BAC7D31162B /* NotificationService.swift */; };
+		4662C64B40BB6EB85C581A4B /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB47E5313091B76D55BDF20E /* StatsView.swift */; };
 		473C4730A141CE0E35B42D8A /* FurSightNotify.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		78226A09A3AB8769BB034FB6 /* API.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC624E3422B5793BFD23B28 /* API.swift */; };
 		8222348CBFA39D7C19274830 /* FoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14919DCBC6166FE1262413 /* FoodView.swift */; };
@@ -60,6 +61,7 @@
 		9EC624E3422B5793BFD23B28 /* API.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = API.swift; sourceTree = "<group>"; };
 		AE70F44C1F5C4BD30FF105FF /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		B16E12425DEFC6CB0B878F32 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB47E5313091B76D55BDF20E /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FurSightApp.swift; sourceTree = "<group>"; };
 		C6E81CC2719C38F24AF9BE30 /* FurSight.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FurSight.entitlements; sourceTree = "<group>"; };
 		E2196AD68290A9ADF9BC341E /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 				C6E81CC2719C38F24AF9BE30 /* FurSight.entitlements */,
 				BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */,
 				F830D04ED96D187E6937789B /* Info.plist */,
+				BB47E5313091B76D55BDF20E /* StatsView.swift */,
 				E2196AD68290A9ADF9BC341E /* Theme.swift */,
 				AE70F44C1F5C4BD30FF105FF /* TodayView.swift */,
 				6A36415DD3DAFF689BC6F356 /* WebTab.swift */,
@@ -224,6 +227,7 @@
 				1A98F18C9B87C94B4C7E1714 /* AskView.swift in Sources */,
 				8222348CBFA39D7C19274830 /* FoodView.swift in Sources */,
 				A90D442809C72FD5A214EB63 /* FurSightApp.swift in Sources */,
+				4662C64B40BB6EB85C581A4B /* StatsView.swift in Sources */,
 				97DF3E8BAB08550B72856DDF /* Theme.swift in Sources */,
 				016CA0A3F04F3F32F685D12E /* TodayView.swift in Sources */,
 				07A0A3500131D0BCDB581728 /* WebTab.swift in Sources */,

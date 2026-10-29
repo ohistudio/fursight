@@ -48,6 +48,7 @@ struct MainView: View {
         TabView {
             TodayView().tabItem { Label("Today", systemImage: "sun.max.fill") }
             AskView().tabItem { Label("Ask", systemImage: "bubble.left.and.text.bubble.right.fill") }
+            StatsView().tabItem { Label("Stats", systemImage: "chart.bar.fill") }
             FoodView().tabItem { Label("Food check", systemImage: "camera.fill") }
             WebTab().tabItem { Label("More", systemImage: "square.grid.2x2.fill") }
         }

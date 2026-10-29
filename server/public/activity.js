@@ -5,6 +5,7 @@
 // Shared by the web app, the glasses and the Ask agent.
 //
 //   FSActivity.summary(entries, now?) -> { today: { loaf: mins, ..., active, flops }, week: {...}, moment, simulated, has }
+//   FSActivity.days(entries, n?)     -> per day, oldest first (for charts)
 //   FSActivity.time(mins)             -> "30 min", "3 h 10"
 (function (root) {
   const POSES = ["loaf", "stretched", "flop", "sitting", "eating", "grooming"];
@@ -31,8 +32,24 @@
     return { today, week, moment, simulated, has };
   }
 
+  // the last n days, oldest first: [{ date, loaf, stretched, flop, flops, active, eating, grooming, sitting }]
+  function days(entries, n = 7, now = new Date()) {
+    const pad = (x) => String(x).padStart(2, "0"), key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const out = new Map();
+    for (let i = n - 1; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i); out.set(key(d), { date: key(d), ...empty() }); }
+    for (const e of entries) {
+      if (!e.extra) continue;
+      if (e.kind === "pose-day") { const d = out.get(e.extra.date); if (d) for (const k of Object.keys(empty())) d[k] += Number(e.extra[k]) || 0; continue; }
+      if (e.kind !== "pose" && e.kind !== "active") continue;
+      const d = out.get(key(new Date(e.at))), k = e.kind === "active" ? "active" : e.extra.pose;
+      if (!d || !(k in d)) continue;
+      d[k] += Number(e.extra.mins) || 0; if (k === "flop") d.flops++;
+    }
+    return [...out.values()];
+  }
+
   const time = (m) => { m = Math.round(m); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? " " + String(m % 60).padStart(2, "0") : ""}`; };
 
-  const api = { summary, time, POSES, WORD };
+  const api = { summary, days, time, POSES, WORD };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.FSActivity = api;
 })(typeof window !== "undefined" ? window : globalThis);
