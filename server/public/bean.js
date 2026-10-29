@@ -107,5 +107,16 @@
     svg.setAttribute("class", "bean " + m);
   }
 
-  window.bean = bean; window.setBean = setBean;
+  // The FurSight wordmark: the dot of the i is a pink rabbit nose. Sized by the surrounding font, so it fits any heading.
+  const NOSE = `<path d="M-7 -3.5 Q0 -6.5 7 -3.5 Q7 -1.5 3 1.5 Q0 3.5 -3 1.5 Q-7 -1.5 -7 -3.5 Z" fill="#F08CBB"/>`;
+  function wordmark(after = "") {
+    if (!document.getElementById("fs-word-css")) {
+      const s = document.createElement("style"); s.id = "fs-word-css";
+      s.textContent = ".fs-word{white-space:nowrap}.fs-i{position:relative;display:inline-block}.fs-i svg{position:absolute;left:50%;top:.03em;width:.42em;height:.27em;transform:translateX(-50%);overflow:visible}";
+      document.head.appendChild(s);
+    }
+    return `<span class="fs-word" aria-label="FurSight${after}">FurS<span class="fs-i">ı<svg viewBox="-8 -7 16 11" aria-hidden="true">${NOSE}</svg></span>ght${after}</span>`;
+  }
+
+  window.bean = bean; window.setBean = setBean; window.wordmark = wordmark;
 })();

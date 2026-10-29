@@ -12,7 +12,7 @@ async function get(path, token) {
 async function context(token) {
   const [me, diary] = await Promise.all([get("/me", token), get("/diary?limit=30", token)]);
   const start = new Date(); start.setHours(0, 0, 0, 0);
-  const today = diary.entries.filter((e) => e.at >= start.getTime() - 6 * 3600e3 && !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind)).slice(0, 15);   // today, plus late last night
+  const today = diary.entries.filter((e) => e.at >= start.getTime() - 6 * 3600e3 && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind)).slice(0, 15);   // today, plus late last night
   return { pet: me.pets[0] || null, cams: me.cams || [], today, home: me.home || null };
 }
 
@@ -43,10 +43,23 @@ async function petPhoto(token, petId) {
 }
 
 const recent = (token, limit = 200) => get(`/diary?limit=${limit}`, token).then((d) => d.entries);
+// uploads: vet records, old photos and videos (filtered here too, in case the hub doesn't filter yet)
+const UPLOADS = ["record", "photo", "video"];
+async function uploads(token, kinds = UPLOADS, limit = 60) {
+  let out = [], before = 9e15;
+  // an older hub ignores kinds and returns everything: then page back through up to 1000 entries
+  for (let page = 0; page < 5 && out.length < limit; page++) {
+    const { entries } = await get(`/diary?limit=200&before=${before}&kinds=${kinds.join(",")}`, token);
+    out = out.concat(entries.filter((e) => kinds.includes(e.kind)));
+    if (entries.length < 200 || entries.every((e) => kinds.includes(e.kind))) break;
+    before = entries[entries.length - 1].at;
+  }
+  return out.slice(0, limit);
+}
 
 async function addDiary(token, entry) {
   const r = await fetch(HUB + "/hub/diary", { method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/json" }, body: JSON.stringify(entry) });
   return r.ok ? r.json() : null;
 }
 
-module.exports = { context, camFrame, camView, petPhoto, recent, addDiary };
+module.exports = { context, camFrame, camView, petPhoto, recent, uploads, addDiary };

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3DBE6B">
 <title>FurSight</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
 <style>
@@ -44,7 +45,6 @@
 
   /* top bar + pet header */
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 20px; }
-  .brand i { width: 30px; height: 30px; border-radius: 10px; background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); display: grid; place-items: center; }
   .pet { display: flex; gap: 14px; align-items: center; }
   .pet img, .pet .ph { width: 76px; height: 76px; border-radius: 22px; object-fit: cover; background: var(--line); border: 3px solid var(--card); box-shadow: 0 4px 0 var(--line); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -112,14 +112,21 @@
   .tray { display: grid; gap: 10px; }
   .idea { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
   .idea p { font-size: 14px; margin-top: 2px; } .idea small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .room { border-radius: 14px; padding: 10px 12px; background: var(--bg); font-size: 14px; } .room b { font-size: 18px; }
+  .room.watch { background: #FFF2D6; } .room.vet { background: #FFE6E8; color: var(--coral-lip); }
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .tile { display: grid; gap: 2px; padding: 14px; } .tile b { font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; } .tile span { font-size: 13px; color: var(--muted); } .tile small { font-size: 12px; color: var(--muted); }
   .chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
-  .chart .ax { font: 800 10px Nunito, sans-serif; fill: var(--muted); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
+  .chart .ax { font: 800 10px Nunito, sans-serif; fill: var(--muted); } .chart .so { font-style: italic; }
+  table.act tr.unseen td { color: var(--muted); font-style: italic; }
+  .chip.pick.on { background: var(--grape); color: #fff; }
+  .upthumb { width: 72px; height: 72px; flex: none; border-radius: 14px; overflow: hidden; background: var(--line); }
+  .upthumb img { width: 100%; height: 100%; object-fit: cover; }
+  #logForm .pick.on { background: var(--grape); color: #fff; border-color: var(--grape); } .chart .lab { font: 900 12px Nunito, sans-serif; fill: var(--ink); }
   #tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: #fff; font: 800 13px Nunito, sans-serif; padding: 6px 10px; border-radius: 10px; opacity: 0; transition: opacity .12s; max-width: 260px; }
   .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tstats b { display: block; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; } .tstats span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
-  .pill { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 900; white-space: nowrap; }
+  .pill { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 900; white-space: nowrap; flex: none !important; }
   .s-normal { background: #E3F6EA; color: var(--fern-lip); } .s-watch { background: #FFF2D6; color: #B87700; } .s-vet { background: #FFE6E8; color: var(--coral-lip); }
   .month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; text-align: center; }
   .month b { font-size: 12px; color: var(--muted); padding: 4px 0; }
@@ -177,6 +184,7 @@
 <script src="/routines.js"></script>
 <script src="/activity.js"></script>
 <script src="/sticker.js"></script>
+<script src="/climate.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -188,6 +196,9 @@ const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} },
 };
+// a link with #t=<token> signs this browser in (the demo household from scripts/demo.js); the fragment never reaches a server
+const hashT = /^#t=(fs1\.[\w.-]+)$/.exec(location.hash);
+if (hashT) { store.set("fs.token", hashT[1]); history.replaceState(null, "", location.pathname + location.search); }
 let token = store.get("fs.token"), me = null, tab = store.get("fs.tab") || "today";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
@@ -231,6 +242,7 @@ async function render() {
   if (!me.pets.length) { $tabs.classList.add("hidden"); return addPet(); }
   $tabs.classList.remove("hidden");
   for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
+  if (location.hash === "#upload") return uploadPage();
   ({ today, care, calendar, stats, cam, devices })[tab]();
 }
 $tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.tab; store.set("fs.tab", tab); render(); });
@@ -241,13 +253,52 @@ const nicknames = (p) => String(p.nicknames || "").split(/[,;\n]/).map((s) => s.
 function header() {
   const p = me.pets[0];
   return `<div class="pet pop">${p.has_photo ? `<img src="${img(`/pets/${p.id}/photo`)}" alt="">` : `<div class="ph"></div>`}
-    <div><h1>${esc(p.name)}</h1><div class="chips">${[p.species, p.breed, p.sex].filter(Boolean).map((s) => `<span class="chip">${esc(cap(s))}</span>`).join("")}</div></div></div>`;
+    <div style="flex:1"><h1>${esc(p.name)}</h1><div class="chips">${[p.species, p.breed, p.sex].filter(Boolean).map((s) => `<span class="chip">${esc(cap(s))}</span>`).join("")}</div></div>
+    <button class="btn ghost small" onclick="editPet()" style="flex:none;width:auto;align-self:flex-start">Edit</button></div>`;
+}
+
+// change anything about him after he's set up: name, photo, details, nicknames, notes (the care plan stays)
+function editPet() {
+  stopCam();
+  const p = me.pets[0];
+  let photo = null;
+  $app.innerHTML = `<div class="stack pop">
+    <div class="row" style="justify-content:space-between"><h1>Edit ${esc(p.name)}</h1><button class="btn ghost small" id="back" style="flex:none;width:auto">Cancel</button></div>
+    <label class="card center" style="cursor:pointer;display:grid;justify-items:center">
+      <input type="file" accept="image/*" id="ephoto" class="hidden">
+      ${p.has_photo ? `<img id="epreview" src="${img(`/pets/${p.id}/photo`)}" style="width:140px;height:140px;object-fit:cover;border-radius:28px;margin:0 auto 10px">` : `<img id="epreview" class="hidden" style="width:140px;height:140px;object-fit:cover;border-radius:28px;margin:0 auto 10px">`}
+      <span class="btn sky small" style="pointer-events:none">Change photo</span></label>
+    <div class="card stack">
+      <div><label>Name</label><input id="ename" value="${esc(p.name)}" maxlength="40"></div>
+      <div class="row"><div><label>Species</label><input id="especies" value="${esc(p.species || "")}"></div><div><label>Breed</label><input id="ebreed" value="${esc(p.breed || "")}"></div></div>
+      <div class="row"><div><label>Sex</label><select id="esex">${["male", "female", "unknown"].map((s) => `<option ${s === p.sex ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+        <div><label>Age</label><input id="eage" value="${esc(p.age || "")}" placeholder="e.g. 2 years"></div></div>
+      <div><label>Colour</label><input id="ecolour" value="${esc(p.colour || "")}"></div>
+      <div><label>Nicknames</label><input id="enicks" value="${esc(p.nicknames || "")}" placeholder="e.g. Si Si, Little Loaf" maxlength="120"></div>
+      <div><label>Notes</label><textarea id="enotes">${esc(p.notes || "")}</textarea></div>
+    </div>
+    <button class="btn" id="esave">Save</button></div>`;
+  document.getElementById("back").onclick = () => render();
+  document.getElementById("ephoto").onchange = async (e) => {
+    if (!e.target.files[0]) return;
+    photo = await shrink(e.target.files[0]);
+    const pv = document.getElementById("epreview"); pv.src = photo; pv.classList.remove("hidden");
+  };
+  document.getElementById("esave").onclick = async (e) => {
+    const v = (id) => document.getElementById(id).value.trim();
+    if (!v("ename")) return document.getElementById("ename").focus();
+    e.target.disabled = true;
+    // same id, so his diary, calendar and stats all stay with him
+    try { await hub("/pets/" + p.id, { method: "PUT", body: JSON.stringify({ name: v("ename"), species: v("especies"), breed: v("ebreed"), sex: v("esex"), age: v("eage"), colour: v("ecolour"), nicknames: v("enicks"), notes: v("enotes"), ...(photo ? { photo } : {}) }) }); }
+    catch (err) { e.target.disabled = false; return toast(err.message); }
+    toast("Saved"); render();
+  };
 }
 
 function welcome() {
   $app.innerHTML = `<div class="hero center stack pop">
     <div class="beanbox">${bean("idle", 150)}</div>
-    <h1>FurSight</h1>
+    <h1>${wordmark()}</h1>
     <p class="muted">Rabbits hide illness. FurSight notices.<br>It notices, your vet decides.</p>
   </div>
   <div class="stack" style="margin-top:28px">
@@ -285,7 +336,7 @@ async function linkThis(kind) {
 
 function addPet() {
   $app.innerHTML = `<div class="stack pop">
-    <div class="brand"><i></i>FurSight</div>
+    <div class="brand">${wordmark()}</div>
     <h1>Who are we looking after?</h1>
     <p class="muted">Take a clear photo of your pet. FurSight works out what they are and writes a care plan you can check.</p>
     <label class="card center" style="cursor:pointer;padding:26px">
@@ -359,22 +410,36 @@ async function makeRecap(btn) {
   } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Make this week's card"; document.getElementById("drawing")?.remove(); }
 }
 
+let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  $app.innerHTML = `<div class="stack">${header()}<a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+    <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
+    <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
+    <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
-  const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind)).slice(0, 80);
+  document.getElementById("upload").onclick = () => uploadPage();
+  for (const b of document.querySelectorAll("[data-show]")) b.onclick = () => { diaryShow = b.dataset.show; today(); };
+  const kinds = { record: ["record"], media: ["photo", "video", "moment"] }[diaryShow];
+  // uploads can be dated long ago, so a filter asks the hub for just those kinds
+  let all = (await hub(kinds ? `/diary?limit=200&kinds=${kinds.join(",")}` : "/diary?limit=120")).entries;
+  // an older hub ignores kinds: page back through up to 1000 entries for them
+  for (let page = 0, list = all; kinds && page < 4 && list.length === 200 && !list.every((e) => kinds.includes(e.kind)); page++)
+    all = all.concat(list = (await hub(`/diary?limit=200&before=${list[list.length - 1].at}&kinds=${kinds.join(",")}`)).entries);
+  const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind))).slice(0, 80);
   const $l = document.getElementById("list");
   if (!entries.length) {
-    $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
+    $l.innerHTML = kinds ? `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>None yet</h3><p class="muted">Add old photos, videos and vet papers and FurSight keeps them with ${esc(me.pets[0].name)}'s diary.</p></div>`
+      : `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
     return;
   }
   let last = "";
-  const bday = FSCal.upcoming(all, 1).find((u) => /birthday/i.test(u.title));
+  const bday = !kinds && FSCal.upcoming(all, 1).find((u) => /birthday/i.test(u.title));
   if (bday) $l.insertAdjacentHTML("beforebegin", `<div class="card center stack pop birthday"><div class="beanbox">${bean("safe", 110)}</div><h2>Happy birthday, ${esc(me.pets[0].name)}!</h2><p class="muted">A good day for a favourite herb and some extra floor time.</p></div>`);
   $l.innerHTML = entries.map((e) => {
-    const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+    const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short", ...(Date.now() - e.at > 300 * 864e5 ? { year: "numeric" } : {}) });
     const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
-    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
+    const word = e.extra && e.extra.uploaded && UPKIND[e.kind] ? UPKIND[e.kind] + ({ caution: " · keep an eye on", vet: " · see a vet" }[e.verdict] || "")
+      : { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", video: "Video", record: "Vet record", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
     if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
@@ -382,9 +447,166 @@ async function today() {
     return `${head}<div class="card entry pop" style="margin-bottom:10px">
       ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
-      ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}
-      <div class="when">${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""}</div></div></div>`;
+      ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}${recordDetails(e)}
+      <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""}</div></div></div>`;
   }).join("");
+  remindButtons($l);
+}
+
+// ---------------------------------------------------------------- uploads: old photos, videos and vet records
+// Everything is read in the browser first: a photo is shrunk, a video gives four frames (kept as one 2 by 2 sheet:
+// the video itself isn't stored), a PDF gives its first pages as pictures (page 1 is kept). With "Understand it",
+// Muse Spark reads them (/api/understand) and fills in the title, the summary and, for a vet record, the details.
+
+const UPKIND = { record: "Vet record", photo: "Photo", video: "Video" };
+const ymd = (t) => FSCal.key(new Date(t));
+const loadScript = (src) => new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => no(new Error("couldn't load the PDF reader")); document.head.appendChild(s); });
+const canvasJpeg = (c, q = 0.82) => c.toDataURL("image/jpeg", q);
+
+async function pdfPages(file, n = 4) {
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise, out = [];
+  for (let i = 1; i <= Math.min(n, doc.numPages); i++) {
+    const page = await doc.getPage(i), v1 = page.getViewport({ scale: 1 }), vp = page.getViewport({ scale: Math.min(2, 1200 / v1.width) });
+    const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    out.push(canvasJpeg(c, 0.8));
+  }
+  return { pages: out, total: doc.numPages };
+}
+
+function videoFrames(file, n = 4) {
+  return new Promise((ok, no) => {
+    const v = document.createElement("video"), url = URL.createObjectURL(file), frames = [];
+    v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+    v.onerror = () => { URL.revokeObjectURL(url); no(new Error("This browser can't read that video")); };
+    v.onloadedmetadata = async () => {
+      const k = Math.min(1, 640 / Math.max(v.videoWidth, v.videoHeight)), w = Math.round(v.videoWidth * k), h = Math.round(v.videoHeight * k);
+      for (let i = 0; i < n; i++) {
+        await new Promise((r) => { v.onseeked = r; v.currentTime = Math.min(v.duration - 0.05, v.duration * (0.1 + (0.8 * i) / Math.max(1, n - 1))); });
+        const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(v, 0, 0, w, h); frames.push(c);
+      }
+      // the four frames as one 2 by 2 sheet for the diary
+      const s = document.createElement("canvas"); s.width = w * 2 + 6; s.height = h * 2 + 6;
+      const g = s.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, s.width, s.height);
+      frames.forEach((f, i) => g.drawImage(f, (i % 2) * (w + 6), Math.floor(i / 2) * (h + 6)));
+      URL.revokeObjectURL(url);
+      ok({ frames: frames.map((f) => canvasJpeg(f, 0.8)), sheet: canvasJpeg(s, 0.8), secs: Math.round(v.duration) });
+    };
+  });
+}
+
+// the diary entry: extra is capped at 4000 characters, so long lists are trimmed
+function trimRecord(r) {
+  if (!r) return undefined;
+  const s = (x, n = 160) => String(x || "").slice(0, n), l = (a, n = 8) => (Array.isArray(a) ? a : []).slice(0, n);
+  return { clinic: s(r.clinic, 80), reason: s(r.reason), weight_g: Number(r.weight_g) || 0, findings: l(r.findings).map((x) => s(x)), medications: l(r.medications, 6).map((m) => ({ name: s(m.name, 60), dose: s(m.dose, 100), until: s(m.until, 10) })),
+    vaccinations: l(r.vaccinations, 6).map((v) => ({ name: s(v.name, 60), given: s(v.given, 10), next_due: s(v.next_due, 10) })), follow_up: r.follow_up && r.follow_up.date ? { date: s(r.follow_up.date, 10), what: s(r.follow_up.what, 100) } : null };
+}
+
+// dates in a record worth a reminder: the follow-up and jabs coming due
+function recordDates(rec) {
+  if (!rec) return [];
+  const today = ymd(Date.now()), out = [];
+  if (rec.follow_up && rec.follow_up.date >= today) out.push({ date: rec.follow_up.date, title: rec.follow_up.what || "Vet follow-up", repeat: "none" });
+  for (const v of rec.vaccinations || []) if (v.next_due && v.next_due >= today) out.push({ date: v.next_due, title: `${v.name} vaccination due`, repeat: "yearly" });
+  return out.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date));
+}
+
+function recordDetails(e) {
+  const r = e.extra && e.extra.record, sn = e.extra && e.extra.seen;
+  if (!r && !(sn && sn.health_notes && sn.health_notes.length)) return "";
+  const li = (a) => a.map((x) => `<li><span>${esc(x)}</span></li>`).join("");
+  const rows = r ? [
+    r.clinic && `Clinic: ${r.clinic}`, r.reason && `Why: ${r.reason}`, r.weight_g && `Weight: ${(r.weight_g / 1000).toFixed(2)} kg`,
+    ...r.findings.map((f) => `Found: ${f}`), ...r.medications.map((m) => `Medicine: ${m.name}, ${m.dose}${m.until ? ` until ${m.until}` : ""}`),
+    ...r.vaccinations.map((v) => `Vaccination: ${v.name}${v.given ? `, given ${v.given}` : ""}${v.next_due ? `, next due ${v.next_due}` : ""}`),
+    r.follow_up && `Follow-up: ${r.follow_up.what} on ${r.follow_up.date}`].filter(Boolean) : sn.health_notes;
+  const dates = recordDates(r);
+  return `<details class="how"><summary>${r ? "What it says" : "What FurSight noticed"}</summary><ol>${li(rows)}</ol>
+    ${dates.map((d) => `<button class="btn ghost small" data-remind='${esc(JSON.stringify(d))}' style="margin-top:6px">Remind me: ${esc(d.title)}, ${esc(FSCal.day(d.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }))}</button>`).join("")}</details>`;
+}
+function remindButtons(root) {
+  for (const b of root.querySelectorAll("[data-remind]")) b.onclick = async () => {
+    const d = JSON.parse(b.dataset.remind);
+    b.disabled = true;
+    try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "event", title: d.title, pet: me.pets[0].name, extra: { date: d.date, repeat: d.repeat } }) }); b.textContent = "On the calendar"; }
+    catch (err) { b.disabled = false; toast(err.message); }
+  };
+}
+
+function uploadPage() {
+  stopCam();
+  const p = me.pets[0], items = [];
+  $app.innerHTML = `<div class="stack pop">
+    <div class="row" style="justify-content:space-between"><h1>Add to ${esc(p.name)}'s record</h1><button class="btn ghost small" id="upBack" style="flex:none;width:auto">Done</button></div>
+    <p class="muted">Old photos and videos, vet letters, invoices, vaccination cards, lab results. Photos of paper work too.</p>
+    <label class="btn sky" for="upFiles">Choose photos, videos or PDFs</label>
+    <input id="upFiles" type="file" multiple accept="image/*,video/*,application/pdf,.pdf" class="hidden">
+    <div id="upList" class="stack"></div>
+    <button class="btn" id="upSave" disabled>Save to the diary</button>
+    <p class="when">Videos keep four still frames, not the video. PDFs keep their first page as a picture; FurSight reads up to four.</p></div>`;
+  const $list = document.getElementById("upList"), $save = document.getElementById("upSave");
+  document.getElementById("upBack").onclick = () => { history.replaceState(null, "", location.pathname); tab = "today"; render(); };
+  document.getElementById("upFiles").onchange = async (ev) => {
+    for (const f of [...ev.target.files].slice(0, 12)) {
+      const kind = /pdf/.test(f.type) || /\.pdf$/i.test(f.name) ? "record" : f.type.startsWith("video") ? "video" : "photo";
+      const it = { f, kind, id: "u" + items.length, understand: true, status: "Reading…" };
+      items.push(it);
+      $list.insertAdjacentHTML("beforeend", `<div class="card stack" id="${it.id}"><div class="row" style="align-items:flex-start">
+        <div class="upthumb"></div><div style="flex:1;min-width:0"><h3 style="overflow-wrap:anywhere">${esc(f.name)}</h3>
+        <select data-k="kind">${Object.entries(UPKIND).map(([k, w]) => `<option value="${k}" ${k === kind ? "selected" : ""}>${w}</option>`).join("")}</select></div></div>
+        <div class="row"><div><label>Date</label><input type="date" data-k="date" value="${ymd(f.lastModified || Date.now())}" max="${ymd(Date.now())}"></div></div>
+        <label style="display:flex;align-items:center;gap:10px;font-weight:800;cursor:pointer"><input type="checkbox" data-k="understand" checked style="width:22px;height:22px;flex:none;margin:0">Understand it with Muse Spark</label>
+        <input data-k="note" placeholder="Anything to add? (optional)" maxlength="200">
+        <div class="when" data-k="status">Reading…</div><div data-k="result"></div></div>`);
+      const $c = document.getElementById(it.id), q = (k) => $c.querySelector(`[data-k="${k}"]`);
+      q("kind").onchange = () => (it.kind = q("kind").value);
+      q("date").onchange = () => (it.dateTouched = true);
+      try {
+        if (kind === "record" && /pdf/.test(f.type + f.name)) { const r = await pdfPages(f); it.images = r.pages; it.keep = r.pages[0]; it.pages = r.total; }
+        else if (kind === "video") { const r = await videoFrames(f); it.images = r.frames; it.keep = r.sheet; it.secs = r.secs; }
+        else { it.keep = await shrink(f, 1400); it.images = [it.keep]; }
+        $c.querySelector(".upthumb").innerHTML = `<img src="${it.keep}" alt="">`;
+        q("status").textContent = kind === "video" ? `${it.secs} s video, 4 frames` : it.pages ? `${it.pages} page${it.pages === 1 ? "" : "s"}` : "Ready";
+        it.ready = true;
+      } catch (err) { it.failed = true; q("status").textContent = err.message || "Couldn't read this file"; }
+      $save.disabled = !items.some((x) => x.ready && !x.saved);
+    }
+    ev.target.value = "";
+  };
+  $save.onclick = async () => {
+    $save.disabled = true;
+    for (const it of items.filter((x) => x.ready && !x.saved)) {
+      const $c = document.getElementById(it.id), q = (k) => $c.querySelector(`[data-k="${k}"]`);
+      const note = q("note").value.trim();
+      let u = null;
+      if (q("understand").checked) {
+        q("status").textContent = "Muse Spark is reading it…";
+        try { u = await api("/api/understand", { kind: it.kind, images: it.images, note, pet: { name: p.name, species: p.species, breed: p.breed, notes: p.notes } }); }
+        catch (err) { q("status").textContent = "Couldn't read it (" + err.message + "), saving it as it is"; }
+      }
+      // the date it says beats the file's date, unless you picked one
+      const date = !it.dateTouched && u && /^\d{4}-\d{2}-\d{2}$/.test(u.date) && u.date <= ymd(Date.now()) ? u.date : q("date").value;
+      q("date").value = date;
+      const record = it.kind === "record" && u ? trimRecord(u.record) : undefined;
+      const entry = { kind: it.kind, pet: p.name, image: it.keep, at: FSCal.day(date).getTime(),
+        title: (u && u.title) || `${UPKIND[it.kind]}: ${it.f.name.replace(/\.[^.]+$/, "")}`.slice(0, 120),
+        note: [u && u.summary, note && `You said: ${note}`].filter(Boolean).join(" ").slice(0, 1200),
+        ...(u && u.verdict === "vet" ? { verdict: "vet" } : u && u.verdict === "watch" ? { verdict: "caution" } : {}),
+        extra: { uploaded: true, understood: !!u, file: it.f.name.slice(0, 60), ...(it.pages ? { pages: it.pages } : {}), ...(it.secs ? { secs: it.secs } : {}), ...(record ? { record } : {}), ...(u && it.kind !== "record" ? { seen: { doing: String(u.seen.doing || "").slice(0, 160), pose: u.seen.pose, health_notes: (u.seen.health_notes || []).slice(0, 5).map((x) => String(x).slice(0, 160)) } } : {}) } };
+      q("status").textContent = "Saving…";
+      try { const saved = await hub("/diary", { method: "POST", body: JSON.stringify(entry) }); it.saved = true;
+        q("status").textContent = `Saved to ${new Date(entry.at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`;
+        q("result").innerHTML = `<h3>${esc(entry.title)}</h3>${entry.note ? `<p class="muted">${esc(entry.note)}</p>` : ""}${recordDetails({ ...saved, extra: entry.extra })}`;
+        const det = q("result").querySelector("details"); if (det) det.open = true;
+        remindButtons(q("result"));
+      } catch (err) { q("status").textContent = err.message; }
+    }
+    $save.disabled = !items.some((x) => x.ready && !x.saved);
+  };
 }
 
 // What the Ask agent did before it answered: each look, each check that stopped an answer, and any question it
@@ -426,10 +648,11 @@ async function care() {
   };
   if (!items.length) return;
   const { entries } = await hub("/diary?limit=200");
-  document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p);
+  document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p, FSClimate.summary(entries));
   routinesCard(entries, p);
   ideasCard(entries, p);
   document.getElementById("activity").innerHTML = activityCard(FSActivity.summary(entries), p);
+  logForm(p);
   const st = careState(entries, items);
   const left = items.filter((i) => !st.today.has(i)).length;
   document.getElementById("checklist").innerHTML = `<div class="card pop">
@@ -454,8 +677,42 @@ function activityCard(a, p) {
   return `<div class="card stack pop"><div class="row" style="justify-content:space-between"><h2>${esc(p.name)}'s day</h2><span class="chip" style="flex:none">${a.today.flops} flop${a.today.flops === 1 ? "" : "s"} today</span></div>
     ${a.moment ? `<div class="moment${a.moment.has_image ? "" : " noimg"}${a.moment.extra && a.moment.extra.sticker ? " sticker" : ""}">${a.moment.has_image ? `<img src="${img(`/diary/${a.moment.id}/image`)}" alt="">` : ""}<p><b>${esc(a.moment.title)}</b><br><span class="when">${new Date(a.moment.at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></p></div>` : ""}
     <table class="act"><tr><th></th><th>Today</th><th>This week</th></tr>
-      ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}</table>
+      ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}
+      <tr class="unseen"><td>Not seen</td><td>${FSActivity.time(a.today.unseen)}</td><td>${FSActivity.time(a.week.unseen)}</td></tr></table>
+    <p class="when">Only what the cams saw is counted. Not seen means out of view, another room, the cam off or the night: FurSight doesn't guess.${a.week.flopsYou ? ` ${a.week.flopsYou} flop${a.week.flopsYou === 1 ? "" : "s"} this week ${a.week.flopsYou === 1 ? "was" : "were"} added by you.` : ""}</p>
+    ${a.treats.today.length ? `<p class="muted"><b>Treats today:</b> ${a.treats.today.map((t) => esc(t.item + (t.amount ? ` (${t.amount})` : ""))).join(", ")}</p>` : ""}
+    <button class="btn ghost" id="logOpen">Add what the cams missed</button>
+    <div id="logForm" class="stack hidden">
+      <div class="chips">${Object.entries({ treat: "Treat", greens: "Greens", flop: "Flop", loaf: "Loaf", zoomies: "Zoomies", droppings: "Good droppings", note: "Note" }).map(([k, w]) => `<button class="chip pick" data-log="${k}">${w}</button>`).join("")}</div>
+      <input id="logItem" class="hidden" maxlength="60" placeholder="What? e.g. a slice of apple">
+      <select id="logAmount" class="hidden"><option value="tiny">A tiny bit</option><option value="small">A small piece</option><option value="handful">A handful</option></select>
+      <button class="btn" id="logSave" disabled>Add to his diary</button></div>
     ${a.simulated ? `<span class="chip" style="justify-self:start">Includes simulated days</span>` : ""}</div>`;
+}
+
+// the owner adds what the cams didn't see (through /api/log, which checks a treat against his never list)
+function logForm(p) {
+  const open = document.getElementById("logOpen");
+  if (!open) return;
+  const $f = document.getElementById("logForm"), $item = document.getElementById("logItem"), $amt = document.getElementById("logAmount"), $save = document.getElementById("logSave");
+  let what = null;
+  open.onclick = () => { $f.classList.toggle("hidden"); open.classList.add("hidden"); };
+  for (const b of $f.querySelectorAll("[data-log]")) b.onclick = () => {
+    what = b.dataset.log;
+    for (const o of $f.querySelectorAll("[data-log]")) o.classList.toggle("on", o === b);
+    $item.classList.toggle("hidden", !["treat", "greens", "note"].includes(what));
+    $amt.classList.toggle("hidden", !["treat", "greens"].includes(what));
+    $item.placeholder = what === "note" ? "What happened?" : what === "greens" ? "Which? e.g. coriander" : "What? e.g. a slice of apple";
+    $save.disabled = false;
+  };
+  $save.onclick = async () => {
+    if (["treat", "greens", "note"].includes(what) && !$item.value.trim()) return $item.focus();
+    $save.disabled = true;
+    let r;
+    try { r = await api("/api/log", { what, item: $item.value.trim(), amount: $amt.value }); } catch (e) { $save.disabled = false; return toast(e.message); }
+    toast(r.never ? "Careful: that's on his never list" : "Added. Thanks for filling the gap");
+    care();
+  };
 }
 
 // ---------------------------------------------------------------- ideas for him: treats, toys, enrichment (not adverts)
@@ -505,8 +762,8 @@ function routinesCard(entries, p) {
 
 // ---------------------------------------------------------------- the litter tray: weight, visits, output against his usual
 
-function trayCard(s, p) {
-  if (s.status === "none") return "";
+function trayCard(s, p, c) {
+  if (s.status === "none" && (!c || !c.now)) return "";
   const word = { normal: "All normal", watch: "Worth watching", vet: "Talk to your vet" }[s.status];
   const kg = (g) => g ? (g / 1000).toFixed(2) + " kg" : "–";
   // his weight across the week: a small line, today's point bigger
@@ -522,6 +779,8 @@ function trayCard(s, p) {
     </div>
     ${spark}<div class="when" style="text-align:center">His weight, last ${w.length} days</div>
     ${s.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}
+    ${c && c.now ? `<div class="room ${c.status}"><b>${c.now.t.toFixed(1)}°C</b> by his tray · ${Math.round(c.now.h)}% humidity${c.today.max !== null ? ` · today ${c.today.min.toFixed(0)} to ${c.today.max.toFixed(0)}°C` : ""}</div>
+      ${c.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}${c.status === "vet" ? `<p class="muted">${FSClimate.HEAT_TIPS.map(esc).join(". ")}.</p>` : ""}` : ""}
     ${s.simulated ? `<span class="chip" style="justify-self:start">Simulated tray</span>` : ""}</div>`;
 }
 
@@ -532,7 +791,7 @@ async function stats() {
   const p = me.pets[0];
   $app.innerHTML = `<div class="stack">${header()}<div id="st"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
-  const tray = FSTray.summary(entries), days = FSActivity.days(entries, 7), a = FSActivity.summary(entries);
+  const tray = FSTray.summary(entries), days = FSActivity.days(entries, 7), a = FSActivity.summary(entries), clim = FSClimate.summary(entries);
   const tw = tray.week.filter((d) => d.weight_g), wNow = tray.today.weight_g || (tw.length ? tw[tw.length - 1].weight_g : null);
   const wDelta = tw.length > 1 ? tw[tw.length - 1].weight_g - tw[0].weight_g : null;
   const day = (k) => k === FSCal.key(new Date()) ? "Today" : FSCal.day(k).toLocaleDateString(undefined, { weekday: "short" });
@@ -541,7 +800,13 @@ async function stats() {
     a.has ? [FSActivity.time(a.today.loaf), "loafing today", `${FSActivity.time(a.week.loaf)} this week`] : null,
     a.has ? [`${a.today.flops}`, "flops today", `${a.week.flops} this week`] : null,
     a.has ? [FSActivity.time(a.today.active), "on the move", `${FSActivity.time(a.week.active)} this week`] : null,
+    a.has ? [FSActivity.time(a.week.seen / 7), "seen a day", `${FSActivity.time(a.week.unseen / 7)} a day not seen`] : null,
+    a.treats.week ? [`${a.treats.week}`, "treats this week", "added by you"] : null,
   ].filter(Boolean);
+  // today isn't over: its bars are drawn faded, with a dashed outline of a usual day behind them
+  const isToday = (k) => k === FSCal.key(new Date());
+  const restOf = (d) => d.loaf + d.stretched + d.flop, pastRest = days.filter((d) => !isToday(d.date) && d.seen > 0);
+  const usualRest = pastRest.length ? pastRest.reduce((t, d) => t + restOf(d), 0) / pastRest.length : 0;
   const none = !tw.length && !a.has;
   document.getElementById("st").innerHTML = (none ? "" : `<a class="btn sky" href="/wrapped/" style="margin-bottom:14px">${esc(p.name)}'s week, wrapped</a>`) + (none ? `<div class="card center stack pop">${bean("idle", 90)}<h3>No stats yet</h3><p class="muted">Stats fill in from the litter tray and the pet cam. Link a FurSight Tray or set up a pet cam in Devices.</p></div>` : `<div class="stack">
     <div class="tiles">${tiles.map(([b, l, sub]) => `<div class="card tile pop"><b>${b}</b><span>${l}</span><small>${sub}</small></div>`).join("")}</div>
@@ -549,15 +814,19 @@ async function stats() {
       ${tray.simulated ? `<span class="when">Simulated tray</span>` : ""}</div>` : ""}
     ${a.has ? `<div class="card stack pop"><h3>Resting each day</h3>
       <div class="legend">${["loaf", "stretched", "flop"].map((k) => `<span><i style="background:${STAT_COL[k]}"></i>${FSActivity.WORD[k]}</span>`).join("")}</div>
-      ${stackChart(days.map((d) => ({ x: day(d.date), parts: ["loaf", "stretched", "flop"].map((k) => ({ k, v: d[k] })), tip: `${day(d.date)}: ${["loaf", "stretched", "flop"].map((k) => `${FSActivity.WORD[k]} ${FSActivity.time(d[k])}`).join(", ")}, ${d.flops} flop${d.flops === 1 ? "" : "s"}` })))}
+      ${stackChart(days.map((d) => ({ x: day(d.date), partial: isToday(d.date), ghost: isToday(d.date) ? usualRest : 0, parts: ["loaf", "stretched", "flop"].map((k) => ({ k, v: d[k] })), tip: `${day(d.date)}${isToday(d.date) ? " so far" : ""}: ${["loaf", "stretched", "flop"].map((k) => `${FSActivity.WORD[k]} ${FSActivity.time(d[k])}`).join(", ")}, ${d.flops} flop${d.flops === 1 ? "" : "s"}. Not seen ${FSActivity.time(d.unseen)}` })))}
+      <p class="when">Today is so far: the dashed outline is a usual day. Counts only the time the cams saw him, about ${FSActivity.time(a.week.seen / 7)} a day.</p>
       <details class="how"><summary>As a table</summary><table class="act"><tr><th></th>${days.map((d) => `<th>${day(d.date)}</th>`).join("")}</tr>
         ${["loaf", "stretched", "flop", "active"].map((k) => `<tr><td>${FSActivity.WORD[k]}</td>${days.map((d) => `<td>${Math.round(d[k])}</td>`).join("")}</tr>`).join("")}
-        <tr><td>Flops</td>${days.map((d) => `<td>${d.flops}</td>`).join("")}</tr></table><p class="when">Minutes</p></details>
+        <tr><td>Flops</td>${days.map((d) => `<td>${d.flops}</td>`).join("")}</tr>
+        <tr><td>Not seen</td>${days.map((d) => `<td>${Math.round(d.unseen)}</td>`).join("")}</tr></table><p class="when">Minutes</p></details>
       ${a.simulated ? `<span class="when">Includes simulated days</span>` : ""}</div>` : ""}
-    ${tray.week.length ? `<div class="card stack pop"><h3>Litter tray visits</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.visits, tip: `${day(d.date)}: ${d.visits} visits` })), "var(--grape-lip)")}</div>
-      <div class="card stack pop"><h3>Litter tray output</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.output_g, tip: `${day(d.date)}: ${d.output_g} g` })), "#B87700", "g")}
-      <p class="when">Today is so far. A drop in output is one of the earliest signs of gut trouble.</p></div>` : ""}
-  </div>`;
+    ${clim.now ? `<div class="card stack pop"><h3>Room temperature by his tray</h3>${rangeChart(clim.days.filter((d) => d.min !== null).map((d) => ({ x: day(d.date), partial: isToday(d.date), lo: d.min, hi: d.max, tip: `${day(d.date)}${isToday(d.date) ? " so far" : ""}: ${d.min.toFixed(1)} to ${d.max.toFixed(1)}°C` })))}
+      <p class="when">Each bar runs from the day's coolest to warmest. The dashed line is 25°C, where it starts to get too warm for a rabbit.</p>${clim.simulated ? `<span class="when">Simulated readings</span>` : ""}</div>` : ""}
+    ${tray.week.length ? `<div class="card stack pop"><h3>Litter tray visits</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.visits, partial: isToday(d.date), ghost: isToday(d.date) && tray.usual ? tray.usual.visits_day : 0, tip: `${day(d.date)}${isToday(d.date) ? ` so far: ${d.visits} visits${tray.usual ? `, usually ${tray.usual.visits_day} a day` : ""}` : `: ${d.visits} visits`}` })), "var(--grape-lip)")}<p class="when">Today is so far: the dashed outline is a usual day.</p></div>
+      <div class="card stack pop"><h3>Litter tray output</h3>${barChart(tray.week.map((d) => ({ x: day(d.date), y: d.output_g, partial: isToday(d.date), ghost: isToday(d.date) && tray.usual ? tray.usual.output_day : 0, tip: `${day(d.date)}${isToday(d.date) ? ` so far: ${d.output_g} g${tray.usual ? `, usually ${tray.usual.output_day} g a day` : ""}` : `: ${d.output_g} g`}` })), "#B87700", "g")}
+      <p class="when">Today is so far: the dashed outline is a usual day. A drop in output is one of the earliest signs of gut trouble.</p></div>` : ""}
+  </div>`);
   tips(document.getElementById("st"));
 }
 
@@ -586,8 +855,16 @@ function lineChart(pts, { unit = "", colour = "var(--sky)" } = {}) {
     ${pts.map((p, i) => `<text x="${X(i)}" y="${CH - 6}" text-anchor="middle" class="ax">${p.x}</text>`).join("")}</svg>`;
 }
 function bars(items, max, draw) {
-  const bw = (CW - PL - 8) / items.length;
-  return items.map((it, i) => draw(it, PL + 4 + i * bw + 3, bw - 6, (v) => ((CH - PB - PT) * v) / max) + `<text x="${PL + 4 + i * bw + bw / 2}" y="${CH - 6}" text-anchor="middle" class="ax">${it.x}</text>`).join("");
+  const bw = (CW - PL - 8) / items.length, H = (v) => ((CH - PB - PT) * v) / max;
+  return items.map((it, i) => {
+    const x = PL + 4 + i * bw + 3, w = bw - 6, cx = PL + 4 + i * bw + bw / 2;
+    const label = `<text x="${cx}" y="${CH - 6}" text-anchor="middle" class="ax">${it.x}</text>`;
+    if (!it.partial) return draw(it, x, w, H) + label;
+    // a day still going: faded, a dashed outline of a usual day behind it, and "so far" on top
+    const val = it.parts ? it.parts.reduce((t, p) => t + p.v, 0) : it.y || 0, top = it.lo != null ? null : CH - PB - H(Math.max(val, it.ghost || 0));
+    const ghost = it.ghost > 0 ? `<rect x="${x + 0.75}" y="${CH - PB - H(it.ghost)}" width="${w - 1.5}" height="${H(it.ghost)}" rx="4" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="3 3"/>` : "";
+    return ghost + `<g opacity=".45">${draw(it, x, w, H)}</g>` + (top !== null ? `<text x="${cx}" y="${Math.max(PT - 2, top - 5)}" text-anchor="middle" class="ax so">so far</text>` : "") + label;
+  }).join("");
 }
 // a bar with its data end rounded (4px) and its base square on the axis
 const bar = (x, y, w, h, fill, round) => h <= 0 ? "" : round ? `<path d="M${x},${y + h}V${y + Math.min(4, h)}Q${x},${y} ${x + Math.min(4, w / 2)},${y}H${x + w - Math.min(4, w / 2)}Q${x + w},${y} ${x + w},${y + Math.min(4, h)}V${y + h}Z" fill="${fill}"/>` : `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`;
@@ -603,6 +880,17 @@ function stackChart(items) {
     live.forEach((p, j) => { const hh = h(p.v); y -= hh; out += bar(x, y + (j ? 1 : 0), w, hh - (j ? 2 : 0), STAT_COL[p.k], j === live.length - 1); });
     return out + `<rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`;
   })}</svg>`;
+}
+// a day's coolest to warmest, with the 25°C line where it gets too warm for a rabbit
+function rangeChart(items) {
+  if (!items.length) return "";
+  const lo = Math.min(10, ...items.map((i) => i.lo)) , hi = Math.max(30, ...items.map((i) => i.hi));
+  const st = niceStep(hi - lo), min = Math.floor(lo / st) * st, max = min + 3 * st >= hi ? min + 3 * st : min + 4 * st;
+  const Y = (v) => CH - PB - ((v - min) / (max - min)) * (CH - PB - PT);
+  return `<svg viewBox="0 0 ${CW} ${CH}" class="chart" role="img" aria-label="Room temperature each day">${axis(max, min, "°C")}
+    <line x1="${PL}" x2="${CW}" y1="${Y(25)}" y2="${Y(25)}" stroke="var(--coral)" stroke-width="1.5" stroke-dasharray="4 4"/>
+    ${bars(items, 1, (it, x, w) => { const y1 = Y(it.hi), y2 = Y(it.lo), hot = it.hi >= 25;
+      return (it.partial ? `<text x="${x + w / 2}" y="${y1 - 5}" text-anchor="middle" class="ax so">so far</text>` : "") + `<rect x="${x + w * 0.2}" y="${y1}" width="${w * 0.6}" height="${Math.max(4, y2 - y1)}" rx="4" fill="${hot ? "var(--coral)" : "var(--sky)"}"/><rect x="${x}" y="${PT}" width="${w}" height="${CH - PT - PB}" fill="transparent" data-tip="${esc(it.tip)}"/>`; })}</svg>`;
 }
 function tips(root) {
   let t = document.getElementById("tip");
@@ -622,7 +910,7 @@ async function calendar() {
   $app.innerHTML = `<div class="stack">${header()}<div id="cal"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
   const routines = FSRoutine.list(entries), dueOn = (k) => routines.filter((r) => r.due === k || (k === today && r.days < 0));
-  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind));
+  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind));
   const byDay = new Map();
   for (const e of diary) { const k = FSCal.key(new Date(e.at)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
   const careDone = (k) => items.length && items.every((i) => (byDay.get(k) || []).some((e) => e.kind === "care" && e.title === i));
@@ -680,6 +968,8 @@ function devices() {
     <div class="card stack pop"><h2>Link a device</h2><p class="muted">On the Quest, glasses or pet cam, FurSight shows a 4-letter code. Type it here.</p>
       <input id="code" class="codein" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="····">
       <button class="btn sky" id="claim" disabled>Link</button></div>
+    <div class="card stack pop"><h3>This device</h3><div><label for="dname">Name</label><input id="dname" maxlength="40" value="${esc((me.devices.find((d) => d.id === me.device) || {}).name || "")}"></div>
+      <button class="btn ghost" id="drename">Rename</button></div>
     <h3 style="margin:18px 4px 0">Linked</h3>
     ${me.devices.map((d) => `<div class="card row pop"><div><h3>${esc(d.name)}</h3><div class="when">${icon[d.kind] || cap(d.kind)}${d.id === me.device ? " · this one" : ""} · seen ${ago(d.seen)}</div></div>
       ${d.id === me.device ? "" : `<button class="btn ghost small" data-remove="${d.id}" style="flex:none">Remove</button>`}</div>`).join("")}
@@ -695,6 +985,13 @@ function devices() {
     catch (err) { toast(err.message); $b.disabled = false; }
   };
   for (const b of document.querySelectorAll("[data-remove]")) b.onclick = async () => { await hub("/devices/" + b.dataset.remove, { method: "DELETE" }); render(); };
+  document.getElementById("drename").onclick = async (e) => {
+    const name = document.getElementById("dname").value.trim();
+    if (!name) return;
+    e.target.disabled = true;
+    try { await hub("/devices/" + me.device, { method: "PUT", body: JSON.stringify({ name }) }); toast("Renamed"); render(); }
+    catch (err) { e.target.disabled = false; toast(/404|405|not found/i.test(err.message) ? "Renaming works once the hub is updated" : err.message); }
+  };
   document.getElementById("sethome").onclick = (e) => {
     if (!navigator.geolocation) return toast("This browser can't share location");
     e.target.disabled = true;

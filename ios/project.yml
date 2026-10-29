@@ -28,7 +28,8 @@ targets:
         UILaunchScreen: { UIColorName: "" }
         UIAppFonts: [Nunito-800.ttf, Nunito-900.ttf]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
-        NSCameraUsageDescription: FurSight uses the camera to check whether a food or plant is safe for your pet.
+        NSCameraUsageDescription: FurSight uses the camera to check whether a food or plant is safe for your pet, and to add photos and videos to their record.
+        NSMicrophoneUsageDescription: FurSight records sound when you film a video for your pet's record.
         NSAppTransportSecurity: { NSAllowsLocalNetworking: true }
     settings:
       base:

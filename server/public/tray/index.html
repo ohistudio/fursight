@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FurSight Tray</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
 <style>
   :root {
@@ -44,6 +45,7 @@
 <script src="/tray.js"></script>
 <script src="/activity.js"></script>
 <script src="/sticker.js"></script>
+<script src="/climate.js"></script>
 <script>
 // A simulated FurSight Tray: the litter tray with a scale and a camera looking down, standing in for the hardware
 // until it's built. It links like any FurSight device, then logs what the real Tray would: each visit (his weight,
@@ -56,6 +58,7 @@ const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { ret
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const rnd = (a, b) => a + Math.random() * (b - a);
 let token = store.get("fs.trayToken"), me = null, entries = [], lastSticker = null;
+let real = null;   // the real FurSight Tray over Bluetooth, once connected: { weight, climate, command, steady, g }
 let base = 4200 + Math.round(rnd(0, 300)), onTray = false, slow = store.get("fs.traySlow") === "1", auto = null;
 
 async function hub(path, opt = {}) {
@@ -68,7 +71,7 @@ async function hub(path, opt = {}) {
 
 async function link() {
   $app.innerHTML = `<div class="sim">Simulated FurSight Tray · prototype</div>
-    <div class="card center"><div style="display:grid;place-items:center">${bean("idle", 90)}</div><h1>FurSight Tray</h1>
+    <div class="card center"><div style="display:grid;place-items:center">${bean("idle", 90)}</div><h1>${wordmark(" Tray")}</h1>
     <p class="muted">On your phone, open FurSight, go to <b>Devices</b> and enter this code.</p><div class="code" id="code">····</div></div>`;
   const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind: "tray", name: "FurSight Tray" }) });
   $("code").textContent = s.code;
@@ -112,6 +115,96 @@ async function start() {
   render();
 }
 
+// ---------------------------------------------------------------- the room: temperature and humidity by his tray
+
+function climateCard() {
+  const c = FSClimate.summary(entries), word = { normal: "Comfortable", watch: "Worth watching", vet: "Too hot", none: "No readings yet" }[c.status];
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between"><h2>The room</h2><span class="pill s-${c.status}">${word}</span></div>
+    ${c.now ? `<div class="grid2"><div class="stat"><b>${c.now.t.toFixed(1)}°C</b><span>by his tray${c.today.max !== null ? `, today ${c.today.min.toFixed(0)} to ${c.today.max.toFixed(0)}°C` : ""}</span></div>
+      <div class="stat"><b>${Math.round(c.now.h)}%</b><span>humidity</span></div></div>` : `<p class="muted">The Tray's sensor reads the air by his tray.</p>`}
+    ${c.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}
+    <div class="grid2"><button class="btn ghost" id="hot">Hot afternoon</button><button class="btn ghost" id="cool">Back to normal</button></div>
+    <button class="btn ghost" id="climWeek">Fill a week of room readings</button>
+    ${c.simulated ? `<p class="muted" style="font-size:13px">Simulated readings until the sensor is built.</p>` : ""}
+  </div>`;
+}
+const postClimate = (t, h, at = Date.now(), sim = true) => hub("/diary", { method: "POST", body: JSON.stringify({ kind: "climate", title: "", at, pet: me.pets[0].name, extra: { t: Math.round(t * 10) / 10, h: Math.round(h), ...(sim ? { sim: true } : {}) } }) });
+async function simClimate(kind) {
+  for (const b of document.querySelectorAll("button")) b.disabled = true;
+  if (kind === "hot") { for (const [t, h, ago] of [[24.6, 52, 50], [26.2, 55, 30], [27.4, 57, 15], [28.3, 58, 0]]) await postClimate(t, h, Date.now() - ago * 60e3); }
+  else await postClimate(21.4, 47);
+  entries = (await hub("/diary?limit=200")).entries;
+  render();
+}
+async function fillClimate() {
+  for (const b of document.querySelectorAll("button")) b.disabled = true;
+  const now = new Date();
+  for (let d = 6; d >= 1; d--) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d, 23), lo = rnd(17, 19.5), hi = lo + rnd(2.5, 5);
+    await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "climate-day", title: "", at: day.getTime(), pet: me.pets[0].name, extra: { date: FSTray.key(day), min: Math.round(lo * 10) / 10, max: Math.round(hi * 10) / 10, sim: true } }) });
+  }
+  for (let hr = 7; new Date(now.getFullYear(), now.getMonth(), now.getDate(), hr, 10) < now - 30 * 60e3; hr += 2) await postClimate(18 + 3 * Math.sin((hr - 9) / 12 * Math.PI) + rnd(-0.3, 0.3), rnd(44, 52), new Date(now.getFullYear(), now.getMonth(), now.getDate(), hr, 10).getTime());
+  entries = (await hub("/diary?limit=200")).entries;
+  render();
+}
+// warm or hot: one alert (and so one phone notification) per level per day
+function climateAlert() {
+  const c = FSClimate.summary(entries), k = FSTray.key(new Date()) + "climate" + c.status;
+  if ((c.status === "watch" || c.status === "vet") && store.get("fs.climateAlert") !== k) {
+    store.set("fs.climateAlert", k);
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "alert", title: c.status === "vet" ? "Too hot by his tray" : "The room is warm", note: `${c.reasons[0] || ""} ${c.status === "vet" ? FSClimate.HEAT_TIPS.slice(0, 2).join(". ") + "." : ""}`.trim(), verdict: c.status === "vet" ? "vet" : "caution", pet: me.pets[0].name, extra: { climate: true, sim: c.simulated } }) }).catch(() => {});
+  }
+}
+
+// ---------------------------------------------------------------- the real Tray over Bluetooth (tray.ino)
+
+const SVC = "6f75a000-7e1c-4e2b-9b7a-46757253f001", W = "6f75a001-7e1c-4e2b-9b7a-46757253f001", C = "6f75a002-7e1c-4e2b-9b7a-46757253f001", CMD = "6f75a003-7e1c-4e2b-9b7a-46757253f001";
+async function connectTray() {
+  if (!navigator.bluetooth) return alert("Bluetooth from a web page needs Chrome on a computer.");
+  try {
+    const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [SVC] }] });
+    const gatt = await dev.gatt.connect(), svc = await gatt.getPrimaryService(SVC);
+    const weight = await svc.getCharacteristic(W), climate = await svc.getCharacteristic(C), command = await svc.getCharacteristic(CMD);
+    real = { weight, climate, command, base: null, inAt: 0, inG: 0, lastT: null, lastPost: 0 };
+    const text = (e) => JSON.parse(new TextDecoder().decode(e.target.value));
+    weight.addEventListener("characteristicvaluechanged", (e) => onWeight(text(e)));
+    climate.addEventListener("characteristicvaluechanged", (e) => onClimate(text(e)));
+    await weight.startNotifications(); await climate.startNotifications();
+    dev.addEventListener("gattserverdisconnected", () => { real = null; render(); });
+    render();
+  } catch (e) { if (e.name !== "NotFoundError") alert("Couldn't connect: " + e.message); }
+}
+const command = (s) => real && real.command.writeValue(new TextEncoder().encode(s));
+async function calibrate() {
+  const g = Number(prompt("Put something you know the weight of on the tray (a 1 kg bag of rice is perfect). How many grams?", "1000"));
+  if (g > 50) { await command("cal:" + g); alert("Calibrated. Take it off, then press Zero."); }
+}
+// A visit: a steady reading about his weight above the baseline, then back down. What's left behind is his output.
+// A jump far from his weight (a litter top-up, a hand) just moves the baseline.
+function onWeight({ g, s }) {
+  const p = me.pets[0], his = FSTray.summary(entries).usual?.weight_g || 1100;
+  $("reading") && ($("reading").innerHTML = `${Math.round(g).toLocaleString()} g<small>${real.inAt ? p.name + " is on the tray" : "tray and litter (live)"}</small>`);
+  if (!s) return;
+  if (real.base === null) { real.base = g; return; }
+  const up = g - real.base;
+  if (!real.inAt && up > his * 0.6 && up < his * 1.5) { real.inAt = Date.now(); real.inG = up; return; }
+  if (real.inAt && Math.abs(g - real.base) < his * 0.3) {
+    const out = Math.max(0, Math.min(80, g - real.base));
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "tray", title: "Tray visit", pet: p.name, extra: { weight_g: Math.round(real.inG), secs: Math.round((Date.now() - real.inAt) / 1000), output_g: Math.round(out) } }) })
+      .then((e) => { entries.unshift(e); render(); });
+    real.inAt = 0; real.base = g;
+    return;
+  }
+  if (!real.inAt && Math.abs(up) > 40) real.base = g;   // litter added or taken out: not a rabbit
+}
+// log the temperature when it moves half a degree, or once an hour
+function onClimate({ t, h }) {
+  if (real.lastT !== null && Math.abs(t - real.lastT) < 0.5 && Date.now() - real.lastPost < 36e5) return;
+  real.lastT = t; real.lastPost = Date.now();
+  postClimate(t, h, Date.now(), false).then((e) => { entries.unshift(e); render(); });
+}
+
 // when the status turns to watch or vet, log one alert (that's what sends the phone notification)
 function alertOnce(s) {
   const k = FSTray.key(new Date()) + s.status;
@@ -124,8 +217,9 @@ function alertOnce(s) {
 function render() {
   const p = me.pets[0], s = FSTray.summary(entries), word = { normal: "All normal", watch: "Worth watching", vet: "Talk to your vet", none: "Learning his normal" }[s.status];
   alertOnce(s);
-  $app.innerHTML = `<div class="sim">Simulated FurSight Tray · prototype · the real one is a scale under the tray</div>
-    <div class="row" style="justify-content:space-between"><div><h1>FurSight Tray</h1><p class="muted">${esc(p.name)}'s litter tray</p></div><div id="bn">${bean(s.status === "vet" ? "toxic" : s.status === "watch" ? "caution" : "idle", 70)}</div></div>
+  climateAlert();
+  $app.innerHTML = `<div class="sim">${real ? "FurSight Tray · connected over Bluetooth" : "Simulated FurSight Tray · prototype · the real one is a scale under the tray"}</div>
+    <div class="row" style="justify-content:space-between"><div><h1>${wordmark(" Tray")}</h1><p class="muted">${esc(p.name)}'s litter tray</p></div><div id="bn">${bean(s.status === "vet" ? "toxic" : s.status === "watch" ? "caution" : "idle", 70)}</div></div>
     <div class="scale" id="reading">${(base + s.today.output_g).toLocaleString()} g<small id="who">${onTray ? p.name + " is on the tray" : "tray and litter"}</small></div>
     <div class="card">
       <div class="row" style="justify-content:space-between"><h2>Today</h2><span class="pill s-${s.status}">${word}</span></div>
@@ -136,6 +230,13 @@ function render() {
         <div class="stat"><b>${s.today.last_at ? new Date(s.today.last_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–"}</b><span>last visit</span></div>
       </div>
       ${s.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}
+    </div>
+    ${climateCard()}
+    <div class="card">
+      <h2>Real FurSight Tray</h2>
+      ${real ? `<p class="muted">Connected over Bluetooth. Visits and the room temperature are logged by themselves.</p>
+        <div class="grid2"><button class="btn ghost" id="tare">Zero (empty tray + litter)</button><button class="btn ghost" id="cal">Calibrate…</button></div>`
+      : `<p class="muted">Built one? Turn it on, then connect. Use Chrome on a computer (Bluetooth from a web page needs Chrome).</p><button class="btn sky" id="connect">Connect the FurSight Tray</button>`}
     </div>
     <div class="card">
       <h2>Demo controls</h2>
@@ -161,6 +262,12 @@ function render() {
       <div id="poo"></div>
     </div>`;
   $("hop").onclick = hop;
+  if ($("connect")) $("connect").onclick = connectTray;
+  if ($("tare")) $("tare").onclick = () => command("tare");
+  if ($("cal")) $("cal").onclick = calibrate;
+  $("hot").onclick = () => simClimate("hot");
+  $("cool").onclick = () => simClimate("cool");
+  $("climWeek").onclick = fillClimate;
   $("actWeek").onclick = fillActivity;
   $("flop").onclick = () => flopNow();
   $("flopPhoto").onchange = async (e) => e.target.files[0] && flopNow(await shrink(e.target.files[0]));

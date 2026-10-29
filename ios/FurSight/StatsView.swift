@@ -40,6 +40,8 @@ struct StatsView: View {
                 tile(hm(t.num("loaf")), "loafing today", "\(hm(wk.num("loaf"))) this week")
                 tile("\(Int(t.num("flops")))", "flops today", "\(Int(wk.num("flops"))) this week")
                 tile(hm(t.num("active")), "on the move", "\(hm(wk.num("active"))) this week")
+                tile(hm(wk.num("seen") / 7), "seen a day", "\(hm(wk.num("unseen") / 7)) a day not seen")
+                if wk.num("treats") > 0 { tile("\(Int(wk.num("treats")))", "treats this week", "added by you") }
             }
         }
     }
@@ -70,24 +72,45 @@ struct StatsView: View {
     private var resting: some View {
         let days = data.arr("days")
         let rows: [(day: String, kind: String, mins: Double)] = days.flatMap { d in [("Loafing", "loaf"), ("Stretched out", "stretched"), ("Flopped", "flop")].map { (day(d.str("date")), $0.0, d.num($0.1)) } }
+        let rest = { (d: [String: Any]) in d.num("loaf") + d.num("stretched") + d.num("flop") }
+        let past = days.filter { day($0.str("date")) != "Today" && $0.num("seen") > 0 }
+        let usual = past.isEmpty ? 0 : past.map(rest).reduce(0, +) / Double(past.count)
+        let todaySoFar = days.last.map(rest) ?? 0
         return VStack(alignment: .leading, spacing: 8) {
-            header("Resting each day", picked["r"].flatMap { p in days.first { day($0.str("date")) == p }.map { "\(p): loaf \(hm($0.num("loaf"))), stretched \(hm($0.num("stretched"))), \(Int($0.num("flops"))) flops" } })
-            Chart(Array(rows.enumerated()), id: \.offset) { _, r in
-                BarMark(x: .value("Day", r.day), y: .value("Minutes", r.mins)).foregroundStyle(by: .value("Pose", r.kind)).cornerRadius(3)
+            header("Resting each day", picked["r"].flatMap { p in days.first { day($0.str("date")) == p }.map { "\(p)\(p == "Today" ? " so far" : ""): loaf \(hm($0.num("loaf"))), stretched \(hm($0.num("stretched"))), \(Int($0.num("flops"))) flops, not seen \(hm($0.num("unseen")))" } })
+            Chart {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
+                    BarMark(x: .value("Day", r.day), y: .value("Minutes", r.mins)).foregroundStyle(by: .value("Pose", r.kind)).cornerRadius(3).opacity(r.day == "Today" ? 0.4 : 1)
+                }
+                if usual > 0 { usualTick(usual, above: todaySoFar) }
             }
             .chartForegroundStyleScale(["Loafing": restColours["Loafing"]!, "Stretched out": restColours["Stretched out"]!, "Flopped": restColours["Flopped"]!])
             .chartLegend(position: .top, alignment: .leading).chartYAxisLabel("min").frame(height: 200)
             .chartXSelection(value: Binding(get: { picked["r"] }, set: { picked["r"] = $0 }))
+            Text("Today is so far: the line is a usual day. Counts only the time the cams saw him.").font(.nunito(12, black: false)).foregroundStyle(Color.muted)
             if (data.obj("simulated")?["activity"] as? Bool) == true { Text("Includes simulated days").font(.nunito(12)).foregroundStyle(Color.muted) }
         }.card()
     }
 
+    // today isn't over: a short line at a usual day's level, and "so far" over today's bar
+    @ChartContentBuilder private func usualTick(_ usual: Double, above: Double) -> some ChartContent {
+        RectangleMark(x: .value("Day", "Today"), y: .value("Usual", usual), height: 2).foregroundStyle(Color.muted)
+            .annotation(position: .top, spacing: 2) { Text(usual >= above ? "usual" : "").font(.nunito(9)).foregroundStyle(Color.muted) }
+        RectangleMark(x: .value("Day", "Today"), y: .value("So far", above), height: 0).foregroundStyle(.clear)
+            .annotation(position: .top, spacing: 2) { Text(usual >= above ? "" : "so far").font(.nunito(9)).foregroundStyle(Color.muted) }
+    }
+
     private func trayBars(_ title: String, key: String, unit: String, colour: Color) -> some View {
         let pts = data.arr("tray").map { (day: day($0.str("date")), v: $0.num(key)) }
+        let usual = data.obj("usual")?.num(key == "visits" ? "visits" : "output_g") ?? 0, now = pts.last { $0.day == "Today" }?.v ?? 0
         return VStack(alignment: .leading, spacing: 8) {
-            header(title, picked[key].flatMap { p in pts.first { $0.day == p }.map { "\(p): \(Int($0.v))\(unit)" } })
-            Chart(pts, id: \.day) { p in BarMark(x: .value("Day", p.day), y: .value(title, p.v)).foregroundStyle(colour).cornerRadius(4) }
-                .frame(height: 150).chartXSelection(value: Binding(get: { picked[key] }, set: { picked[key] = $0 }))
+            header(title, picked[key].flatMap { p in pts.first { $0.day == p }.map { "\(p)\(p == "Today" ? " so far" : ""): \(Int($0.v))\(unit)" } })
+            Chart {
+                ForEach(pts, id: \.day) { p in BarMark(x: .value("Day", p.day), y: .value(title, p.v)).foregroundStyle(colour).cornerRadius(4).opacity(p.day == "Today" ? 0.4 : 1) }
+                if usual > 0, pts.contains(where: { $0.day == "Today" }) { usualTick(usual, above: now) }
+            }
+            .frame(height: 150).chartXSelection(value: Binding(get: { picked[key] }, set: { picked[key] = $0 }))
+            Text("Today is so far: the line is a usual day.").font(.nunito(12, black: false)).foregroundStyle(Color.muted)
         }.card()
     }
 

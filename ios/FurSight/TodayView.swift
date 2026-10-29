@@ -7,6 +7,8 @@ struct TodayView: View {
     @State private var error: String?
     @State private var loading = true
     @State private var wrapped = false
+    @State private var logging = false
+    @State private var uploading = false
 
     var body: some View {
         NavigationStack {
@@ -21,8 +23,12 @@ struct TodayView: View {
                     ForEach(Array(data.arr("alerts").enumerated()), id: \.offset) { _, a in alert(a) }
                     if let m = data.obj("moment") { moment(m) }
                     if let t = data.obj("tray") { tray(t) }
+                    if let c = data.obj("climate") { room(c) }
                     if let a = data.obj("activity") { activity(a) }
                     if !data.arr("due").isEmpty || !data.arr("coming").isEmpty { upcoming }
+                    // old photos, videos and vet papers: the web app's upload page, which reads PDFs and videos
+                    Button { uploading = true } label: { Label("Add photos, videos or vet papers", systemImage: "doc.badge.plus") }
+                        .buttonStyle(ChunkyButton(color: .sky, lip: .skyLip))
                     if let r = data.obj("recap") { recap(r) }
                 }
                 .padding(16)
@@ -37,6 +43,14 @@ struct TodayView: View {
                         .padding(.top, 14).padding(.trailing, 6)
                 }
             }
+            .sheet(isPresented: $uploading, onDismiss: { Task { await load() } }) {
+                NavigationStack {
+                    WebApp(url: URL(string: Config.server.absoluteString + "/#upload")!).ignoresSafeArea(edges: .bottom)
+                        .navigationTitle("Add to his record").navigationBarTitleDisplayMode(.inline)
+                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { uploading = false } } }
+                }
+            }
+            .sheet(isPresented: $logging) { LogView(pet: data.obj("pet")?.str("name") ?? "him") { Task { await load() } }.presentationDetents([.medium, .large]) }
             .onReceive(NotificationCenter.default.publisher(for: .fursightRefresh)) { _ in Task { await load() } }
         }
     }
@@ -108,6 +122,20 @@ struct TodayView: View {
         }.card()
     }
 
+    // the room by his tray: rabbits handle heat badly
+    private func room(_ c: [String: Any]) -> some View {
+        let word = ["normal": "Comfortable", "watch": "Worth watching", "vet": "Too hot"][c.str("status")] ?? ""
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack { Text("The room").font(.nunito(20)); Spacer(); Pill(text: word, status: c.str("status")) }
+            HStack(alignment: .top) {
+                stat(String(format: "%.1f°C", c.num("t")), "by his tray", c["max"] is NSNumber ? String(format: "today %.0f to %.0f°C", c.num("min"), c.num("max")) : nil)
+                stat("\(Int(c.num("h")))%", "humidity", nil)
+            }
+            ForEach(c["reasons"] as? [String] ?? [], id: \.self) { Text("• " + $0).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
+            if c["simulated"] as? Bool == true { Text("Simulated readings").font(.nunito(12)).foregroundStyle(Color.muted) }
+        }.card(c.str("status") == "vet" ? .coral : .line)
+    }
+
     private func activity(_ a: [String: Any]) -> some View {
         let today = a.obj("today") ?? [:], week = a.obj("week") ?? [:]
         let rest = today.num("loaf") + today.num("stretched") + today.num("flop")
@@ -118,6 +146,17 @@ struct TodayView: View {
                 stat(hm(today.num("loaf")), "loafing", "\(hm(week.num("loaf"))) this week")
                 stat(hm(today.num("active")), "on the move", "\(hm(week.num("active"))) this week")
             }
+            // the cams only see part of the day, and say so
+            HStack(spacing: 6) {
+                Image(systemName: "eye.slash").foregroundStyle(Color.muted)
+                Text("Not seen today: \(hm(today.num("unseen")))").font(.nunito(13)).foregroundStyle(Color.muted)
+                if today.num("flopsYou") > 0 { Text("· \(Int(today.num("flopsYou"))) flop\(today.num("flopsYou") == 1 ? "" : "s") added by you").font(.nunito(13)).foregroundStyle(Color.muted) }
+            }
+            if let treats = a.obj("treats")?["today"] as? [[String: Any]], !treats.isEmpty {
+                Text("Treats today: " + treats.map { $0.str("item") + ($0.str("amount").isEmpty ? "" : " (\($0.str("amount")))") }.joined(separator: ", ")).font(.nunito(14, black: false))
+            }
+            Button { logging = true } label: { Label("Add what the cams missed", systemImage: "plus") }
+                .buttonStyle(ChunkyButton(color: .grape, lip: .grapeLip))
             if a["simulated"] as? Bool == true { Text("Includes simulated days").font(.nunito(12)).foregroundStyle(Color.muted) }
         }.card()
     }

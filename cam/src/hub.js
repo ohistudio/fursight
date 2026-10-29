@@ -8,11 +8,12 @@
 //   PUT  /hub/pets/:id                    (token) {name, species, breed, sex, notes, care, photo?}  -> pet
 //   GET  /hub/pets/:id/photo              (token)                     -> image/jpeg
 //   POST /hub/diary                       (token) {kind, title, note, verdict?, image?, at?}        -> entry
-//   GET  /hub/diary?limit=&before=        (token)                     -> { entries }  (no images)
+//   GET  /hub/diary?limit=&before=&kinds= (token)                     -> { entries }  (no images; kinds = comma list)
 //   GET  /hub/diary/:id/image             (token)                     -> image/jpeg (or png)
 //   GET  /hub/i/:household/:id?e=&s=                                  -> the same picture, by an expiring signed link (notifications)
 //   PUT  /hub/cams/:channel               (token) {name}              -> cam      (a webcam registering itself)
 //   PUT  /hub/home                        (token) {lat, lng, radius?} -> home     (where "home" is, for home/away)
+//   PUT  /hub/devices/:id                 (token) {name}              -> device   (rename)
 //   DELETE /hub/devices/:id               (token)                     -> ok
 //   PUT  /hub/push                        (token) {token, sandbox}    -> ok       (an iPhone's notification token)
 //   POST /hub/link/start                  {kind, name}                -> { code, nonce }  (a device wants in)
@@ -167,7 +168,11 @@ export class Household {
     }
     if (p === "/diary" && m === "GET") {
       const limit = Math.min(200, Number(url.searchParams.get("limit")) || 50), before = Number(url.searchParams.get("before")) || 9e15;
-      const entries = this.all("SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? ORDER BY at DESC LIMIT ?", before, limit)
+      // ?kinds=record,photo: only those (uploads can be dated years back, past the latest 200)
+      const kinds = (url.searchParams.get("kinds") || "").split(",").filter((k) => /^[a-z-]{1,20}$/.test(k)).slice(0, 8);
+      const entries = (kinds.length
+        ? this.all(`SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? AND json_extract(data, '$.kind') IN (${kinds.map(() => "?").join(",")}) ORDER BY at DESC LIMIT ?`, before, ...kinds, limit)
+        : this.all("SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? ORDER BY at DESC LIMIT ?", before, limit))
         .map((r) => ({ id: r.id, at: r.at, ...JSON.parse(r.data), has_image: !!r.has_image }));
       return json({ entries });
     }
@@ -194,6 +199,13 @@ export class Household {
       if (!/^[0-9a-f]{32,200}$/i.test(String(b.token || ""))) return err("token must be the device's APNs token in hex");
       this.sql.exec("INSERT OR REPLACE INTO push VALUES (?, ?, ?)", device, b.token, b.sandbox ? 1 : 0);
       return json({ ok: true });
+    }
+    if ((mm = p.match(/^\/devices\/([A-Za-z0-9]{12})$/)) && m === "PUT") {
+      const b = await req.json().catch(() => ({})), name = String(b.name || "").trim().slice(0, 40);
+      if (!name) return err("name required");
+      if (!this.one("SELECT id FROM devices WHERE id = ?", mm[1])) return err("no such device", 404);
+      this.sql.exec("UPDATE devices SET name = ? WHERE id = ?", name, mm[1]);
+      return json({ id: mm[1], name });
     }
     if ((mm = p.match(/^\/devices\/([A-Za-z0-9]{12})$/)) && m === "DELETE") {
       this.sql.exec("DELETE FROM devices WHERE id = ?", mm[1]);
