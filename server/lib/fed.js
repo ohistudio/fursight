@@ -38,25 +38,29 @@ function status(entries, food, pet, tz = 0, now = Date.now()) {
 }
 
 // save it: the diary entry, the calendar day it's OK again (replacing an older one for the same food)
-async function record(token, pet, { food, verdict = "caution", wait_days, amount = "small" }, tz = 0) {
+// at: when he had it (a past day from the calendar), default now
+async function record(token, pet, { food, verdict = "caution", wait_days, amount = "small", at = Date.now() }, tz = 0) {
   const entries = await recent(token, 200).catch(() => []);
   const had = status(entries, food, pet, tz);
   const wait = Math.max(0, Math.min(30, Math.round(Number(wait_days) || 0)));
   const ent = FSActivity.entry(pet, wait || verdict !== "safe" ? "treat" : "greens", String(food).slice(0, 60), amount);
   if (!ent) throw Object.assign(new Error("say what he had"), { status: 400, expose: true });
   const toxic = verdict === "toxic" || ent.verdict === "toxic";
-  const next = wait && !toxic ? dayKey(Date.now() + wait * DAY, tz) : null;
+  at = Math.min(Date.now(), Number(at) || Date.now());
+  const next = wait && !toxic ? dayKey(at + wait * DAY, tz) : null;
   ent.extra = { ...ent.extra, wait_days: wait, ...(next ? { next } : {}), checked: verdict };
   if (toxic && !ent.verdict) Object.assign(ent, { verdict: "toxic", note: `${cap(food)} isn't safe for ${pet.name}. If he ate some, ask FurSight or call a vet.` });
 
   const today = dayKey(Date.now(), tz), k = key(food);
+  ent.at = at;
   const old = FSCal.events(entries).filter((e) => e.extra.fed && key(e.extra.fed) === k && e.extra.date >= today);
   await Promise.all(old.map((e) => addDiary(token, { kind: "event-cancel", title: e.title, pet: pet.name, extra: { of: e.id } })));
   if (!(await addDiary(token, ent))) throw Object.assign(new Error("couldn't save it, try again"), { status: 502, expose: true });
-  if (next) await addDiary(token, { kind: "event", title: `${cap(ent.extra.item)} is OK again`, note: `${pet.name} had ${ent.extra.item} on ${nice(today)}.`, pet: pet.name, extra: { date: next, repeat: "none", fed: ent.extra.item } });
+  // the day it's OK again goes on the calendar (unless that day has already come)
+  if (next && next > today) await addDiary(token, { kind: "event", title: `${cap(ent.extra.item)} is OK again`, note: `${pet.name} had ${ent.extra.item} on ${nice(dayKey(at, tz))}.`, pet: pet.name, extra: { date: next, repeat: "none", fed: ent.extra.item } });
 
   const said = toxic ? ent.note
-    : next ? `Marked. ${pet.name} can have ${ent.extra.item} again from ${nice(next)}: it's on the calendar.`
+    : next && next > today ? `Marked. ${pet.name} can have ${ent.extra.item} again from ${nice(next)}: it's on the calendar.`
     : `Marked: ${pet.name} had ${ent.extra.item}.`;
   return { title: ent.title, item: ent.extra.item, next, wait_days: wait, toxic, had, said };
 }

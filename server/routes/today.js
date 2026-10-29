@@ -14,7 +14,7 @@ module.exports = handler(async (body, req) => {
   if (!auth.startsWith("fs1.")) throw Object.assign(new Error("link this phone first"), { status: 401, expose: true });
   const [ctx, all] = await Promise.all([context(auth), recent(auth, 200)]);
   const start = new Date(); start.setHours(0, 0, 0, 0);
-  const today = all.filter((e) => e.at >= start.getTime() && !/^(event|tray|pose|active|climate)|^routine(-cancel)?$/.test(e.kind));
+  const today = all.filter((e) => e.at >= start.getTime() && !/^(event|tray|pose|active|climate|camtime)|^routine(-cancel)?$/.test(e.kind));
   const pick = (e) => e && { id: e.id, title: e.title, note: e.note, verdict: e.verdict, kind: e.kind, at: e.at, has_image: e.has_image, sticker: !!(e.extra && e.extra.sticker) };
   const tray = FSTray.summary(all), activity = FSActivity.summary(all);
   return {

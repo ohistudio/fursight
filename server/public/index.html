@@ -64,7 +64,7 @@
   .del:hover { color: var(--coral-lip); } .recap .del { margin-top: 8px; justify-self: start; }
   .entry img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; flex: none; background: var(--line); }
   /* a cut-out sticker is shown whole, bigger, with no tile behind it */
-  .entry img, .recap img { cursor: zoom-in; }
+  .entry img, .recap img, .livecardbox { cursor: zoom-in; }
   .livecard { gap: 16px; align-items: center; } .livecard .lxcap { display: grid; gap: 2px; } .livecard .lxcap b { font-size: 19px; } .livecard .lxcap span { color: var(--muted); font-size: 14px; }
   .lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(20,19,26,.86); display: grid; place-items: center; padding: 20px; animation: lbIn .18s ease-out; cursor: zoom-out; }
   .lightbox.out { opacity: 0; transition: opacity .18s; }
@@ -459,7 +459,7 @@ async function makeRecap(btn) {
     // Muse Spark writes the week's headline and highlights; the card is drawn here from his sticker and numbers
     const [r, { entries }] = await Promise.all([api("/api/recap", { draft: true }), hub("/diary?limit=200")]);
     const card = await FSFactCard.make({ pet: me.pets[0], entries, recap: r, img });
-    await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "recap", title: r.title, note: r.note, image: card, pet: me.pets[0].name, extra: { highlights: r.highlights, watch: r.watch, streak: r.streak, card: "facts" } }) });
+    await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "recap", title: r.title, note: r.note, image: card.png, pet: me.pets[0].name, extra: { highlights: r.highlights, watch: r.watch, streak: r.streak, card: "facts", layout: card.layout } }) });
     toast(r.title); render();
   } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Make this week's card"; document.getElementById("drawing")?.remove(); }
 }
@@ -479,7 +479,7 @@ async function today() {
   // an older hub ignores kinds: page back through up to 1000 entries for them
   for (let page = 0, list = all; kinds && page < 4 && list.length === 200 && !list.every((e) => kinds.includes(e.kind)); page++)
     all = all.concat(list = (await hub(`/diary?limit=200&before=${list[list.length - 1].at}&kinds=${kinds.join(",")}`)).entries);
-  const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind))).slice(0, 80);
+  const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime)/.test(e.kind))).slice(0, 80);
   const $l = document.getElementById("list");
   if (!$l) return;   // you've moved to another tab while this loaded
   // live: his sticker doing what the pet cam last saw (only on the everything view)
@@ -500,7 +500,8 @@ async function today() {
       : { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", video: "Video", record: "Vet record", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
-    if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px" data-entry="${e.id}">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
+    // a fact card shows live (stickers sway, numbers count up); tap it for the picture to save or share
+    if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px" data-entry="${e.id}">${e.extra && e.extra.layout ? `<div class="livecardbox" data-png="${img(`/diary/${e.id}/image`)}">${FSFactCard.html(e.extra.layout, img)}</div>` : e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
       <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p>
       <button class="del" data-del="${e.id}">Remove</button></div>`;
     return `${head}<div class="card entry pop" style="margin-bottom:10px" data-entry="${e.id}">
@@ -511,7 +512,8 @@ async function today() {
   }).join("");
   remindButtons($l);
   // tap a picture to see it big
-  for (const im of $l.querySelectorAll(".entry img, .recap img")) im.onclick = () => enlarge(im.src, im.classList.contains("sticker"));
+  for (const im of $l.querySelectorAll(".entry img, .recap > img")) im.onclick = () => enlarge(im.src, im.classList.contains("sticker"));
+  for (const b of $l.querySelectorAll(".livecardbox")) b.onclick = () => enlarge(b.dataset.png);
   // remove an entry: asks first, then it's gone from every device
   for (const b of $l.querySelectorAll("[data-del]")) b.onclick = async () => {
     if (!confirm("Remove this from the diary? It's removed on every device and can't be undone.")) return;
@@ -750,7 +752,9 @@ function activityCard(a, p) {
     ${a.moment ? `<div class="moment${a.moment.has_image ? "" : " noimg"}${a.moment.extra && a.moment.extra.sticker ? " sticker" : ""}">${a.moment.has_image ? `<img src="${img(`/diary/${a.moment.id}/image`)}" alt="">` : ""}<p><b>${esc(a.moment.title)}</b><br><span class="when">${new Date(a.moment.at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}</span></p></div>` : ""}
     <table class="act"><tr><th></th><th>Today</th><th>This week</th></tr>
       ${rows.map(([k, w]) => `<tr><td>${w}</td><td>${FSActivity.time(a.today[k])}</td><td>${FSActivity.time(a.week[k])}</td></tr>`).join("")}
-      <tr class="unseen"><td>Not seen</td><td>${FSActivity.time(a.today.unseen)}</td><td>${FSActivity.time(a.week.unseen)}</td></tr></table>
+      ${a.today.camOn !== undefined ? `<tr class="unseen"><td>Out of view</td><td>${FSActivity.time(a.today.outOfView)}</td><td>${FSActivity.time(a.week.outOfView)}</td></tr>
+      <tr class="unseen"><td>No cam on</td><td>${FSActivity.time(a.today.noCam)}</td><td>${FSActivity.time(a.week.noCam)}</td></tr>`
+      : `<tr class="unseen"><td>Not seen</td><td>${FSActivity.time(a.today.unseen)}</td><td>${FSActivity.time(a.week.unseen)}</td></tr>`}</table>
     <p class="when">Only what the cams saw is counted. Not seen means out of view, another room, the cam off or the night: FurSight doesn't guess.${a.week.flopsYou ? ` ${a.week.flopsYou} flop${a.week.flopsYou === 1 ? "" : "s"} this week ${a.week.flopsYou === 1 ? "was" : "were"} added by you.` : ""}</p>
     ${a.treats.today.length ? `<p class="muted"><b>Treats today:</b> ${a.treats.today.map((t) => esc(t.item + (t.amount ? ` (${t.amount})` : ""))).join(", ")}</p>` : ""}
     <button class="btn ghost" id="logOpen">Add a note</button>
@@ -888,7 +892,7 @@ async function stats() {
     a.has ? [FSActivity.time(a.today.loaf), "loafing today", `${FSActivity.time(a.week.loaf)} this week`] : null,
     a.has ? [`${a.today.flops}`, "flops today", `${a.week.flops} this week`] : null,
     a.has ? [FSActivity.time(a.today.active), "on the move", `${FSActivity.time(a.week.active)} this week`] : null,
-    a.has ? [FSActivity.time(a.week.seen / 7), "seen a day", `${FSActivity.time(a.week.unseen / 7)} a day not seen`] : null,
+    a.has ? [FSActivity.time(a.week.seen / 7), "seen a day", a.week.camOn !== undefined ? `${FSActivity.time(a.week.outOfView / 7)} out of view, ${FSActivity.time(a.week.noCam / 7)} no cam on` : `${FSActivity.time(a.week.unseen / 7)} a day not seen`] : null,
     a.treats.week ? [`${a.treats.week}`, "treats this week", "added by you"] : null,
   ].filter(Boolean);
   // today isn't over: its bars are drawn faded, with a dashed outline of a usual day behind them
@@ -998,17 +1002,19 @@ async function calendar() {
   $app.innerHTML = `<div class="stack">${header()}<div id="cal"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
   const routines = FSRoutine.list(entries), dueOn = (k) => routines.filter((r) => r.due === k || (k === today && r.days < 0));
-  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind));
+  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime)/.test(e.kind));
   const byDay = new Map();
   for (const e of diary) { const k = FSCal.key(new Date(e.at)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
   const careDone = (k) => items.length && items.every((i) => (byDay.get(k) || []).some((e) => e.kind === "care" && e.title === i));
+  // what he ate: treats and greens the owner logged (We fed him this, notes, the Treat button, or here)
+  const isFed = (e) => e.kind === "log" && e.extra && (e.extra.what === "treat" || e.extra.what === "greens");
   // Monday-first month grid
   const y = calMonth.getFullYear(), m = calMonth.getMonth(), first = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate();
   let cells = "";
   for (let i = 0; i < first; i++) cells += `<div></div>`;
   for (let d = 1; d <= n; d++) {
     const k = FSCal.key(new Date(y, m, d, 12)), list = byDay.get(k) || [];
-    const dots = [careDone(k) ? "fern" : "", list.some((e) => e.verdict === "toxic" || e.verdict === "vet") ? "coral" : list.some((e) => e.verdict === "caution") ? "sun" : list.length ? "sky" : "", evs.some((ev) => FSCal.on(ev, k)) ? "grape" : "", dueOn(k).length ? "sun" : ""].filter(Boolean);
+    const dots = [careDone(k) ? "fern" : "", list.some((e) => e.verdict === "toxic" || e.verdict === "vet") ? "coral" : list.some((e) => e.verdict === "caution") ? "sun" : list.length ? "sky" : "", evs.some((ev) => FSCal.on(ev, k)) ? "grape" : "", dueOn(k).length ? "sun" : "", list.some(isFed) ? "grape" : ""].filter(Boolean);
     cells += `<button class="day ${k === today ? "today" : ""} ${k === calDay ? "sel" : ""}" data-day="${k}">${d}<span>${dots.map((c) => `<i style="background:var(--${c})"></i>`).join("")}</span></button>`;
   }
   const sel = FSCal.day(calDay), dayEvs = evs.filter((ev) => FSCal.on(ev, calDay)), dayDiary = byDay.get(calDay) || [];
@@ -1019,12 +1025,14 @@ async function calendar() {
     <div class="card pop">
       <div class="row" style="justify-content:space-between"><button class="btn ghost small monthnav" id="prev" aria-label="Previous month">‹</button><h2 style="white-space:nowrap">${calMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h2><button class="btn ghost small monthnav" id="next" aria-label="Next month">›</button></div>
       <div class="month">${["M", "T", "W", "T", "F", "S", "S"].map((d) => `<b>${d}</b>`).join("")}${cells}</div>
-      <div class="legend"><span><i style="background:var(--fern)"></i>care done</span><span><i style="background:var(--sky)"></i>diary</span><span><i style="background:var(--coral)"></i>a don't</span><span><i style="background:var(--grape)"></i>reminder</span><span><i style="background:var(--sun)"></i>grooming due</span></div>
+      <div class="legend"><span><i style="background:var(--fern)"></i>care done</span><span><i style="background:var(--grape)"></i>ate a treat</span><span><i style="background:var(--sky)"></i>diary</span><span><i style="background:var(--coral)"></i>a don't</span><span><i style="background:var(--grape)"></i>reminder</span><span><i style="background:var(--sun)"></i>grooming due</span></div>
     </div>
     <div class="card stack pop"><h3>${sel.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</h3>
       ${dueOn(calDay).map((r) => `<div class="row"><span class="chip" style="background:var(--sun);color:var(--ink);border:0;flex:none">Due</span><b style="flex:1;min-width:0">${esc(r.title)}</b><span class="when" style="flex:none">${FSRoutine.when(r)}</span></div>`).join("")}
       ${dayEvs.map((ev) => `<div class="row"><span class="chip" style="background:var(--grape-lip);color:#fff;border:0">Reminder</span><b style="flex:1;min-width:0">${esc(ev.title)}</b><span class="when">${FSCal.REPEATS[ev.extra.repeat || "none"]}</span></div>`).join("")}
-      ${dayDiary.length ? dayDiary.slice(0, 12).map((e) => `<div class="row" style="gap:10px"><span class="when" style="width:44px;flex:none">${new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span style="flex:1;min-width:0"><b>${esc(e.title || word(e))}</b> <span class="muted">· ${esc(word(e))}</span></span></div>`).join("") : dayEvs.length || dueOn(calDay).length ? "" : `<p class="muted">Nothing on this day.</p>`}
+      ${dayDiary.filter(isFed).map((e) => `<div class="row"><span class="chip" style="background:var(--grape-lip);color:#fff;border:0;flex:none">Ate</span><b style="flex:1;min-width:0">${esc(e.extra.item || e.title)}${e.extra.amount ? ` <span class="muted">(${esc(FSActivity.AMOUNT[e.extra.amount] || e.extra.amount)})</span>` : ""}</b>${e.extra.next ? `<span class="when" style="flex:none">OK again ${esc(nice(e.extra.next))}</span>` : ""}</div>`).join("")}
+      ${calDay <= today ? `<div class="row"><input id="ateItem" placeholder="${calDay === today ? "He ate…" : "That day he ate…"} e.g. a strawberry" maxlength="60"><button class="btn small" id="ateAdd" style="flex:none;width:auto" disabled>Add</button></div>` : ""}
+      ${dayDiary.filter((e) => !isFed(e)).length ? dayDiary.filter((e) => !isFed(e)).slice(0, 12).map((e) => `<div class="row" style="gap:10px"><span class="when" style="width:44px;flex:none">${new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span style="flex:1;min-width:0"><b>${esc(e.title || word(e))}</b> <span class="muted">· ${esc(word(e))}</span></span></div>`).join("") : dayEvs.length || dueOn(calDay).length ? "" : `<p class="muted">Nothing on this day.</p>`}
     </div>
     <div class="card stack pop"><h3>Coming up</h3>
       ${up.length ? up.map((u) => `<div class="row"><span class="chip">${nice(u.date)}</span><b style="flex:1;min-width:0">${esc(u.title)}</b><button class="btn ghost small" data-cancel="${u.id}" title="Remove this reminder${u.repeat !== "none" ? " and its repeats" : ""}">Remove</button></div>`).join("") : `<p class="muted">No reminders yet. Add one below, or ask FurSight to remind you.</p>`}
@@ -1035,6 +1043,20 @@ async function calendar() {
       <div class="row"><input id="evDate" type="date" value="${calDay}"><select id="evRepeat">${Object.entries(FSCal.REPEATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
       <button class="btn grape" id="evAdd" disabled>Add to ${esc(p.name)}'s calendar</button>
     </div></div>`;
+  // he ate something (today or a past day): saved with the day it's OK again, which goes on the calendar
+  const $ate = document.getElementById("ateItem"), $ateAdd = document.getElementById("ateAdd");
+  if ($ate) {
+    $ate.oninput = () => ($ateAdd.disabled = !$ate.value.trim());
+    $ate.onkeydown = (e) => e.key === "Enter" && !$ateAdd.disabled && $ateAdd.click();
+    $ateAdd.onclick = async () => {
+      $ateAdd.disabled = true;
+      try {
+        const at = calDay === today ? Date.now() : FSCal.day(calDay).getTime();
+        const r = await api("/api/fed", { food: $ate.value.trim(), at, tz: -new Date().getTimezoneOffset() });
+        toast(r.said); calendar();
+      } catch (err) { toast(err.message); $ateAdd.disabled = false; }
+    };
+  }
   document.getElementById("prev").onclick = () => { calMonth = new Date(y, m - 1, 1); calendar(); };
   document.getElementById("next").onclick = () => { calMonth = new Date(y, m + 1, 1); calendar(); };
   for (const b of document.querySelectorAll("[data-day]")) b.onclick = () => { calDay = b.dataset.day; calendar(); };
@@ -1409,7 +1431,11 @@ function watchActivity(v, c, g, view, status) {
     else if (moving) lastMove = now;
     if (!seg && !asking && now - lastMove > 120e3) ask(lastMove);
     if (seg && now - seg.from > 45 * 60e3) { const from = now; close(now); ask(from); }   // a long rest: look again
-    if (now - activeFrom > 30 * 60e3) { if (activeMs > 60e3) post({ kind: "active", title: "On the move", extra: { mins: Math.round(activeMs / 60e3) } }); activeMs = 0; activeFrom = now; }
+    if (now - activeFrom > 30 * 60e3) {
+      if (activeMs > 60e3) post({ kind: "active", title: "On the move", extra: { mins: Math.round(activeMs / 60e3) } });
+      post({ kind: "camtime", title: "", extra: { mins: Math.round((now - activeFrom) / 60e3) } });   // the cam was on: "not seen" then means out of view
+      activeMs = 0; activeFrom = now;
+    }
   }, 1000);
 }
 

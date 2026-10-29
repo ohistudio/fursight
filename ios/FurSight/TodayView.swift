@@ -151,7 +151,8 @@ struct TodayView: View {
             // the cams only see part of the day, and say so
             HStack(spacing: 6) {
                 Image(systemName: "eye.slash").foregroundStyle(Color.muted)
-                Text("Not seen today: \(hm(today.num("unseen")))").font(.nunito(13)).foregroundStyle(Color.muted)
+                // with the cam's own running time: out of view (cam on, he wasn't in it) and no cam on
+                Text(today["camOn"] != nil ? "Out of view \(hm(today.num("outOfView"))) · no cam \(hm(today.num("noCam")))" : "Not seen today: \(hm(today.num("unseen")))").font(.nunito(13)).foregroundStyle(Color.muted)
                 if today.num("flopsYou") > 0 { Text("· \(Int(today.num("flopsYou"))) flop\(today.num("flopsYou") == 1 ? "" : "s") added by you").font(.nunito(13)).foregroundStyle(Color.muted) }
             }
             if let treats = a.obj("treats")?["today"] as? [[String: Any]], !treats.isEmpty {

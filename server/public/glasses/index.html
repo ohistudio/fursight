@@ -190,7 +190,7 @@ async function load() {
   routines = FSRoutine.list(all);
   activity = FSActivity.summary(all);
   climate = FSClimate.summary(all);
-  entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind)).slice(0, 40);
+  entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime)/.test(e.kind)).slice(0, 40);
   render();
 }
 
@@ -215,7 +215,7 @@ function render() {
   $("lAsks").textContent = rest !== null ? "resting" : "questions";
   // honest about what the cams saw; treats you told FurSight about ("I gave him some apple")
   const tr = activity ? activity.treats.today.length : 0;
-  $("seen").textContent = rest !== null ? `Seen ${FSActivity.time(activity.today.seen)} · not seen ${FSActivity.time(activity.today.unseen)}${tr ? ` · ${tr} treat${tr === 1 ? "" : "s"}` : ""}` : "";
+  $("seen").textContent = rest !== null ? `Seen ${FSActivity.time(activity.today.seen)} · ${activity.today.camOn !== undefined ? `out of view ${FSActivity.time(activity.today.outOfView)} · no cam ${FSActivity.time(activity.today.noCam)}` : `not seen ${FSActivity.time(activity.today.unseen)}`}${tr ? ` · ${tr} treat${tr === 1 ? "" : "s"}` : ""}` : "";
   // a new flop or big stretch: say it, once
   const mo = activity && activity.moment;
   if (mo && store.get("fs.spokenMoment") !== mo.id && Date.now() - mo.at < 30 * 60e3) { store.set("fs.spokenMoment", mo.id); say(mo.title); }

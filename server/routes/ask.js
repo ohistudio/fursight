@@ -171,7 +171,7 @@ module.exports = handler(async (body, req) => {
     },
   };
   if (ctx) tools.check_activity = {
-    description: `What ${p.name} has been doing, from the pet cam: minutes loafing, stretched out, flopped, eating, grooming and on the move, today and this week; flops; the latest moment; and any warnings (chewing things that aren't food). A relaxed rabbit loafs, stretches and flops; an unwell one sits hunched and still. Use it for "how's he been", mood, energy and behaviour. The cams only see part of the day: seen and unseen are minutes, and you must never describe the unseen time, only say it wasn't seen. flopsYou are flops the owner saw and added; treats are what the owner says they gave.`,
+    description: `What ${p.name} has been doing, from the pet cam: minutes loafing, stretched out, flopped, eating, grooming and on the move, today and this week; flops; the latest moment; and any warnings (chewing things that aren't food). A relaxed rabbit loafs, stretches and flops; an unwell one sits hunched and still. Use it for "how's he been", mood, energy and behaviour. The cams only see part of the day: seen and unseen are minutes, and you must never describe the unseen time, only say it wasn't seen. When outOfView and noCam are there, outOfView is time a cam was on but he wasn't in it, and noCam is time no camera was running: say which, plainly. flopsYou are flops the owner saw and added; treats are what the owner says they gave.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
     async run() {
       const all = await recent(home.token, 200).catch(() => []), a = FSActivity.summary(all);
@@ -264,7 +264,7 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;
-      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind));
+      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime)/.test(e.kind));
       const out = list.slice(0, 25).map((e, i) => {
         const id = "d" + (seen.size + i + 1);
         seen.set(id, { kind: e.kind, what: e.title });

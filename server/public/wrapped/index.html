@@ -47,6 +47,13 @@
   .aka { display: flex; flex-wrap: wrap; gap: 10px; }
   .aka span { background: #fff; color: var(--ink); border-radius: 999px; padding: 10px 18px; font-size: 24px; font-weight: 900; box-shadow: 0 5px 0 rgba(0,0,0,.18); opacity: 0; }
   .slide.on .aka span { animation: pop .55s cubic-bezier(.3,1.6,.5,1) both; }
+  .foods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .foods figure { margin: 0; position: relative; opacity: 0; }
+  .slide.on .foods figure { animation: pop .55s cubic-bezier(.3,1.6,.5,1) both; }
+  .foods img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 16px; border: 4px solid #fff; box-shadow: 0 6px 0 rgba(0,0,0,.15); display: block; }
+  .foods i { position: absolute; top: -6px; right: -6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 16px; color: #2B2A33; border: 3px solid #fff; }
+  .foods i.v-safe { background: #3DBE6B; } .foods i.v-caution { background: #FFB627; } .foods i.v-toxic { background: #FF4D5E; } .foods i.v- { background: #2FA8F5; }
+  .foods figcaption { font-size: 13px; font-weight: 900; text-align: center; margin-top: 4px; }
   .parade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 4px; align-items: center; }
   .parade figure { margin: 0; display: grid; justify-items: center; gap: 4px; }
   .parade img { width: 100%; max-height: 120px; object-fit: contain; opacity: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.22)); }
@@ -63,6 +70,7 @@
 <script src="/tray.js"></script>
 <script src="/activity.js"></script>
 <script src="/routines.js"></script>
+<script src="/factcard.js"></script>
 <script>
 // Xiaosi's week, wrapped: his week as full-screen story slides, made only from what FurSight actually logged.
 // A slide with nothing behind it is left out. Opened from the web app and the iPhone app (signed in as that device).
@@ -124,7 +132,11 @@ async function build() {
   if (checks.length) {
     const count = {}; for (const c of checks) count[c.title] = (count[c.title] || 0) + 1;
     const top = Object.entries(count).sort((x, y) => y[1] - x[1]).slice(0, 3);
-    S.push({ bg: COLOURS[3], html: `<div class="k rise">Careful owner award</div><h1 class="rise">You checked</h1><div class="big rise" data-count="${checks.length}">0</div><h1 class="rise">foods before sharing</h1><div class="list rise">${top.map(([t, n], i) => `<div><b>${i + 1}</b>${esc(t)}${n > 1 ? ` <span style="opacity:.8">×${n}</span>` : ""}</div>`).join("")}</div>` });
+    const foodPics = checks.filter((e) => e.has_image).filter((e, i, a) => a.findIndex((x) => x.title === e.title) === i).slice(0, 6);   // one photo per food
+    S.push({ bg: COLOURS[3], html: `<div class="k rise">Careful owner award</div><h1 class="rise">You checked</h1><div class="big rise" data-count="${checks.length}">0</div><h1 class="rise">foods before sharing</h1>${foodPics.length
+      // the photos you checked, each with its verdict badge, popping in one by one
+      ? `<div class="foods">${foodPics.map((e, i) => `<figure style="animation-delay:${0.3 + i * 0.12}s"><img src="${img(`/diary/${e.id}/image`)}" alt=""><i class="v-${e.verdict || ""}">${{ safe: "✓", caution: "!", toxic: "✕" }[e.verdict] || "•"}</i><figcaption>${esc(e.title)}</figcaption></figure>`).join("")}</div>`
+      : `<div class="list rise">${top.map(([t, n], i) => `<div><b>${i + 1}</b>${esc(t)}${n > 1 ? ` <span style="opacity:.8">×${n}</span>` : ""}</div>`).join("")}</div>`}` });
   }
 
   const groomed = week.filter((e) => e.kind === "routine-done"), cared = week.filter((e) => e.kind === "care").length;
@@ -140,7 +152,9 @@ async function build() {
 
   // this week's card, if one was made
   const card = week.find((e) => e.kind === "recap" && e.has_image);
-  if (card) S.push({ bg: COLOURS[5], html: `<div class="k rise">This week's card</div><img class="pop" src="${img(`/diary/${card.id}/image`)}" alt="" style="width:min(80vw,380px);align-self:center;border-radius:22px;box-shadow:0 18px 40px rgba(0,0,0,.3)"><p class="rise" style="text-align:center;align-self:center;font-size:15px">Screenshot to share</p>` });
+  if (card) S.push({ bg: COLOURS[5], html: `<div class="k rise">This week's card</div>${card.extra && card.extra.layout
+      ? `<div class="pop" style="width:min(80vw,380px);align-self:center;box-shadow:0 18px 40px rgba(0,0,0,.3);border-radius:22px">${FSFactCard.html(card.extra.layout, img)}</div>`
+      : `<img class="pop" src="${img(`/diary/${card.id}/image`)}" alt="" style="width:min(80vw,380px);align-self:center;border-radius:22px;box-shadow:0 18px 40px rgba(0,0,0,.3)">`}<p class="rise" style="text-align:center;align-self:center;font-size:15px">Screenshot to share</p>` });
 
   const asks = week.filter((e) => e.kind === "ask").length;
   S.push({ bg: COLOURS[0], html: `<div class="summary rise">
@@ -169,6 +183,7 @@ function show(i) {
   }
   // re-run the entrance
   el.querySelectorAll(".rise, .pop").forEach((r) => { r.style.animation = "none"; void r.offsetWidth; r.style.animation = ""; });
+  el.querySelectorAll(".fc").forEach((c) => FSFactCard.play(c));
   clearTimeout(timer); t0 = performance.now();
   const bar = document.querySelectorAll(".bars b")[at];
   requestAnimationFrame(() => { bar.style.transition = `width ${DWELL}ms linear`; bar.style.width = "100%"; });

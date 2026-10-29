@@ -109,11 +109,13 @@ async function makeDemo({ pic = null, stickers = [], tz = 0, into = null } = {})
     const lo = rnd(17.5, 19.5), hi = warm ? rnd(25.6, 26.8) : rnd(21.5, 23.8);
     await go({ kind: "climate-day", title: "", at: at(d, 12), extra: { date, min: +lo.toFixed(1), max: +hi.toFixed(1) } });
     const flops = warm ? int(4, 6) : int(1, 4);
-    await go({ kind: "pose-day", title: "", at: at(d, 12), extra: { date, loaf: int(80, 170), stretched: int(40, 110) + (warm ? 40 : 0), flop: flops * int(6, 14), flops, sitting: int(60, 120), eating: slow ? 38 : int(70, 110), grooming: int(20, 45), active: slow ? 70 : int(120, 220) } });
+    await go({ kind: "pose-day", title: "", at: at(d, 12), extra: { date, cam: int(600, 840), loaf: int(80, 170), stretched: int(40, 110) + (warm ? 40 : 0), flop: flops * int(6, 14), flops, sitting: int(60, 120), eating: slow ? 38 : int(70, 110), grooming: int(20, 45), active: slow ? 70 : int(120, 220) } });
   }
 
   // ---- today, in detail
   const hr = (now.getTime() - midnight) / H;
+  // the cam ran from 7 this morning, in half-hour logs (so "not seen" splits into out of view and no cam on)
+  for (let h = 7.5; h < hr; h += 0.5) await go({ kind: "camtime", title: "", at: at(0, h), extra: { mins: 30 } });
   for (let h = 0.5; h < hr - 0.3; h += rnd(1.2, 2.4))
     await go({ kind: "tray", title: "Tray visit", at: at(0, h), extra: { weight_g: Math.round(1098 + rnd(-8, 8)), secs: int(90, 380), output_g: int(14, 32) } });
   for (let h = 0; h < hr - 0.5; h += 1)

@@ -1,7 +1,8 @@
 // "We fed him this", from a food check card: saves it with how long to wait before the next one, and puts the
 // day it's OK again on the calendar.
 //
-//   POST /api/fed  { food, verdict?: safe|caution|toxic, wait_days?, amount?: tiny|small|handful, tz? }  (a household device)
+//   POST /api/fed  { food, verdict?: safe|caution|toxic, wait_days?, amount?: tiny|small|handful, at?, tz? }  (a household device)
+//   at: when he had it, for a past day added from the calendar (default now)
 //   -> { title, item, next: "YYYY-MM-DD" | null, wait_days, toxic, had: <the time before> | null, said }
 const { handler, text, household } = require("../lib/http");
 const { context } = require("../lib/hub");
@@ -23,5 +24,5 @@ module.exports = handler(async (body, req) => {
   if (rule && RANK[rule.verdict] > RANK[verdict]) verdict = rule.verdict;
   const wait = body.wait_days !== undefined ? body.wait_days : verdict === "safe" ? 0 : 3;
   const amount = ["tiny", "small", "handful"].includes(body.amount) ? body.amount : "small";
-  return fed.record(home.token, ctx.pet, { food, verdict, wait_days: wait, amount }, fed.tzOf(body.tz));
+  return fed.record(home.token, ctx.pet, { food, verdict, wait_days: wait, amount, at: body.at }, fed.tzOf(body.tz));
 });

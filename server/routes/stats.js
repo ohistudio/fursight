@@ -16,8 +16,8 @@ module.exports = handler(async (body, req) => {
     weight: tray.week.filter((d) => d.weight_g).map((d) => ({ date: d.date, g: d.weight_g })),
     tray: tray.week.map((d) => ({ date: d.date, visits: d.visits, output_g: d.output_g })),
     days: a.has ? FSActivity.days(all, 7).map((d) => ({ date: d.date, loaf: d.loaf, stretched: d.stretched, flop: d.flop, flops: d.flops, active: d.active, seen: d.seen, unseen: d.unseen })) : [],
-    today: { loaf: a.today.loaf, flops: a.today.flops, active: a.today.active, seen: a.today.seen, unseen: a.today.unseen },
-    week: { loaf: a.week.loaf, flops: a.week.flops, active: a.week.active, seen: a.week.seen, unseen: a.week.unseen, treats: a.treats.week },
+    today: { loaf: a.today.loaf, flops: a.today.flops, active: a.today.active, seen: a.today.seen, unseen: a.today.unseen, out_of_view: a.today.outOfView, no_cam: a.today.noCam },
+    week: { loaf: a.week.loaf, flops: a.week.flops, active: a.week.active, seen: a.week.seen, unseen: a.week.unseen, out_of_view: a.week.outOfView, no_cam: a.week.noCam, treats: a.treats.week },
     // today isn't over: a usual whole day to draw it against
     usual: { visits: tray.usual ? tray.usual.visits_day : null, output_g: tray.usual ? tray.usual.output_day : null },
     simulated: { tray: tray.simulated, activity: a.simulated },

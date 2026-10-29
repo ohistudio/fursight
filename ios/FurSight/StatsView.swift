@@ -40,7 +40,7 @@ struct StatsView: View {
                 tile(hm(t.num("loaf")), "loafing today", "\(hm(wk.num("loaf"))) this week")
                 tile("\(Int(t.num("flops")))", "flops today", "\(Int(wk.num("flops"))) this week")
                 tile(hm(t.num("active")), "on the move", "\(hm(wk.num("active"))) this week")
-                tile(hm(wk.num("seen") / 7), "seen a day", "\(hm(wk.num("unseen") / 7)) a day not seen")
+                tile(hm(wk.num("seen") / 7), "seen a day", wk["out_of_view"] != nil ? "\(hm(wk.num("out_of_view") / 7)) out of view, \(hm(wk.num("no_cam") / 7)) no cam" : "\(hm(wk.num("unseen") / 7)) a day not seen")
                 if wk.num("treats") > 0 { tile("\(Int(wk.num("treats")))", "treats this week", "added by you") }
             }
         }
