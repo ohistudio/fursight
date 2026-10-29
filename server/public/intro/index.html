@@ -47,6 +47,27 @@
   .tier .n small { font-size: .4em; color: var(--muted); }
   .tier p { margin: 0; font-size: clamp(11px, 1.25vw, 21px); font-weight: 800; color: var(--muted); line-height: 1.35; }
   .price .foot { grid-column: 1 / -1; text-align: center; font: 800 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: var(--muted); }
+  /* real devices, the models, what's next */
+  .devs { width: 90%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4%; }
+  .devs h2, .models h2 { grid-column: 1 / -1; margin: 0 0 1%; text-align: center; font-size: clamp(20px, 3.2vw, 54px); font-weight: 900; color: var(--ink); }
+  .dev { background: #FFFFFF; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 0 rgba(43,42,51,.10); color: var(--ink); }
+  .dev .pic { aspect-ratio: 4 / 3; background: #EDE7F7; display: grid; place-items: center; overflow: hidden; }
+  .dev .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dev b { display: block; padding: 4% 6% 0; font-size: clamp(13px, 1.6vw, 26px); font-weight: 900; }
+  .dev p { margin: 0; padding: 1% 6% 6%; font-size: clamp(10px, 1.15vw, 19px); font-weight: 800; color: var(--muted); }
+  .dev.soon b::after { content: "concept"; margin-left: .5em; font-size: .6em; vertical-align: middle; background: #F1EEF6; color: var(--grape-lip); padding: .15em .6em; border-radius: 99px; }
+  .credit { grid-column: 1 / -1; text-align: center; font: 800 clamp(9px, .9vw, 14px) Nunito, sans-serif; color: #A9A4B6; }
+  .phone { width: 34%; aspect-ratio: 9 / 18; background: var(--ink); border-radius: 18%/9%; padding: 4%; }
+  .phone div { width: 100%; height: 100%; background: #EDE7F7; border-radius: 14%/7%; display: grid; place-items: center; }
+  .phone img { width: 86%; filter: drop-shadow(0 3px 0 rgba(43,42,51,.15)); }
+  .charm { width: 46%; aspect-ratio: 1; border-radius: 28%; background: linear-gradient(160deg, #FFFFFF, #E9E1F8); border: 4px solid var(--ink); display: grid; place-items: center; position: relative; }
+  .charm img { width: 70%; }
+  .charm::before { content: ""; position: absolute; top: -14%; left: 50%; width: 18%; height: 18%; border: 4px solid var(--ink); border-radius: 50%; transform: translateX(-50%); }
+  .models { width: 86%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2%; }
+  .model { background: #FFFFFF; border-radius: 22px; padding: 7% 8%; box-shadow: 0 6px 0 rgba(43,42,51,.10); border-top: 8px solid var(--grape); }
+  .model b { display: block; font-size: clamp(13px, 1.6vw, 26px); font-weight: 900; color: var(--ink); }
+  .model p { margin: .5em 0 0; font-size: clamp(10px, 1.1vw, 18px); font-weight: 800; color: var(--muted); line-height: 1.35; }
+  .models .foot { grid-column: 1 / -1; text-align: center; font: 800 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: var(--muted); }
   #go { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(246,245,249,.75); cursor: pointer; }
   #go span { background: var(--grape); color: #FFFFFF; font: 900 clamp(18px, 2.6vw, 40px) Nunito, sans-serif; padding: .5em 1.2em; border-radius: 999px; box-shadow: 0 .15em 0 var(--grape-lip); }
   #hint { position: absolute; right: 14px; bottom: 10px; font: 800 12px Nunito, sans-serif; color: #B3AEC0; }
@@ -193,7 +214,23 @@ async function story(r) {
   $("bunwrap").setAttribute("opacity", 0);
   show("devices"); sfx("whoosh", .6); await Promise.all([breathe(3000, r), caption("It links to your Ray-Ban Display, Meta Quest and phone.", 3000, r)]);
   await caption("Ask, check food, or just peek in.", 2800, r);
-  show("devices", false); $("bunwrap").setAttribute("opacity", 1); await wait(500, r);
+  show("devices", false); $("bunwrap").setAttribute("opacity", 1);
+  $("capText").classList.remove("on"); sfx("whoosh", .6);
+  extra(`<div class="devs"><h2>Works today on</h2>
+    <div class="dev"><div class="pic"><img src="/meta/ray-ban-display.jpg" alt="Meta Ray-Ban Display"></div><b>Meta Ray-Ban Display</b><p>Hold up food, ask about him, peek at the pet cam</p></div>
+    <div class="dev"><div class="pic"><img src="/meta/quest-3.jpg" alt="Meta Quest 3"></div><b>Meta Quest</b><p>Verdict cards pinned to real food; speak a note</p></div>
+    <div class="dev"><div class="pic"><div class="phone"><div><img src="${S.stickers.bum.src}" alt=""></div></div></div><b>Your phone</b><p>His diary, alerts with stickers, his week</p></div>
+    <div class="credit">Product images: Meta</div></div>`);
+  await wait(300, r); await caption("Meta Ray-Ban Display, Meta Quest and your phone.", 3600, r);
+  $("capText").classList.remove("on"); sfx("whoosh", .6);
+  extra(`<div class="models"><h2>Built on Meta's models</h2>
+    <div class="model"><b>Muse Spark</b><p>Food verdicts, what he's doing on the pet cam, hay levels, the Ask agent, his week</p></div>
+    <div class="model" style="border-top-color:var(--sky,#2EA8F5)"><b>SAM 3.1</b><p>Finds him on every cam, cuts out his stickers, measures the hay pile</p></div>
+    <div class="model" style="border-top-color:#FFB23F"><b>Muse Voice Transcribe</b><p>Spoken questions and notes on Quest</p></div>
+    <div class="model" style="border-top-color:#3DBB6E"><b>Muse Image</b><p>Redraws his photo for the weekly Wrapped poster</p></div>
+    <div class="foot">All through the Meta Model API</div></div>`);
+  await wait(300, r); await caption("All of it runs on Meta's models, through the Meta Model API.", 4200, r);
+  extra(""); await wait(500, r);
   const st = S.stickers.bum.src, as = $("awaySticker"); as.setAttribute("href", st); as.setAttributeNS("http://www.w3.org/1999/xlink", "href", st);
   show("cardAway"); sfx("ping", .6); await caption("When you're away, it sends you funny stickers, and you can ask how he is.", 3400, r);
   show("cardAway", false);
@@ -219,6 +256,13 @@ async function story(r) {
     <div class="tier"><b>FurSight Plus</b><div class="n">$7.99<small> a month</small></div><p>or $69 a year. The AI: food checks, Ask, early warnings, stickers and his weekly card</p></div>
     <div class="foot">Rough concept pricing. In this hackathon build the Tray's sensors are simulated; the cams are real.</div></div>`);
   await wait(5600, r);
+  sfx("whoosh", .6);
+  extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:66%"><h2>Where it could go next</h2>
+    <div class="dev soon"><div class="pic"><img src="/meta/vr-glasses.jpg" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
+    <div class="dev soon"><div class="pic"><div class="charm"><img src="${S.stickers.loaf.src}" alt=""></div></div><b>Muse Charm</b><p>His sticker on your keychain; ask Muse how he is</p></div>
+    <div class="credit">Meta VR Glasses image: Meta. Muse Charm drawn as an idea; not built.</div></div>`);
+  await wait(300, r); await caption("And next: Meta VR Glasses, and Muse Charm on your keychain.", 4000, r);
+  $("capText").classList.remove("on");
   extra(""); await wait(500, r);
   music(false); sfx("end", .7);
   card(`<div class="plate"><h1>FurSight</h1><p>Spoil them. Worry less.</p></div>`);
