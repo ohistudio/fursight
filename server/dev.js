@@ -1,5 +1,5 @@
 // Run the API on this machine, no Vercel needed:  node dev.js  (port 3030, reads .env.local)
-// Same handlers as production: every api/<name>.js answers POST /api/<name>.
+// Same handlers as production: every routes/<name>.js answers POST /api/<name>.
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -20,7 +20,7 @@ http.createServer(async (req, res) => {
     return fs.createReadStream(f).pipe(res);
   }
   const m = req.url.match(/^\/api\/([a-z]+)/);
-  const file = m && path.join(__dirname, "api", m[1] + ".js");
+  const file = m && path.join(__dirname, "routes", m[1] + ".js");
   if (!file || !fs.existsSync(file)) { res.writeHead(404); return res.end("not found"); }
   let raw = "";
   for await (const chunk of req) raw += chunk;
