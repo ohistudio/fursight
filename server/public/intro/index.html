@@ -31,7 +31,7 @@
   #card .plate { background: #FFFFFF; padding: .5em 1.1em .6em; border-radius: .5em; box-shadow: 0 .12em 0 rgba(43,42,51,.12); }
   #card .plate p { color: var(--ink); }
   /* the kit and the price, after the story */
-  #extra { position: absolute; inset: 0; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
+  #extra { position: absolute; inset: 0; padding-bottom: 12%; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
   #extra.on { opacity: 1; }
   .kitrow { position: absolute; inset: 3% 3% 17% 3%; display: flex; gap: 2.5%; align-items: center; justify-content: center; }
   .kitrow img.kit { height: 100%; max-width: 66%; object-fit: contain; border-radius: 18px; }
@@ -53,6 +53,8 @@
   .dev { background: #FFFFFF; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 0 rgba(43,42,51,.10); color: var(--ink); }
   .dev .pic { aspect-ratio: 4 / 3; background: #EDE7F7; display: grid; place-items: center; overflow: hidden; }
   .dev .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dev .pic img.stk { width: 84%; height: 84%; object-fit: contain; filter: drop-shadow(0 5px 0 rgba(43,42,51,.14)); animation: bob 2.6s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-4%) rotate(-2deg); } }
   .dev b { display: block; padding: 4% 6% 0; font-size: clamp(13px, 1.6vw, 26px); font-weight: 900; }
   .dev p { margin: 0; padding: 1% 6% 6%; font-size: clamp(10px, 1.15vw, 19px); font-weight: 800; color: var(--muted); }
   .dev.soon b::after { content: "concept"; margin-left: .5em; font-size: .6em; vertical-align: middle; background: #F1EEF6; color: var(--grape-lip); padding: .15em .6em; border-radius: 99px; }
@@ -217,8 +219,8 @@ async function story(r) {
   show("devices", false); $("bunwrap").setAttribute("opacity", 1);
   $("capText").classList.remove("on"); sfx("whoosh", .6);
   extra(`<div class="devs"><h2>Works today on</h2>
-    <div class="dev"><div class="pic"><img src="/meta/ray-ban-display.jpg" alt="Meta Ray-Ban Display"></div><b>Meta Ray-Ban Display</b><p>Hold up food, ask about him, peek at the pet cam</p></div>
-    <div class="dev"><div class="pic"><img src="/meta/quest-3.jpg" alt="Meta Quest 3"></div><b>Meta Quest</b><p>Verdict cards pinned to real food; speak a note</p></div>
+    <div class="dev"><div class="pic"><img class="stk" src="/meta/ray-ban-display.png" alt="Meta Ray-Ban Display"></div><b>Meta Ray-Ban Display</b><p>Hold up food, ask about him, peek at the pet cam</p></div>
+    <div class="dev"><div class="pic"><img class="stk" src="/meta/quest-3.png" alt="Meta Quest 3" style="animation-delay:-.9s"></div><b>Meta Quest</b><p>Verdict cards pinned to real food; speak a note</p></div>
     <div class="dev"><div class="pic"><div class="phone"><div><img src="${S.stickers.bum.src}" alt=""></div></div></div><b>Your phone</b><p>His diary, alerts with stickers, his week</p></div>
     <div class="credit">Product images: Meta</div></div>`);
   await wait(300, r); await caption("Meta Ray-Ban Display, Meta Quest and your phone.", 3600, r);
@@ -257,10 +259,10 @@ async function story(r) {
     <div class="foot">Rough concept pricing. In this hackathon build the Tray's sensors are simulated; the cams are real.</div></div>`);
   await wait(5600, r);
   sfx("whoosh", .6);
-  extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:66%"><h2>Where it could go next</h2>
-    <div class="dev soon"><div class="pic"><img src="/meta/vr-glasses.jpg" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
-    <div class="dev soon"><div class="pic"><div class="charm"><img src="${S.stickers.loaf.src}" alt=""></div></div><b>Muse Charm</b><p>His sticker on your keychain; ask Muse how he is</p></div>
-    <div class="credit">Meta VR Glasses image: Meta. Muse Charm drawn as an idea; not built.</div></div>`);
+  extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:54%"><h2>Where it could go next</h2>
+    <div class="dev soon"><div class="pic"><img class="stk" src="/meta/vr-glasses.png" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
+    <div class="dev soon"><div class="pic"><img class="stk" src="/meta/muse-charm.png" alt="Muse Charm" style="animation-delay:-1.2s"></div><b>Muse Charm</b><p>His sticker on its screen; ask Muse how he is</p></div>
+    <div class="credit">Images: Meta, VRX. FurSight on these is an idea, not built yet.</div></div>`);
   await wait(300, r); await caption("And next: Meta VR Glasses, and Muse Charm on your keychain.", 4000, r);
   $("capText").classList.remove("on");
   extra(""); await wait(500, r);
