@@ -65,6 +65,7 @@
   .entry img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; flex: none; background: var(--line); }
   /* a cut-out sticker is shown whole, bigger, with no tile behind it */
   .entry img, .recap img { cursor: zoom-in; }
+  .livecard { gap: 16px; align-items: center; } .livecard .lxcap { display: grid; gap: 2px; } .livecard .lxcap b { font-size: 19px; } .livecard .lxcap span { color: var(--muted); font-size: 14px; }
   .lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(20,19,26,.86); display: grid; place-items: center; padding: 20px; animation: lbIn .18s ease-out; cursor: zoom-out; }
   .lightbox.out { opacity: 0; transition: opacity .18s; }
   .lightbox img { max-width: min(100%, 900px); max-height: 86vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
@@ -199,6 +200,7 @@
 <script src="/climate.js"></script>
 <script src="/rtc.js"></script>
 <script src="/factcard.js"></script>
+<script src="/live.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -464,7 +466,7 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+  $app.innerHTML = `<div class="stack">${header()}<div id="liveNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
@@ -480,6 +482,9 @@ async function today() {
   const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate)/.test(e.kind))).slice(0, 80);
   const $l = document.getElementById("list");
   if (!$l) return;   // you've moved to another tab while this loaded
+  // live: his sticker doing what the pet cam last saw (only on the everything view)
+  const st = !kinds && FSLive.state(me, all), stk = FSLive.sticker(all), p0 = me.pets[0];
+  if (st) document.getElementById("liveNow").innerHTML = `<div class="card row pop livecard">${FSLive.html({ sticker: stk && img(`/diary/${stk.id}/image`), photo: p0.has_photo && img(`/pets/${p0.id}/photo`), state: st, name: p0.name, size: 110 })}</div>`;
   if (!entries.length) {
     $l.innerHTML = kinds ? `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>None yet</h3><p class="muted">Add old photos, videos and vet papers and FurSight keeps them with ${esc(me.pets[0].name)}'s diary.</p></div>`
       : `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
@@ -1358,6 +1363,9 @@ function watchActivity(v, c, g, view, status) {
   const p = me.pets[0];
   let prev = null, lastMove = Date.now(), moveRun = 0, seg = null, asking = false, activeMs = 0, activeFrom = Date.now(), lastTick = Date.now(), lastMoment = 0;
   const post = (b) => hub("/diary", { method: "POST", body: JSON.stringify({ pet: p.name, ...b }) }).catch(() => {});
+  // what he's doing right now, for the live sticker on every device (only when it changes, at most once a minute)
+  let liveSent = "", liveAt = 0;
+  const live = (st) => { if (st === liveSent && Date.now() - liveAt < 10 * 60e3) return; if (st !== liveSent || Date.now() - liveAt > 60e3) { liveSent = st; liveAt = Date.now(); hub("/live", { method: "PUT", body: JSON.stringify({ state: st, cam: store.get("fs.camName") || "" }) }).catch(() => {}); } };
   const snap = () => {
     const s = Math.min(v.videoWidth, v.videoHeight), vw = view(), cs = s / vw.z;
     g.drawImage(v, (v.videoWidth - s) / 2 + vw.x * s - cs / 2, (v.videoHeight - s) / 2 + vw.y * s - cs / 2, cs, cs, 0, 0, 480, 480);
@@ -1374,6 +1382,7 @@ function watchActivity(v, c, g, view, status) {
       const image = snap();
       const r = await api("/api/pose", { image });
       seg = { pose: r.visible && r.pose !== "other" ? r.pose : null, from };
+      live(!r.visible ? "away" : seg.pose === "chewing" ? "eating" : seg.pose || "sitting");
       status(r.visible ? `${r.caption || FSActivity.WORD[r.pose]}` : `Still, but ${p.name} isn't in view`);
       if (r.visible && (r.pose === "flop" || r.pose === "stretched") && Date.now() - lastMoment > 3600e3) {
         lastMoment = Date.now();
@@ -1395,7 +1404,8 @@ function watchActivity(v, c, g, view, status) {
     const now = Date.now(), dt = now - lastTick, moving = diff / (48 * 48) > 4;
     lastTick = now;
     if (moving) { moveRun++; activeMs += dt; } else moveRun = 0;
-    if (moveRun >= 3) { if (seg) close(lastMove); lastMove = now; status(`${p.name} is on the move`); }
+    if (moveRun >= 3) { if (seg) close(lastMove); lastMove = now; status(`${p.name} is on the move`); live("active"); }
+    else if (seg && !moving) live(seg.pose ? (seg.pose === "chewing" ? "eating" : seg.pose) : "away");   // still settled: keep it fresh
     else if (moving) lastMove = now;
     if (!seg && !asking && now - lastMove > 120e3) ask(lastMove);
     if (seg && now - seg.from > 45 * 60e3) { const from = now; close(now); ask(from); }   // a long rest: look again

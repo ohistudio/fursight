@@ -13,6 +13,7 @@
 //   GET  /hub/i/:household/:id?e=&s=                                  -> the same picture, by an expiring signed link (notifications)
 //   PUT  /hub/cams/:channel               (token) {name}              -> cam      (a webcam registering itself)
 //   PUT  /hub/home                        (token) {lat, lng, radius?} -> home     (where "home" is, for home/away)
+//   PUT  /hub/live                        (token) {state, cam?}       -> live     (what he's doing now, from a pet cam; /me returns it)
 //   PUT  /hub/devices/:id                 (token) {name}              -> device   (rename)
 //   DELETE /hub/devices/:id               (token)                     -> ok
 //   PUT  /hub/push                        (token) {token, sandbox}    -> ok       (an iPhone's notification token)
@@ -134,8 +135,8 @@ export class Household {
       // newest first: the glasses and the Quest watch the first one, so that's the cam most recently started
       const cams = this.all("SELECT channel, name, updated FROM cams ORDER BY updated DESC");
       const devices = this.all("SELECT id, kind, name, created, seen FROM devices ORDER BY created");
-      const home = this.one("SELECT v FROM meta WHERE k = 'home'");
-      return json({ household, device, pets, cams, devices, home: home ? JSON.parse(home.v) : null });
+      const home = this.one("SELECT v FROM meta WHERE k = 'home'"), live = this.one("SELECT v FROM meta WHERE k = 'live'");
+      return json({ household, device, pets, cams, devices, home: home ? JSON.parse(home.v) : null, live: live ? JSON.parse(live.v) : null });
     }
 
     let mm;
@@ -205,6 +206,15 @@ export class Household {
     if ((mm = p.match(/^\/cams\/([A-Za-z0-9]{16})$/)) && m === "DELETE") {
       this.sql.exec("DELETE FROM cams WHERE channel = ?", mm[1]);
       return json({ ok: true });
+    }
+    // what he's doing right now, from the pet cam: { state: loaf|flop|stretched|sitting|eating|grooming|active|away, cam? }
+    if (p === "/live" && m === "PUT") {
+      const b = await req.json().catch(() => ({}));
+      const state = String(b.state || "").slice(0, 20);
+      if (!/^[a-z]+$/.test(state)) return err("state required");
+      const live = { state, cam: b.cam ? String(b.cam).slice(0, 40) : undefined, sim: b.sim ? true : undefined, at: Date.now() };
+      this.sql.exec("INSERT OR REPLACE INTO meta VALUES ('live', ?)", JSON.stringify(live));
+      return json(live);
     }
     if (p === "/home" && m === "PUT") {
       const b = await req.json().catch(() => ({}));

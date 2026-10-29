@@ -141,6 +141,7 @@
 <script src="/climate.js"></script>
 <script src="/rtc.js"></script>
 <script src="/sticker.js"></script>
+<script src="/live.js"></script>
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
 // between Today, Care (tick the daily list), Ask, Pet cam and Diary; up/down picks a care item, pinch ticks it; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
@@ -235,7 +236,13 @@ function render() {
   if (away) $("alert").innerHTML = `<div class="card row" style="border-color:#FFC23D"><div class="badge caution">↗</div><div><div class="big away">You're out</div><div class="note">${me.cams[0] ? "Swipe to the pet cam, or tilt your head down to peek." : "Set up a pet cam to keep an eye on " + esc(pet.name) + "."}</div></div></div>` + $("alert").innerHTML;
   const items = careItems(), done = items.length && items.every((i) => careToday().today.has(i));
   const mood = bday && !bad ? "safe" : bad || (tray && tray.status === "vet") ? "toxic" : tray && tray.status === "watch" ? "caution" : done ? "safe" : "idle";
-  if ($("todayBean").dataset.mood !== mood) { $("todayBean").dataset.mood = mood; $("todayBean").innerHTML = bean(mood, 60); }
+  // live: his sticker doing what the pet cam last saw (the Bean stays when something needs your attention)
+  const st = FSLive.state(me, entries), stk = FSLive.sticker(entries);
+  const liveKey = st && stk && mood !== "toxic" && mood !== "caution" ? `${st.state}:${stk.id}` : "";
+  if (liveKey) {
+    if ($("todayBean").dataset.mood !== liveKey) { $("todayBean").dataset.mood = liveKey; $("todayBean").innerHTML = FSLive.html({ sticker: `${HUB}/hub/diary/${stk.id}/image?t=${encodeURIComponent(token)}`, state: st, name: pet.name, size: 96, caption: false }); }
+    $("seen").textContent = `${pet.name} ${FSLive.WORD[st.state] || ""}${st.sim ? " (simulated)" : ""}` + ($("seen").textContent ? " · " + $("seen").textContent : "");
+  } else if ($("todayBean").dataset.mood !== mood) { $("todayBean").dataset.mood = mood; $("todayBean").innerHTML = bean(mood, 60); }
   const recap = entries.find((e) => e.kind === "recap" && Date.now() - e.at < 8 * 864e5);
   const last = recap || entries[0];
   $("date").innerHTML = esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) +
