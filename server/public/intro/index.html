@@ -12,11 +12,12 @@
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: Nunito, system-ui, sans-serif; }
   #stage { position: absolute; inset: 0; display: grid; place-items: center; }
   #frame { position: relative; width: min(100vw, 177.78vh); aspect-ratio: 16 / 9; }
+  #scene { position: absolute; inset: 0; transition: transform 2.2s cubic-bezier(.6,0,.2,1); }
   #scene svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   #scene svg g { transition: opacity .6s ease; }
   #dim { position: absolute; inset: 0; background: #2B2A33; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
   /* the words: one line at a time, bottom centre */
-  #cap { position: absolute; left: 50%; bottom: 5.5%; transform: translateX(-50%); max-width: 86%; text-align: center; pointer-events: none; }
+  #cap { position: absolute; left: 7%; right: 7%; bottom: 5.5%; text-align: center; pointer-events: none; }
   #cap span { display: inline-block; background: #FFFFFF; color: var(--ink); font-weight: 900; font-size: clamp(16px, 2.6vw, 44px); line-height: 1.2;
               padding: .32em .8em; border-radius: 999px; box-shadow: 0 .18em 0 rgba(43,42,51,.14); opacity: 0; transform: translateY(14px) scale(.98); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.9,.3,1); }
   #cap span.on { opacity: 1; transform: none; }
@@ -27,13 +28,34 @@
   #card h1 { margin: 0; font-size: clamp(36px, 7vw, 120px); font-weight: 900; color: var(--ink); letter-spacing: -.01em; }
   #card p { margin: .3em 0 0; font-size: clamp(16px, 2.2vw, 36px); font-weight: 800; color: var(--muted); }
   #card .dot { color: #FFB3D4; }
+  #card .plate { background: #FFFFFF; padding: .5em 1.1em .6em; border-radius: .5em; box-shadow: 0 .12em 0 rgba(43,42,51,.12); }
+  #card .plate p { color: var(--ink); }
+  /* the kit and the price, after the story */
+  #extra { position: absolute; inset: 0; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
+  #extra.on { opacity: 1; }
+  .kitrow { position: absolute; inset: 3% 3% 17% 3%; display: flex; gap: 2.5%; align-items: center; justify-content: center; }
+  .kitrow img.kit { height: 100%; max-width: 66%; object-fit: contain; border-radius: 18px; }
+  .kitrow figure { margin: 0; width: 30%; }
+  .kitrow figure img { width: 100%; border-radius: 18px; box-shadow: 0 6px 0 rgba(43,42,51,.12); display: block; }
+  .kitrow figcaption { margin-top: 4%; text-align: center; font: 800 clamp(10px, 1.2vw, 20px) Nunito, sans-serif; color: var(--muted); }
+  .price { width: 88%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4%; }
+  .price h2 { grid-column: 1 / -1; margin: 0 0 1%; text-align: center; font-size: clamp(22px, 3.6vw, 60px); font-weight: 900; color: var(--ink); }
+  .tier { background: #FFFFFF; border-radius: 28px; padding: 7% 8%; box-shadow: 0 6px 0 rgba(43,42,51,.10); color: var(--ink); }
+  .tier.hot { outline: 5px solid var(--grape); }
+  .tier b { display: block; font-size: clamp(14px, 1.7vw, 28px); font-weight: 900; }
+  .tier .n { font-size: clamp(26px, 4vw, 66px); font-weight: 900; color: var(--grape-lip); margin: 4% 0 2%; }
+  .tier .n small { font-size: .4em; color: var(--muted); }
+  .tier p { margin: 0; font-size: clamp(11px, 1.25vw, 21px); font-weight: 800; color: var(--muted); line-height: 1.35; }
+  .price .foot { grid-column: 1 / -1; text-align: center; font: 800 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: var(--muted); }
+  #go { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(246,245,249,.75); cursor: pointer; }
+  #go span { background: var(--grape); color: #FFFFFF; font: 900 clamp(18px, 2.6vw, 40px) Nunito, sans-serif; padding: .5em 1.2em; border-radius: 999px; box-shadow: 0 .15em 0 var(--grape-lip); }
   #hint { position: absolute; right: 14px; bottom: 10px; font: 800 12px Nunito, sans-serif; color: #B3AEC0; }
   @media (prefers-reduced-motion: reduce) { #cap span, #scene svg g { transition: none; } }
 </style>
 </head>
 <body>
-<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="cap"><span id="capText"></span></div></div></div>
-<div id="hint">R or click to replay</div>
+<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="extra"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
+<div id="hint">R or click to replay · M mutes</div>
 <script>
 // FurSight's intro: Xiaosi's story in the kit schematic's style, with his own stickers. He had GI stasis; since
 // then every treat feels like a risk; he roams, chews a cable, finds avocado (healthy for us, can be fatal for
@@ -43,11 +65,33 @@ const $ = (id) => document.getElementById(id);
 let S, run = 0;
 const wait = (ms, r) => new Promise((ok, no) => setTimeout(() => (r === run ? ok() : no("stop")), ms));
 const show = (id, on = true) => { const el = $(id); if (el) el.setAttribute("opacity", on ? "1" : "0"); };
+// the camera: zoomed right in on his sticker, or the whole room
+const closeUp = (on) => {
+  const sc = $("scene"), [x, y] = S.spots.pen;
+  if (on) { sc.style.transition = "none"; sc.style.transformOrigin = `${x / 16}% ${(y - 60) / 9}%`; sc.style.transform = "scale(3.4)"; void sc.offsetWidth; sc.style.transition = ""; }
+  else sc.style.transform = "";
+};
+const extra = (html) => { $("extra").innerHTML = html || $("extra").innerHTML; $("extra").classList.toggle("on", !!html); };
 const caption = async (text, ms, r, dark = false) => {
   const c = $("capText"); c.classList.remove("on"); await wait(220, r);
   c.textContent = text; c.classList.toggle("dark", dark); c.classList.add("on"); await wait(ms, r);
 };
 const card = (html) => { $("card").innerHTML = html; $("card").classList.toggle("on", !!html); };
+
+// ---------------------------------------------------------------- sound: ElevenLabs effects (docs/kit-src/make_sfx.mjs)
+const AC = new (window.AudioContext || window.webkitAudioContext)(), master = AC.createGain(); master.connect(AC.destination);
+const buf = {}, NAMES = ["pop", "hop", "chew", "munch", "sting", "warn", "chime", "click", "whoosh", "ping", "title", "end", "bed"];
+NAMES.forEach((n) => fetch(`sfx/${n}.mp3`).then((x) => x.arrayBuffer()).then((a) => AC.decodeAudioData(a)).then((b) => (buf[n] = b)).catch(() => {}));
+let bed = null;
+function sfx(n, vol = 0.7, loop = false) {
+  if (!buf[n]) return null;
+  const src = AC.createBufferSource(), g = AC.createGain(); src.buffer = buf[n]; src.loop = loop; g.gain.value = vol;
+  src.connect(g).connect(master); src.start(); return { src, g };
+}
+function music(on) {
+  if (bed) { const b = bed; b.g.gain.setTargetAtTime(0, AC.currentTime, .4); setTimeout(() => b.src.stop(), 2000); bed = null; }
+  if (on) bed = sfx("bed", 0.16, true);
+}
 
 // ---------------------------------------------------------------- Xiaosi: one sticker, moved and posed
 let bun = { x: 0, y: 0, face: 1, pose: "side", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 };
@@ -68,8 +112,10 @@ const tween = (ms, r, step) => new Promise((ok, no) => {
 async function hop(spot, ms, r, hops = 3) {
   const [x0, y0] = [bun.x, bun.y], [x1, y1] = S.spots[spot];
   bun.face = x1 < x0 ? -1 : 1;
+  let landed = 0;
   await tween(ms, r, (k) => {
     const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, ph = (k * hops) % 1;
+    if (Math.floor(k * hops + .5) > landed) { landed++; sfx("hop", .5); }
     bun.x = x0 + (x1 - x0) * e; bun.y = y0 + (y1 - y0) * e;
     bun.lift = Math.sin(ph * Math.PI) * 26; bun.sy = ph < .12 || ph > .9 ? .9 : 1.04; bun.sx = 2 - bun.sy;
   });
@@ -85,22 +131,25 @@ const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 
 
 // ---------------------------------------------------------------- the story
 async function story(r) {
-  for (const id of ["cablering", "avoglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardAvo", "cardHay", "cardTray", "cardBerry", "berry", "berryq", "cardAsk", "cardAway", "cardWeek"]) show(id, false);
-  $("dim").style.opacity = 0; card(""); $("capText").classList.remove("on");
-  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 0 }); draw();
+  for (const id of ["cablering", "avoglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardAvo", "cardHay", "cardTray", "cardBerry", "berry", "berryq", "cardAsk", "cardAway", "cardWeek", "devices", "traykg"]) show(id, false);
+  $("dim").style.opacity = 0; card(""); extra(""); $("capText").classList.remove("on");
+  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 }); draw();
 
-  card(`<div><h1>FurSight</h1><p>a story about Xiaosi</p></div>`); await wait(2200, r); card("");
-  await pop(r);
+  // open close up on him, then pull back to the room
+  closeUp(true); music(true); sfx("title", .6);
+  await breathe(1400, r);
+  card(`<div class="plate"><h1>FurSight</h1><p>a story about Xiaosi</p></div>`); await breathe(2600, r); card("");
+  closeUp(false); sfx("whoosh", .4); await breathe(2000, r);
   await Promise.all([breathe(1800, r), caption("Meet Xiaosi.", 1800, r)]);
   pose("alert");
   await Promise.all([breathe(2200, r), caption("He loves a treat. We love giving him one.", 2200, r)]);
 
   // the scare
-  pose("loaf"); $("dim").style.opacity = .42;
+  pose("loaf"); $("dim").style.opacity = .42; music(false); sfx("sting", .6);
   await Promise.all([breathe(3000, r), caption("A few months ago, he got GI stasis. His gut just stopped.", 3000, r, true)]);
   await caption("Rabbits hide illness until it's serious.", 2400, r, true);
-  $("dim").style.opacity = 0; pose("alert");
-  show("berry"); await wait(500, r); show("berryq");
+  $("dim").style.opacity = 0; pose("alert"); music(true);
+  show("berry"); sfx("pop", .5); await wait(500, r); show("berryq"); sfx("warn", .5);
   await caption("Since then, every treat feels like a risk.", 2600, r);
   show("berryq", false);
 
@@ -108,61 +157,84 @@ async function story(r) {
   bun.pose = "side"; draw();
   await caption("And when he roams free...", 900, r);
   await hop("gate", 1300, r, 3); await hop("cable", 1100, r, 2);
-  faceTo("cable"); show("cablering");
+  faceTo("cable"); show("cablering"); sfx("chew", .7);
   await Promise.all([chew(2000, r), caption("...cables look like chew toys.", 2000, r)]);
   await hop("avo", 1300, r, 3);
-  pose("standing"); show("avoglow");
+  pose("standing"); show("avoglow"); sfx("warn", .55);
   await Promise.all([nod(2600, r), caption("You'd think avocado is good for him. It can be fatal.", 2600, r)]);
   pose("side"); await hop("hay", 1800, r, 4);
-  pose("eating");
+  pose("eating"); sfx("munch", .6);
   await Promise.all([nod(2400, r), caption("Hay should be most of what he eats. Less hay is the first sign.", 2400, r)]);
   show("cablering", false); show("avoglow", false);
 
   // the kit
   pose("grooming");
   await Promise.all([breathe(1600, r), caption("So we built FurSight.", 1600, r, true)]);
-  show("cam1"); await wait(500, r);
+  show("cam1"); sfx("click", .7); await wait(500, r);
   await caption("A cam on his pen, for his hay, food and water.", 1900, r);
-  show("cam2"); await wait(300, r);
+  show("cam2"); sfx("click", .7); await wait(300, r);
   pose("bum");
   await Promise.all([hop("away", 1800, r, 3), caption("A cam that follows him when he roams.", 1800, r)]);
   pose("bum", 1);
-  show("trayscale"); await wait(300, r); show("traytop");
+  show("trayscale"); sfx("click", .7); await wait(300, r); show("traytop"); show("traykg"); sfx("click", .5);
   await caption("And a litter tray that weighs him every visit.", 2000, r);
 
   // and each worry gets an answer
   pose("alert");
-  show("cardBerry"); await caption("Show FurSight the treats you give him. It remembers, and tells you if and when he can have the next.", 3600, r);
-  show("cardAvo"); show("avoglow"); await caption("It checks food before you share it.", 2200, r);
-  show("cardCable"); show("cablering"); await caption("It warns you about hazards before he finds them.", 2400, r);
-  show("cardHay"); show("cardTray"); await caption("And it notices when something changes.", 2400, r);
+  show("cardBerry"); sfx("chime", .5); await caption("Show FurSight the treats you give him. It remembers, and tells you if and when he can have the next.", 3600, r);
+  show("cardAvo"); show("avoglow"); sfx("chime", .5); await caption("It checks food before you share it.", 2200, r);
+  show("cardCable"); show("cablering"); sfx("chime", .5); await caption("It warns you about hazards before he finds them.", 2400, r);
+  show("cardHay"); show("cardTray"); sfx("chime", .5); await caption("And it notices when something changes.", 2400, r);
   for (const id of ["cardBerry", "cardAvo", "cardCable", "cardHay", "cardTray", "cablering", "avoglow"]) show(id, false);
 
   // wherever you are
   pose("grooming");
-  show("cardAsk"); await Promise.all([breathe(2800, r), caption("It links to your Ray-Ban Display and Meta Quest, so you can just ask.", 2800, r)]);
+  for (const im of document.querySelectorAll("image.wk")) { const src = S.stickers[im.dataset.k].src; im.setAttribute("href", src); im.setAttributeNS("http://www.w3.org/1999/xlink", "href", src); }
+  $("bunwrap").setAttribute("opacity", 0);
+  show("devices"); sfx("whoosh", .6); await Promise.all([breathe(3000, r), caption("It links to your Ray-Ban Display, Meta Quest and phone.", 3000, r)]);
+  await caption("Ask, check food, or just peek in.", 2800, r);
+  show("devices", false); $("bunwrap").setAttribute("opacity", 1); await wait(500, r);
   const st = S.stickers.bum.src, as = $("awaySticker"); as.setAttribute("href", st); as.setAttributeNS("http://www.w3.org/1999/xlink", "href", st);
-  show("cardAway"); await caption("When you're away, it sends you funny stickers, and you can ask how he is.", 3400, r);
-  show("cardAsk", false); show("cardAway", false);
+  show("cardAway"); sfx("ping", .6); await caption("When you're away, it sends you funny stickers, and you can ask how he is.", 3400, r);
+  show("cardAway", false);
 
   // his week, on a card
   pose("stretch");
   for (const im of document.querySelectorAll("image.wk")) { const src = S.stickers[im.dataset.k].src; im.setAttribute("href", src); im.setAttributeNS("http://www.w3.org/1999/xlink", "href", src); }
-  show("cardWeek"); await Promise.all([breathe(3000, r), caption("And every week, his week on a card: flops, weight, the lot.", 3000, r)]);
+  show("cardWeek"); sfx("whoosh", .6); await Promise.all([breathe(3000, r), caption("And every week, his week on a card: flops, weight, the lot.", 3000, r)]);
   show("cardWeek", false);
   pose("stretch");
   await Promise.all([breathe(2600, r), caption("Treat him. Without the worry.", 2600, r)]);
   $("capText").classList.remove("on");
-  card(`<div style="background:rgba(246,245,249,.92);padding:40px 60px;border-radius:40px"><h1>FurSight</h1><p>It notices. Your vet decides.</p></div>`);
+
+  // the kit, and what it would cost as a product
+  sfx("whoosh", .6);
+  extra(`<div class="kitrow"><img class="kit" src="/kit/kit.svg" alt=""><figure><img src="/kit/tray.jpg" alt=""><figcaption>The FurSight Tray, a concept render</figcaption></figure></div>`);
+  await wait(400, r); await caption("The kit: two cams and the FurSight Tray.", 4200, r);
+  await caption("Set it up once, then get on with your day.", 3400, r);
+  $("capText").classList.remove("on"); sfx("whoosh", .6);
+  extra(`<div class="price"><h2>If FurSight were a product</h2>
+    <div class="tier hot"><b>The kit</b><div class="n">$249</div><p>Two FurSight Cams, the FurSight Tray, and 3 months of FurSight Plus</p></div>
+    <div class="tier"><b>Free</b><div class="n">$0</div><p>Live view, his weight and tray visits, the diary and the calendar</p></div>
+    <div class="tier"><b>FurSight Plus</b><div class="n">$7.99<small> a month</small></div><p>or $69 a year. The AI: food checks, Ask, early warnings, stickers and his weekly card</p></div>
+    <div class="foot">Rough concept pricing. In this hackathon build the Tray's sensors are simulated; the cams are real.</div></div>`);
+  await wait(5600, r);
+  extra(""); await wait(500, r);
+  music(false); sfx("end", .7);
+  card(`<div class="plate"><h1>FurSight</h1><p>Spoil him. Worry less.</p></div>`);
 }
 
 async function play() {
-  const r = ++run;
+  if (!S) return;
+  $("go").style.display = "none"; AC.resume();
+  const r = ++run; music(false);
   try { await story(r); } catch (e) { if (e !== "stop") console.error(e); }
 }
 Promise.all([fetch("intro.svg").then((x) => x.text()), fetch("scene.json").then((x) => x.json())]).then(([svg, scene]) => {
-  $("scene").innerHTML = svg; S = scene; play();
+  $("scene").innerHTML = svg; S = scene;
+  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], pose: "loaf", size: 1 }); draw(); closeUp(true);
 });
+addEventListener("keydown", (e) => { if (e.key === "m" || e.key === "M") master.gain.value = master.gain.value ? 0 : 1; });
 addEventListener("keydown", (e) => { if (e.key === "r" || e.key === "R") play(); });
 $("stage").addEventListener("click", play);
 </script>

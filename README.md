@@ -1,6 +1,6 @@
 # FurSight
 
-Rabbits hide illness. FurSight notices. It notices, your vet decides.
+Spoil him. Worry less. Rabbits hide illness, and FurSight notices the small changes so you don't have to keep watching.
 
 A rabbit care kit and app: pet cams watch how he rests, flops and eats his hay, a smart litter tray weighs him and what he leaves, and the app turns it into a diary, alerts and a weekly card. Hold up food and ask if he can have it. Ask what he's doing right now. Look round the room and see what he'll chew.
 

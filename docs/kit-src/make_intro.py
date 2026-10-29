@@ -51,13 +51,13 @@ rx, ry = iso(580, 412, 0)
 add(group("cablering", f'<ellipse cx="{rx:.1f}" cy="{ry:.1f}" rx="48" ry="27" fill="{CORAL}" fill-opacity=".12" stroke="{CORAL}" stroke-width="4" stroke-dasharray="7 5"/>', True))
 
 # half an avocado someone left on the floor: healthy for us, can be fatal for a rabbit (persin)
-ax_, ay_ = iso(566, 272, 0)
+ax_, ay_ = iso(600, 190, 0)
 avo = (f'<g transform="translate({ax_:.1f} {ay_ - 12:.1f}) rotate(-18)"><ellipse cx="0" cy="18" rx="26" ry="7" fill="{INK}" opacity=".12"/>'
        f'<path d="M0 -26 C16 -26 24 -6 24 6 C24 20 13 26 0 26 C-13 26 -24 20 -24 6 C-24 -6 -16 -26 0 -26 Z" fill="#3E6B2A" stroke="{INK}" stroke-width="2"/>'
        f'<path d="M0 -21 C12 -21 19 -5 19 6 C19 17 10 21 0 21 C-10 21 -19 17 -19 6 C-19 -5 -12 -21 0 -21 Z" fill="#C9DB7A"/>'
        f'<circle cx="0" cy="8" r="9" fill="#8A5A2B" stroke="{INK}" stroke-width="1.6"/><circle cx="-3" cy="5" r="2.4" fill="#B07B3A"/></g>')
 add(group("avo", avo))
-gx_, gy_ = iso(566, 272, 0)
+gx_, gy_ = iso(600, 190, 0)
 add(group("avoglow", f'<ellipse cx="{gx_:.1f}" cy="{gy_:.1f}" rx="46" ry="26" fill="{CORAL}" fill-opacity=".14" stroke="{CORAL}" stroke-width="4" stroke-dasharray="7 5"/>', True))
 
 # a strawberry: the treat he loves, and the worry since his GI stasis
@@ -82,8 +82,9 @@ add(group("trayscale", prism(TX0 - 6, TY0 - 6, 0, TX1 + 6, TY1 + 6, 7, GRAPE, GR
 add(group("litter", prism(TX0, TY0, 7, TX1, TY1, 34, "#FFFFFF", "#F1EEF6", "#E4E0EC", sw=2)
           + poly([(TX0 + 8, TY0 + 8, 30), (TX1 - 8, TY0 + 8, 30), (TX1 - 8, TY1 - 8, 30), (TX0 + 8, TY1 - 8, 30)], "url(#litter)")))
 rx_, ry_ = iso(TX1, (TY0 + TY1) / 2, 4)
-tc = f'<g transform="translate({rx_ + 4:.1f} {ry_ - 14:.1f})"><rect width="44" height="17" rx="5" fill="#22212A"/><text x="22" y="13" text-anchor="middle" font-size="11" font-weight="900" fill="#7CF0A3">1.10kg</text></g>'
-tc += line((TX0 - 2, TY0 - 2, 34), (TX0 - 2, TY0 - 2, 120), "#B9AECB", 5) + line((TX0 - 2, TY0 - 2, 120), (150, 180, 120), "#B9AECB", 5)
+# the weight readout goes on its own layer, above the pen's front fence
+kg = f'<g transform="translate({rx_ + 4:.1f} {ry_ - 14:.1f})"><rect width="44" height="17" rx="5" fill="#22212A"/><text x="22" y="13" text-anchor="middle" font-size="11" font-weight="900" fill="#7CF0A3">1.10kg</text></g>'
+tc = line((TX0 - 2, TY0 - 2, 34), (TX0 - 2, TY0 - 2, 120), "#B9AECB", 5) + line((TX0 - 2, TY0 - 2, 120), (150, 180, 120), "#B9AECB", 5)
 tc += cone((150, 180, 112), [(TX0 + 8, TY0 + 8, 30), (TX1 - 8, TY0 + 8, 30), (TX1 - 8, TY1 - 8, 30), (TX0 + 8, TY1 - 8, 30)], SUN, "") + camera(150, 180, 122, SUN, SUN_LIP)
 add(group("traytop", tc, True))
 HX0, HY0, HX1, HY1 = 238, 120, 330, 142
@@ -103,6 +104,7 @@ door = [iso(408, 188, 0), iso(408, 188, 28), iso(442, 188, 28), iso(442, 188, 0)
 hide += f'<path d="M{door[0][0]:.1f} {door[0][1]:.1f} L{door[1][0]:.1f} {door[1][1]:.1f} Q{(door[1][0] + door[2][0]) / 2:.1f} {(door[1][1] + door[2][1]) / 2 - 22:.1f} {door[2][0]:.1f} {door[2][1]:.1f} L{door[3][0]:.1f} {door[3][1]:.1f} Z" fill="#B9AECB"/>'
 add(group("hide", hide))
 add(group("penfront", panel((PX0, PY1), (PX1, PY1), 20) + panel((PX1, PY0), (PX1, PY1), 14)))
+add(group("traykg", kg, True))
 
 # ---------------------------------------------------------------- the kit arriving: cam 1 on the pen, cam 2 on the shelf
 c0, c1, c2 = iso(270, PY0, PH), iso(270, PY0 - 10, 250), iso(270, 220, 236)
@@ -164,6 +166,36 @@ for i, (big, lab) in enumerate([("1.10 kg", "weight, steady"), ("17", "flops"), 
            f'<text x="{x + 12}" y="{y + 46}" font-size="11" font-weight="800" fill="{MUTED}">{lab}</text>')
 add(group("cardWeek", wk, True))
 
+# FurSight on your Ray-Ban Display, Meta Quest and phone, linked to the room (a panel that slides up)
+dv = '<rect x="40" y="360" width="1520" height="410" rx="34" fill="#FFFFFF" opacity=".97"/>'
+for x in (330, 800, 1270):
+    dv += f'<path class="flow" d="M{x} 300 V368" stroke="{GRAPE_LIP}" stroke-width="4" stroke-dasharray="10 8" fill="none"/>'
+dv += '<g transform="translate(0 -70)">'
+# glasses, with the answer on the lens
+dv += (f'<g transform="translate(190 560)"><path d="M0 40 C0 10 10 0 40 0 H110 C135 0 140 15 140 40 C140 70 120 80 95 80 H50 C20 80 0 70 0 40 Z" fill="#2B2A3318" stroke="{INK}" stroke-width="7"/>'
+       f'<path d="M150 40 C150 10 160 0 190 0 H240 C265 0 280 15 280 40 C280 70 260 80 235 80 H190 C165 80 150 70 150 40 Z" fill="#2B2A3318" stroke="{INK}" stroke-width="7"/>'
+       f'<path d="M140 30 H150 M0 26 L-34 12 M280 26 L314 12" stroke="{INK}" stroke-width="7" stroke-linecap="round"/>'
+       f'<rect x="176" y="18" width="82" height="44" rx="6" fill="{FERN}" opacity=".9"/><text x="217" y="38" text-anchor="middle" font-size="11" font-weight="900" fill="{INK}">Strawberry</text>'
+       f'<text x="217" y="54" text-anchor="middle" font-size="10" font-weight="900" fill="{INK}">small treat only</text></g>'
+       f'<text x="330" y="700" text-anchor="middle" font-size="24" font-weight="900" fill="{INK}">Ray-Ban Display</text>'
+       f'<text x="330" y="728" text-anchor="middle" font-size="16" font-weight="800" fill="{MUTED}">can he eat this? what\'s he doing?</text>')
+# Quest, with a card floating in front of it
+dv += (f'<g transform="translate(690 560)"><rect x="0" y="10" width="220" height="110" rx="40" fill="{INK}"/><rect x="18" y="26" width="184" height="62" rx="28" fill="#45434F"/>'
+       f'<circle cx="62" cy="57" r="16" fill="{SKY}"/><circle cx="158" cy="57" r="16" fill="{SKY}"/><path d="M0 60 C-30 60 -40 80 -40 100 M220 60 C250 60 260 80 260 100" stroke="#45434F" stroke-width="10" fill="none"/></g>'
+       f'<g filter="url(#soft)"><rect x="830" y="488" width="170" height="64" rx="14" fill="#FFFFFF"/><rect x="830" y="546" width="170" height="6" rx="3" fill="{CORAL}"/></g>'
+       f'<circle cx="856" cy="516" r="13" fill="{CORAL}"/><text x="856" y="521" text-anchor="middle" font-size="14" font-weight="900" fill="{INK}">✕</text>'
+       f'<text x="878" y="514" font-size="15" font-weight="900" fill="{INK}">Avocado</text><text x="878" y="532" font-size="12.5" font-weight="900" fill="#D93545">Don\'t</text>'
+       f'<text x="800" y="700" text-anchor="middle" font-size="24" font-weight="900" fill="{INK}">Meta Quest</text>'
+       f'<text x="800" y="728" text-anchor="middle" font-size="16" font-weight="800" fill="{MUTED}">cards pinned to the real food</text>')
+# phone, his diary with a sticker
+dv += (f'<g filter="url(#soft)"><rect x="1190" y="470" width="160" height="300" rx="28" fill="{INK}"/></g><rect x="1200" y="482" width="140" height="276" rx="20" fill="#EDE7F7"/>'
+       f'<rect x="1210" y="498" width="120" height="120" rx="14" fill="#FFFFFF"/><image class="wk" data-k="stretch" x="1214" y="512" width="112" height="90"/>'
+       f'<text x="1214" y="640" font-size="13" font-weight="900" fill="{INK}">Big flop by the hay</text><text x="1214" y="657" font-size="11" font-weight="800" fill="{MUTED}">pet cam · 2 min ago</text>'
+       f'<rect x="1210" y="668" width="120" height="34" rx="10" fill="#FFFFFF"/><text x="1220" y="690" font-size="11.5" font-weight="900" fill="{FERN_LIP}">Hay 40% gone ✓</text>'
+       f'<text x="1270" y="800" text-anchor="middle" font-size="24" font-weight="900" fill="{INK}">Your phone</text>'
+       f'<text x="1270" y="828" text-anchor="middle" font-size="16" font-weight="800" fill="{MUTED}">his diary, alerts, his week</text>')
+add(group("devices", dv + "</g>", True))
+
 add('<g id="bunwrap"><ellipse id="bunshadow" cx="0" cy="0" rx="34" ry="9" fill="#2B2A33" opacity=".14"/><image id="bun" x="0" y="0" width="10" height="10"/></g>')
 add('</svg>')
 
@@ -172,10 +204,10 @@ def b64(name, box=170):
     im = Image.open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "server/public/demo", name)); im.thumbnail((box, box))
     b = io.BytesIO(); im.save(b, "PNG", optimize=True)
     return {"src": "data:image/png;base64," + base64.b64encode(b.getvalue()).decode(), "w": im.size[0], "h": im.size[1]}
-spots = {"pen": (300, 300), "gate": (500, 330), "cable": (612, 396), "avo": (585, 250), "hay": (290, 175), "hunch": (300, 230), "away": (420, 360)}
+spots = {"pen": (300, 300), "gate": (500, 330), "cable": (612, 396), "avo": (622, 166), "hay": (290, 175), "hunch": (300, 230), "away": (420, 360)}
 scene = {"spots": {k: iso(x, y, 0) for k, (x, y) in spots.items()},
          "stickers": {"side": b64("xiaosi-sticker-3.png"), **{k: b64(f"story/{k}.png") for k in ["bum", "loaf", "eating", "alert", "grooming", "standing", "stretch"]}},
-         "targets": {"cable": iso(580, 412, 0), "avo": iso(566, 272, 0)}}
+         "targets": {"cable": iso(580, 412, 0), "avo": iso(600, 190, 0)}}
 dest = os.path.join(os.path.dirname(os.path.dirname(HERE)), "server/public/intro")
 os.makedirs(dest, exist_ok=True)
 open(os.path.join(dest, "intro.svg"), "w").write("\n".join(out))
