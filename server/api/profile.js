@@ -12,7 +12,7 @@ const SCHEMA = {
   properties: {
     species: { type: "string", description: "common name, lowercase, e.g. 'rabbit', 'dog', 'cat', 'guinea pig'" },
     breed: { type: "string", description: "best guess, or 'mixed' / 'unknown'" },
-    colour: { type: "string" },
+    colour: { type: "string", description: "the main coat colour in 1 to 3 plain words, e.g. 'white', 'grey and white', 'tan'; ignore lighting and shadows" },
     age_guess: { type: "string", description: "e.g. 'young adult', or 'unknown'" },
     sex_guess: { type: "string", enum: ["male", "female", "unknown"] },
     care: {
