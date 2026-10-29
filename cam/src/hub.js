@@ -131,7 +131,8 @@ export class Household {
 
     if (p === "/me" && m === "GET") {
       const pets = this.all("SELECT id, data, photo IS NOT NULL AS has_photo, updated FROM pets ORDER BY updated").map((r) => ({ id: r.id, ...JSON.parse(r.data), has_photo: !!r.has_photo, updated: r.updated }));
-      const cams = this.all("SELECT channel, name, updated FROM cams ORDER BY updated");
+      // newest first: the glasses and the Quest watch the first one, so that's the cam most recently started
+      const cams = this.all("SELECT channel, name, updated FROM cams ORDER BY updated DESC");
       const devices = this.all("SELECT id, kind, name, created, seen FROM devices ORDER BY created");
       const home = this.one("SELECT v FROM meta WHERE k = 'home'");
       return json({ household, device, pets, cams, devices, home: home ? JSON.parse(home.v) : null });
@@ -183,6 +184,8 @@ export class Household {
 
     if ((mm = p.match(/^\/cams\/([A-Za-z0-9]{16})$/)) && m === "PUT") {
       const b = await req.json().catch(() => ({}));
+      // one cam per device: a browser that lost its saved channel starts a new one, which replaces the old
+      this.sql.exec("DELETE FROM cams WHERE device = ? AND channel != ?", device, mm[1]);
       this.sql.exec("INSERT OR REPLACE INTO cams VALUES (?, ?, ?, ?)", mm[1], String(b.name || "Pet cam").slice(0, 40), device, Date.now());
       return json({ channel: mm[1], name: b.name || "Pet cam" });
     }
