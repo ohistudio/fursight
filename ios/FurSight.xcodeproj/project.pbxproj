@@ -10,6 +10,8 @@
 		016CA0A3F04F3F32F685D12E /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE70F44C1F5C4BD30FF105FF /* TodayView.swift */; };
 		07A0A3500131D0BCDB581728 /* WebTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A36415DD3DAFF689BC6F356 /* WebTab.swift */; };
 		1A98F18C9B87C94B4C7E1714 /* AskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 425BB047E2CEF1A38929420A /* AskView.swift */; };
+		2F5644C7B7F0A1E8F8DFD292 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47A778C477B76BAC7D31162B /* NotificationService.swift */; };
+		473C4730A141CE0E35B42D8A /* FurSightNotify.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		78226A09A3AB8769BB034FB6 /* API.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC624E3422B5793BFD23B28 /* API.swift */; };
 		8222348CBFA39D7C19274830 /* FoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14919DCBC6166FE1262413 /* FoodView.swift */; };
 		97DF3E8BAB08550B72856DDF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2196AD68290A9ADF9BC341E /* Theme.swift */; };
@@ -20,12 +22,39 @@
 		F722484F4EB1777B6B56A855 /* Nunito-900.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 847362D05B546CE9AB660E15 /* Nunito-900.ttf */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		F92E0D8DA8C17E8324A02C8D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 43B923AF05114D8ABD633867 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 122A392C151E60B16E27E4DB;
+			remoteInfo = FurSightNotify;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		869A55DD0CD72F3524F22C4F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				473C4730A141CE0E35B42D8A /* FurSightNotify.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		3C14919DCBC6166FE1262413 /* FoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodView.swift; sourceTree = "<group>"; };
 		425BB047E2CEF1A38929420A /* AskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskView.swift; sourceTree = "<group>"; };
+		47A778C477B76BAC7D31162B /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		6A36415DD3DAFF689BC6F356 /* WebTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebTab.swift; sourceTree = "<group>"; };
+		6BA01F7B2E769544DFB8CCED /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		847362D05B546CE9AB660E15 /* Nunito-900.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-900.ttf"; sourceTree = "<group>"; };
 		8583F6F10EB8ECBC0C1DE059 /* Nunito-800.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-800.ttf"; sourceTree = "<group>"; };
+		8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = FurSightNotify.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		9D732289DF18D3692759629C /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		9E49662168F5B0A3BB3BE0D7 /* FurSight.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FurSight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9EC624E3422B5793BFD23B28 /* API.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = API.swift; sourceTree = "<group>"; };
@@ -38,6 +67,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		5DA6E1FC718EE1042B8FD731 /* NotifyService */ = {
+			isa = PBXGroup;
+			children = (
+				6BA01F7B2E769544DFB8CCED /* Info.plist */,
+				47A778C477B76BAC7D31162B /* NotificationService.swift */,
+			);
+			path = NotifyService;
+			sourceTree = "<group>";
+		};
 		A1E9201D447150A088FAAD91 /* FurSight */ = {
 			isa = PBXGroup;
 			children = (
@@ -60,6 +98,7 @@
 			isa = PBXGroup;
 			children = (
 				9E49662168F5B0A3BB3BE0D7 /* FurSight.app */,
+				8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -68,6 +107,7 @@
 			isa = PBXGroup;
 			children = (
 				A1E9201D447150A088FAAD91 /* FurSight */,
+				5DA6E1FC718EE1042B8FD731 /* NotifyService */,
 				B7B868B14A6CA8C58F4E26B4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,16 +125,35 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		122A392C151E60B16E27E4DB /* FurSightNotify */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FEC639D7D0FBBF866D8FB891 /* Build configuration list for PBXNativeTarget "FurSightNotify" */;
+			buildPhases = (
+				5083067C23A6E24CF111BFE2 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FurSightNotify;
+			packageProductDependencies = (
+			);
+			productName = FurSightNotify;
+			productReference = 8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		C3C14EE1AEB8DC3A6C88402C /* FurSight */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0582B39332585AFB3C7EDAE0 /* Build configuration list for PBXNativeTarget "FurSight" */;
 			buildPhases = (
 				0C2C6F6B823524ADF94A92A0 /* Sources */,
 				109D21F474F19839CECF6593 /* Resources */,
+				869A55DD0CD72F3524F22C4F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D49C7A03AA11C586B92A6F0F /* PBXTargetDependency */,
 			);
 			name = FurSight;
 			packageProductDependencies = (
@@ -112,6 +171,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					122A392C151E60B16E27E4DB = {
+						DevelopmentTeam = WF6ZP7RJJV;
+						ProvisioningStyle = Automatic;
+					};
 					C3C14EE1AEB8DC3A6C88402C = {
 						DevelopmentTeam = WF6ZP7RJJV;
 						ProvisioningStyle = Automatic;
@@ -133,6 +196,7 @@
 			projectRoot = "";
 			targets = (
 				C3C14EE1AEB8DC3A6C88402C /* FurSight */,
+				122A392C151E60B16E27E4DB /* FurSightNotify */,
 			);
 		};
 /* End PBXProject section */
@@ -166,7 +230,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5083067C23A6E24CF111BFE2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F5644C7B7F0A1E8F8DFD292 /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D49C7A03AA11C586B92A6F0F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 122A392C151E60B16E27E4DB /* FurSightNotify */;
+			targetProxy = F92E0D8DA8C17E8324A02C8D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		11C9BD0D8B538C7B7168684A /* Release */ = {
@@ -253,6 +333,22 @@
 			};
 			name = Debug;
 		};
+		7C5FE19406F5D88744369B1B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = NotifyService/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = studio.ohi.fursight.pictures;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 		7CE87B603EDC899C5CFA1613 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -312,6 +408,22 @@
 			};
 			name = Release;
 		};
+		AD629DA0E7D448FB5B278443 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = NotifyService/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = studio.ohi.fursight.pictures;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		D6A9DFFF9AEE65007EB52F9C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -347,6 +459,15 @@
 			buildConfigurations = (
 				4E7B7691798AC51ABBEDE350 /* Debug */,
 				7CE87B603EDC899C5CFA1613 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FEC639D7D0FBBF866D8FB891 /* Build configuration list for PBXNativeTarget "FurSightNotify" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD629DA0E7D448FB5B278443 /* Debug */,
+				7C5FE19406F5D88744369B1B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

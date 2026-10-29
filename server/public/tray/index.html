@@ -43,6 +43,7 @@
 <script src="/bean.js"></script>
 <script src="/tray.js"></script>
 <script src="/activity.js"></script>
+<script src="/sticker.js"></script>
 <script>
 // A simulated FurSight Tray: the litter tray with a scale and a camera looking down, standing in for the hardware
 // until it's built. It links like any FurSight device, then logs what the real Tray would: each visit (his weight,
@@ -54,7 +55,7 @@ const $ = (id) => document.getElementById(id), $app = $("app");
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const rnd = (a, b) => a + Math.random() * (b - a);
-let token = store.get("fs.trayToken"), me = null, entries = [];
+let token = store.get("fs.trayToken"), me = null, entries = [], lastSticker = null;
 let base = 4200 + Math.round(rnd(0, 300)), onTray = false, slow = store.get("fs.traySlow") === "1", auto = null;
 
 async function hub(path, opt = {}) {
@@ -149,6 +150,8 @@ function render() {
       <p class="muted">${actLine()}</p>
       <button class="btn ghost" id="actWeek">Fill a week of pet cam activity</button>
       <button class="btn grape" id="flop">${esc(p.name)} flops now</button>
+      <label class="btn ghost" for="flopPhoto">Flop, with a photo of him</label><input id="flopPhoto" type="file" accept="image/*" class="hidden">
+      <div id="stickerOut">${lastSticker ? `<img src="${lastSticker}" alt="Sticker" style="width:60%;display:block;margin:6px auto;transform:rotate(-4deg)">` : ""}</div>
       <p class="muted" style="font-size:13px">The real pet cam logs this by itself: free movement tracking, and one AI look each time he settles. These fill in simulated days for the demo.</p>
     </div>
     <div class="card">
@@ -159,7 +162,8 @@ function render() {
     </div>`;
   $("hop").onclick = hop;
   $("actWeek").onclick = fillActivity;
-  $("flop").onclick = flopNow;
+  $("flop").onclick = () => flopNow();
+  $("flopPhoto").onchange = async (e) => e.target.files[0] && flopNow(await shrink(e.target.files[0]));
   $("slow").onclick = () => { slow = !slow; store.set("fs.traySlow", slow ? "1" : null); render(); };
   $("auto").onclick = () => { if (auto) { clearInterval(auto); auto = null; } else auto = setInterval(hop, 90e3); render(); };
   $("topup").onclick = topUp;
@@ -223,11 +227,18 @@ async function fillActivity() {
   entries = (await hub("/diary?limit=200")).entries;
   render();
 }
-async function flopNow() {
+// photo: a picture of him to cut out as the moment's sticker (what the real pet cam does)
+async function flopNow(photo) {
   $("flop").disabled = true;
+  let sticker = null;
+  if (photo) {
+    $("stickerOut").innerHTML = `<div class="row">${bean("thinking", 48)}<p class="muted">SAM is cutting him out…</p></div>`;
+    sticker = await makeSticker(photo, async (path, body) => { const r = await fetch(API + path, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(body) }); return r.json(); }).catch(() => null);
+  }
   const p = me.pets[0], nick = String(p.nicknames || "").split(",").map((x) => x.trim()).filter(Boolean)[0], who = Math.random() < 0.5 && nick ? nick : p.name, now = Date.now();
   await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "pose", title: "Flopped", at: now, pet: p.name, extra: { pose: "flop", mins: 12, from: now - 12 * 60e3, to: now, sim: true } }) });
-  await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "moment", title: `${who} is having a big flop`, pet: p.name, extra: { pose: "flop", sim: true } }) });
+  await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "moment", title: `${who} is having a big flop`, pet: p.name, ...(sticker || photo ? { image: sticker || photo } : {}), extra: { pose: "flop", sim: true, sticker: !!sticker } }) });
+  if (sticker) { lastSticker = sticker; }
   entries = (await hub("/diary?limit=200")).entries;
   render();
 }

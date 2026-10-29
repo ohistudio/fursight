@@ -1,7 +1,7 @@
 // Phone notifications, sent through Apple. Only the hub calls this (it knows which iPhones belong to the
 // household and what just landed in the diary); it proves itself with HUB_KEY.
 //
-//   POST /api/notify  (x-hub-key)  { targets: [{ token, sandbox }], title, body, entry, kind }  -> { sent, failed }
+//   POST /api/notify  (x-hub-key)  { targets: [{ token, sandbox }], title, body, entry, kind, image? }  -> { sent, failed }
 //
 // Needs the Apple push key in the environment: APNS_KEY (the .p8 file's text), APNS_KEY_ID, APNS_TEAM_ID and
 // APNS_TOPIC (the app's bundle id). Without them it does nothing, so the rest of FurSight works without push.
@@ -40,7 +40,9 @@ module.exports = async (req, res) => {
   if (!process.env.HUB_KEY || !key || key.length !== process.env.HUB_KEY.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(process.env.HUB_KEY))) return res.status(401).json({ error: "hub only" });
   if (!process.env.APNS_KEY || !process.env.APNS_KEY_ID || !process.env.APNS_TEAM_ID || !process.env.APNS_TOPIC) return res.status(200).json({ sent: 0, skipped: "no Apple push key set" });
   const b = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-  const payload = { aps: { alert: { title: String(b.title || "FurSight").slice(0, 60), body: String(b.body || "").slice(0, 200) }, sound: "default", "thread-id": "fursight" }, entry: b.entry, kind: b.kind };
+  // with a picture (a flop sticker), the app's notification extension downloads it and shows it
+  const payload = { aps: { alert: { title: String(b.title || "FurSight").slice(0, 60), body: String(b.body || "").slice(0, 200) }, sound: "default", "thread-id": "fursight", ...(b.image ? { "mutable-content": 1 } : {}) },
+    entry: b.entry, kind: b.kind, ...(b.image ? { image: String(b.image) } : {}) };
   const results = await Promise.all((b.targets || []).slice(0, 10).map((t) => send(t.sandbox ? "api.sandbox.push.apple.com" : "api.push.apple.com", String(t.token), payload)));
   res.status(200).json({ sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).map((r) => r.reason || r.status) });
 };
