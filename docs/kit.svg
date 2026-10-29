@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="1200" height="860" font-family="Nunito, 'Avenir Next', 'Segoe UI', system-ui, sans-serif">
+  <title>The FurSight kit: two pet cams, the FurSight Tray and the app</title>
+  <defs>
+    <pattern id="planks" width="120" height="26" patternUnits="userSpaceOnUse"><rect width="120" height="26" fill="#EFE9F7"/><path d="M0 25.5H120M60 0V26" stroke="#E2D9EF" stroke-width="2"/></pattern>
+    <pattern id="litter" width="10" height="10" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#EADFC8"/><circle cx="3" cy="3" r="1.6" fill="#D8C9A8"/><circle cx="8" cy="7" r="1.4" fill="#D8C9A8"/></pattern>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7A4ED1"/></marker>
+    <filter id="lift" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="0" flood-color="#2B2A33" flood-opacity=".12"/></filter>
+  </defs>
+
+  <rect width="1200" height="860" fill="#F6F5F9"/>
+
+  <!-- heading -->
+  <text x="40" y="58" font-size="34" font-weight="900" fill="#2B2A33">The FurSight kit</text>
+  <text x="40" y="88" font-size="17" font-weight="700" fill="#6B6977">Two pet cams, a smart litter tray and the app. Ray-Ban Display and Quest are optional extras.</text>
+
+  <!-- ===================== the room ===================== -->
+  <g filter="url(#lift)"><rect x="30" y="110" width="790" height="520" rx="26" fill="#FFFFFF" stroke="#E4E1EA" stroke-width="2"/></g>
+  <clipPath id="room"><rect x="32" y="112" width="786" height="516" rx="24"/></clipPath>
+  <g clip-path="url(#room)">
+    <rect x="30" y="110" width="790" height="330" fill="#FBFAFD"/>
+    <rect x="30" y="440" width="790" height="190" fill="url(#planks)"/>
+    <line x1="30" y1="440" x2="820" y2="440" stroke="#D9D2E6" stroke-width="3"/>
+    <!-- window light -->
+    <rect x="70" y="150" width="120" height="150" rx="10" fill="#EAF6FE" stroke="#D3E9F7" stroke-width="3"/><path d="M130 150V300M70 225H190" stroke="#D3E9F7" stroke-width="3"/>
+
+    <!-- cam 2: on a shelf, the whole room -->
+    <path d="M736 236 L250 624 L820 624 L820 430 Z" fill="#2FA8F5" opacity=".07"/>
+    <path d="M736 236 L250 624 M736 236 L820 430" stroke="#2FA8F5" stroke-width="2.5" stroke-dasharray="8 7" fill="none" opacity=".7"/>
+    <rect x="680" y="246" width="120" height="10" rx="4" fill="#CBBFDD"/>
+    <g transform="translate(712 214)"><rect width="50" height="32" rx="10" fill="#2B2A33"/><circle cx="17" cy="16" r="9" fill="#2FA8F5"/><circle cx="17" cy="16" r="4" fill="#1E86C9"/><circle cx="40" cy="9" r="3" fill="#FF4D5E"/></g>
+
+    <!-- cam 1: on an arm over the pen, looking down -->
+    <path d="M430 112 V150 H470 V178" stroke="#B9AECB" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M470 206 L170 470 L690 470 Z" fill="#3DBE6B" opacity=".07"/>
+    <path d="M470 206 L170 470 M470 206 L690 470" stroke="#3DBE6B" stroke-width="2.5" stroke-dasharray="8 7" fill="none" opacity=".8"/>
+    <g transform="translate(445 176)"><rect width="50" height="32" rx="10" fill="#2B2A33"/><circle cx="25" cy="22" r="9" fill="#3DBE6B"/><circle cx="25" cy="22" r="4" fill="#2A9A52"/><circle cx="42" cy="8" r="3" fill="#FF4D5E"/></g>
+
+    <!-- the pen: floor, back fence, then everything inside, then the front fence -->
+    <path d="M160 470 H680 L730 606 H110 Z" fill="#E8F6EC"/>
+    <g stroke="#C8BEDA" stroke-width="3">
+      <path d="M160 470 H680"/><path d="M160 430 H680"/>
+      <path d="M160 430V470M212 430V470M264 430V470M316 430V470M368 430V470M420 430V470M472 430V470M524 430V470M576 430V470M628 430V470M680 430V470"/>
+    </g>
+
+    <!-- hay rack, against the back by the tray -->
+    <g transform="translate(320 420)">
+      <path d="M0 0 H110 L100 56 H10 Z" fill="#FFF6DD" stroke="#2B2A33" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M14 8 L22 50 M30 6 L34 52 M48 4 L46 52 M66 6 L62 52 M84 6 L78 50 M98 8 L90 48" stroke="#E0B23C" stroke-width="3" stroke-linecap="round"/>
+      <path d="M6 2 C30 -16 70 -18 104 0" stroke="#E0B23C" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M20 -2 C34 -14 52 -14 64 -4" stroke="#C9971F" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- the FurSight Tray: litter tray on a scale, a camera looking down into it, a temperature sensor -->
+    <g transform="translate(150 486)">
+      <rect x="-8" y="70" width="176" height="14" rx="6" fill="#9B6CF0"/>
+      <rect x="0" y="22" width="160" height="52" rx="12" fill="#FFFFFF" stroke="#2B2A33" stroke-width="3"/>
+      <rect x="10" y="30" width="140" height="22" rx="7" fill="url(#litter)"/>
+      <rect x="112" y="56" width="40" height="13" rx="4" fill="#22212A"/><text x="132" y="66" text-anchor="middle" font-size="10" font-weight="900" fill="#7CF0A3">1.10</text>
+      <g transform="translate(18 56)"><rect width="9" height="14" rx="4.5" fill="#FFFFFF" stroke="#FF4D5E" stroke-width="2"/><rect x="3" y="5" width="3" height="7" rx="1.5" fill="#FF4D5E"/></g>
+      <path d="M10 22 V-6 H40" stroke="#B9AECB" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <g transform="translate(36 -16)"><rect width="34" height="22" rx="7" fill="#2B2A33"/><circle cx="17" cy="15" r="6" fill="#FFB627"/></g>
+      <path d="M53 6 L28 30 M53 6 L120 30" stroke="#FFB627" stroke-width="2" stroke-dasharray="5 5" opacity=".9"/>
+    </g>
+
+    <!-- food bowl, water bowl, a hide -->
+    <g transform="translate(470 560)"><ellipse cx="0" cy="8" rx="30" ry="10" fill="#C9BFDA"/><path d="M-30 0 Q0 26 30 0 Z" fill="#FFB627"/><ellipse cx="0" cy="0" rx="30" ry="8" fill="#B07B3A"/><circle cx="-10" cy="-1" r="3" fill="#8E5F28"/><circle cx="6" cy="1" r="3" fill="#8E5F28"/><circle cx="14" cy="-2" r="2.6" fill="#8E5F28"/></g>
+    <g transform="translate(548 566)"><ellipse cx="0" cy="8" rx="30" ry="10" fill="#C9BFDA"/><path d="M-30 0 Q0 26 30 0 Z" fill="#2FA8F5"/><ellipse cx="0" cy="0" rx="30" ry="8" fill="#BFE5FB"/></g>
+    <path d="M600 540 Q600 488 646 488 Q692 488 692 540 Z" fill="#FFFFFF" stroke="#2B2A33" stroke-width="3"/><path d="M626 540 Q626 512 646 512 Q666 512 666 540" fill="#E8E2F2"/>
+
+    <!-- him: a loafing rabbit -->
+    <g transform="translate(400 536)">
+      <ellipse cx="0" cy="22" rx="40" ry="6" fill="#2B2A33" opacity=".1"/>
+      <path d="M-38 18 Q-40 -16 -6 -18 Q26 -20 34 8 Q36 20 24 22 H-30 Q-38 22 -38 18 Z" fill="#F4F2EE" stroke="#2B2A33" stroke-width="3"/>
+      <ellipse cx="22" cy="-30" rx="6" ry="16" transform="rotate(14 22 -30)" fill="#F4F2EE" stroke="#2B2A33" stroke-width="3"/>
+      <ellipse cx="22" cy="-30" rx="2.6" ry="10" transform="rotate(14 22 -30)" fill="#FFB3D4"/>
+      <ellipse cx="10" cy="-30" rx="6" ry="16" transform="rotate(-8 10 -30)" fill="#F4F2EE" stroke="#2B2A33" stroke-width="3"/>
+      <circle cx="20" cy="-2" r="2.8" fill="#2B2A33"/><circle cx="33" cy="6" r="2.4" fill="#FFB3D4"/>
+    </g>
+
+    <!-- the front fence -->
+    <g stroke="#B9AECB" stroke-width="3.5">
+      <path d="M110 606 H730"/><path d="M110 560 H730" opacity=".9"/>
+      <path d="M110 560V606M172 560V606M234 560V606M296 560V606M358 560V606M420 560V606M482 560V606M544 560V606M606 560V606M668 560V606M730 560V606" opacity=".75"/>
+    </g>
+  </g>
+
+  <!-- numbered callouts on the room -->
+  <g font-weight="900" font-size="17" text-anchor="middle" fill="#FFFFFF">
+    <circle cx="512" cy="186" r="17" fill="#3DBE6B" stroke="#FFFFFF" stroke-width="3"/><text x="512" y="192">1</text>
+    <circle cx="784" cy="206" r="17" fill="#2FA8F5" stroke="#FFFFFF" stroke-width="3"/><text x="784" y="212">2</text>
+    <circle cx="140" cy="470" r="17" fill="#9B6CF0" stroke="#FFFFFF" stroke-width="3"/><text x="140" y="476">3</text>
+    <circle cx="456" cy="410" r="17" fill="#FFB627" stroke="#FFFFFF" stroke-width="3"/><text x="456" y="416" fill="#2B2A33">4</text>
+  </g>
+
+  <!-- ===================== devices and the cloud ===================== -->
+  <g font-weight="800" fill="#2B2A33">
+    <g filter="url(#lift)"><rect x="850" y="110" width="320" height="250" rx="22" fill="#FFFFFF" stroke="#E4E1EA" stroke-width="2"/></g>
+    <text x="874" y="146" font-size="20" font-weight="900">FurSight, wherever you are</text>
+    <!-- phone -->
+    <g transform="translate(878 170)"><rect width="34" height="58" rx="8" fill="#2B2A33"/><rect x="4" y="6" width="26" height="42" rx="4" fill="#9B6CF0"/><rect x="11" y="51" width="12" height="3" rx="1.5" fill="#6B6977"/></g>
+    <text x="928" y="190" font-size="16" font-weight="900">iPhone and web app</text><text x="928" y="212" font-size="14" fill="#6B6977">Diary, stats, Ask, food check, alerts</text>
+    <!-- glasses -->
+    <g transform="translate(872 252)" fill="none" stroke="#2B2A33" stroke-width="4"><rect x="0" y="4" width="20" height="16" rx="6"/><rect x="26" y="4" width="20" height="16" rx="6"/><path d="M20 10 H26"/><rect x="29" y="8" width="8" height="6" rx="1" fill="#3DBE6B" stroke="none"/></g>
+    <text x="928" y="262" font-size="16" font-weight="900">Ray-Ban Display</text><text x="928" y="284" font-size="14" fill="#6B6977">Can he eat this? Pet cam peek, Ask</text>
+    <!-- quest -->
+    <g transform="translate(874 304)"><rect width="44" height="26" rx="10" fill="#2B2A33"/><circle cx="13" cy="13" r="5" fill="#2FA8F5"/><circle cx="31" cy="13" r="5" fill="#2FA8F5"/></g>
+    <text x="928" y="320" font-size="16" font-weight="900">Meta Quest</text><text x="928" y="342" font-size="14" fill="#6B6977">Verdict cards pinned to real food</text>
+
+    <g filter="url(#lift)"><rect x="850" y="392" width="320" height="238" rx="22" fill="#2B2A33"/></g>
+    <text x="874" y="430" font-size="20" font-weight="900" fill="#FFFFFF">In the cloud</text>
+    <rect x="874" y="448" width="272" height="66" rx="14" fill="#3A3946"/>
+    <text x="890" y="474" font-size="16" font-weight="900" fill="#FFFFFF">Household hub</text><text x="890" y="498" font-size="13.5" fill="#C9C7D2">Shared diary, live pet cam relay</text>
+    <rect x="874" y="526" width="272" height="86" rx="14" fill="#9B6CF0"/>
+    <text x="890" y="552" font-size="16" font-weight="900" fill="#FFFFFF">Meta Model API</text>
+    <text x="890" y="575" font-size="13.5" fill="#F3EEFF">Muse Spark: verdicts, poses, Ask</text>
+    <text x="890" y="596" font-size="13.5" fill="#F3EEFF">SAM 3.1: finds him, hay, droppings</text>
+  </g>
+  <path d="M820 470 C836 470 836 480 850 480" stroke="#7A4ED1" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1010 392 V364" stroke="#7A4ED1" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- ===================== what each piece does ===================== -->
+  <g font-weight="800">
+    <g filter="url(#lift)"><rect x="30" y="652" width="276" height="150" rx="20" fill="#FFFFFF" stroke="#E4E1EA" stroke-width="2"/></g>
+    <circle cx="58" cy="682" r="15" fill="#3DBE6B"/><text x="58" y="688" text-anchor="middle" font-size="16" font-weight="900" fill="#FFFFFF">1</text>
+    <text x="82" y="688" font-size="17" font-weight="900" fill="#2B2A33">FurSight Cam, overhead</text>
+    <text x="48" y="716" font-size="14" fill="#6B6977">Looks down on his space: resting,</text>
+    <text x="48" y="736" font-size="14" fill="#6B6977">flops and stretches, how much hay</text>
+    <text x="48" y="756" font-size="14" fill="#6B6977">is gone, food and water levels,</text>
+    <text x="48" y="776" font-size="14" fill="#6B6977">and the live view on your glasses.</text>
+
+    <g filter="url(#lift)"><rect x="320" y="652" width="276" height="150" rx="20" fill="#FFFFFF" stroke="#E4E1EA" stroke-width="2"/></g>
+    <circle cx="348" cy="682" r="15" fill="#2FA8F5"/><text x="348" y="688" text-anchor="middle" font-size="16" font-weight="900" fill="#FFFFFF">2</text>
+    <text x="372" y="688" font-size="17" font-weight="900" fill="#2B2A33">FurSight Cam, the room</text>
+    <text x="338" y="716" font-size="14" fill="#6B6977">Where he roams free: on the move,</text>
+    <text x="338" y="736" font-size="14" fill="#6B6977">chewing cables or skirting, and</text>
+    <text x="338" y="756" font-size="14" fill="#6B6977">room checks that ring anything</text>
+    <text x="338" y="776" font-size="14" fill="#6B6977">he could chew or swallow.</text>
+
+    <g filter="url(#lift)"><rect x="610" y="652" width="276" height="150" rx="20" fill="#FFFFFF" stroke="#E4E1EA" stroke-width="2"/></g>
+    <circle cx="638" cy="682" r="15" fill="#9B6CF0"/><text x="638" y="688" text-anchor="middle" font-size="16" font-weight="900" fill="#FFFFFF">3</text>
+    <text x="662" y="688" font-size="17" font-weight="900" fill="#2B2A33">FurSight Tray</text>
+    <text x="628" y="716" font-size="14" fill="#6B6977">A scale under his litter tray weighs</text>
+    <text x="628" y="736" font-size="14" fill="#6B6977">him and what he leaves each visit;</text>
+    <text x="628" y="756" font-size="14" fill="#6B6977">a camera checks droppings; a sensor</text>
+    <text x="628" y="776" font-size="14" fill="#6B6977">logs temperature and humidity.</text>
+
+    <g filter="url(#lift)"><rect x="900" y="652" width="270" height="150" rx="20" fill="#FFFFFF" stroke="#E4E1EA" stroke-width="2"/></g>
+    <circle cx="928" cy="682" r="15" fill="#FFB627"/><text x="928" y="688" text-anchor="middle" font-size="16" font-weight="900" fill="#2B2A33">4</text>
+    <text x="952" y="688" font-size="17" font-weight="900" fill="#2B2A33">Hay, food, water</text>
+    <text x="918" y="716" font-size="14" fill="#6B6977">Set up where Cam 1 can see them.</text>
+    <text x="918" y="736" font-size="14" fill="#6B6977">Less hay eaten than usual is one</text>
+    <text x="918" y="756" font-size="14" fill="#6B6977">of the first signs of gut stasis,</text>
+    <text x="918" y="776" font-size="14" fill="#6B6977">so FurSight watches the rack.</text>
+  </g>
+
+  <text x="40" y="826" font-size="13.5" font-weight="700" fill="#6B6977">Schematic, not to scale. In the hackathon build the cams are any webcam or old phone running the FurSight cam page;</text>
+  <text x="40" y="846" font-size="13.5" font-weight="700" fill="#6B6977">the Tray's scale and sensors are simulated in the app, and labelled as simulated wherever they show.</text>
+</svg>

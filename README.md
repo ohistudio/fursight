@@ -1,14 +1,19 @@
 # FurSight
 
-Pet care for AI glasses. Hold up food and ask if your pet can have it. Look at your pet and ask if they're okay. Look round the room and see what they'll chew.
+Rabbits hide illness. FurSight notices. It notices, your vet decides.
 
-One app, a profile per pet, every answer scored against that pet.
+A rabbit care kit and app: pet cams watch how he rests, flops and eats his hay, a smart litter tray weighs him and what he leaves, and the app turns it into a diary, alerts and a weekly card. Hold up food and ask if he can have it. Ask what he's doing right now. Look round the room and see what he'll chew.
+
+![The FurSight kit: two pet cams, the FurSight Tray and the app](docs/kit.svg)
+
+More on the kit: [fursight-seven.vercel.app/kit](https://fursight-seven.vercel.app/kit/). Try it without the kit or a rabbit: open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
 
 Built for the Meta Global AI Developer Hackathon (Indie track, Build for Your World) on the Meta Model API:
 
-- **Muse Spark 1.3**: care plans, food verdicts, health checks, hazard lists as structured JSON
-- **SAM 3.1**: finds and tracks the pet and hazards, so labels sit on the real objects
-- **Muse Image**: portraits, streak cards, the cleaned-up room
-- **Muse Voice Transcribe**: hands-free questions
+- **Muse Spark**: food verdicts, poses from the pet cam, hay and bowl levels, the Ask agent, care plans, weekly cards, all as structured JSON
+- **SAM 3.1**: finds him on the pet cams, cuts him out as stickers, measures the hay pile, outlines room hazards
+- **Muse Voice Transcribe**: spoken questions and notes on Quest
 
-Phone first, then Ray-Ban Display through the Wearables Device Access Toolkit.
+Runs on the web, iPhone, Ray-Ban Display (a glasses web app, plus the iPhone app through the Wearables Device Access Toolkit) and Meta Quest.
+
+In this hackathon build the FurSight Tray's scale and sensors are simulated in the app, and labelled as simulated wherever they show. The pet cams are real: any webcam or old phone running the cam page.

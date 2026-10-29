@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FurSight Kit</title>
+<meta name="description" content="The FurSight kit: two pet cams, the FurSight Tray and the app, for rabbits.">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+<style>
+  :root { --fern: #3DBE6B; --sun: #FFB627; --sky: #2FA8F5; --grape: #9B6CF0; --grape-lip: #7A4ED1; --ink: #2B2A33; --muted: #6B6977; --line: #E4E1EA; --bg: #F6F5F9; --card: #FFFFFF; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 700 17px/1.5 Nunito, system-ui, sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 28px 16px 60px; display: grid; gap: 22px; }
+  h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 900; margin: 0; line-height: 1.1; }
+  h2 { font-size: 24px; font-weight: 900; margin: 0 0 10px; }
+  p { margin: 0; } .muted { color: var(--muted); }
+  .card { background: var(--card); border: 2px solid var(--line); border-bottom-width: 5px; border-radius: 22px; padding: 20px; }
+  .schematic { display: block; width: 100%; height: auto; border-radius: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .chip { display: inline-block; border-radius: 999px; padding: 3px 12px; font-size: 14px; font-weight: 900; }
+  .real { background: #E3F6EA; color: #1F7A41; } .sim { background: #EFE7FF; color: var(--grape-lip); }
+  ul { margin: 8px 0 0; padding-left: 20px; } li { margin: 4px 0; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 10px 22px; border-radius: 16px; background: var(--grape-lip); color: #fff; font: 900 17px Nunito, sans-serif; text-decoration: none; box-shadow: 0 5px 0 #5B35A8; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  a { color: var(--grape-lip); }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>The FurSight kit</h1>
+    <p class="muted" style="margin-top:8px">Rabbits hide illness. The kit watches the small daily things that change first: how much hay goes, his weight, what he leaves in the tray, how he rests. It notices, your vet decides.</p>
+  </div>
+
+  <a href="kit.svg" title="Open the schematic full size"><img class="schematic" src="kit.svg" alt="Schematic of a room with a rabbit pen: FurSight Cam 1 on an arm looking down into the pen, FurSight Cam 2 on a shelf watching the room, the FurSight Tray (a litter tray on a scale with a camera and a temperature sensor), a hay rack, food and water bowls, and the phone, Ray-Ban Display and Quest connected through the household hub to the Meta Model API."></a>
+
+  <div class="grid">
+    <div class="card">
+      <h2>In the box</h2>
+      <ul>
+        <li><b>FurSight Cam ×2:</b> one overhead on the pen, one for the room.</li>
+        <li><b>FurSight Tray:</b> a scale under his litter tray, a camera looking down into it, a temperature and humidity sensor.</li>
+        <li><b>The app:</b> iPhone and web, with Ray-Ban Display and Quest if you have them.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>Setting it up</h2>
+      <ul>
+        <li>Cam 1 over his space, with his <b>hay, food bowl and water in view</b>.</li>
+        <li>Cam 2 where he roams free, high up, out of reach.</li>
+        <li>The Tray where his litter tray goes. Zero it once, empty.</li>
+        <li>Link each one to your household with a 4-letter code.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>In this hackathon build</h2>
+      <p><span class="chip real">Real</span> The app on web, iPhone, Ray-Ban Display and Quest; pet cams (any webcam or old phone running the cam page); food checks, Ask, stickers, hay and bowl levels, all on the Meta Model API.</p>
+      <p style="margin-top:10px"><span class="chip sim">Simulated</span> The Tray's scale, droppings camera and temperature sensor, until the hardware is built. Everything simulated is labelled as simulated wherever it shows.</p>
+    </div>
+  </div>
+
+  <div class="card row" style="justify-content:space-between">
+    <div><h2 style="margin:0">Try it without the kit</h2><p class="muted">A demo rabbit with two weeks of life, a simulated pet cam, the Tray, and its room sensor.</p></div>
+    <a class="btn" href="/">Open FurSight</a>
+  </div>
+</main>
+</body>
+</html>
