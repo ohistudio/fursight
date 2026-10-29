@@ -48,6 +48,17 @@ async function call(path, body) {
   return JSON.parse(txt);
 }
 
+// Muse Image, editing from reference photos (data URLs): returns a JPEG data URL. "low" is one pass, faster.
+async function imageEdit(prompt, images, { size = "1024x1024", strength = "low" } = {}) {
+  const out = await call("/images/edits", {
+    model: "muse-image-1.0", prompt, n: 1, size, output_format: "jpeg", reasoning_strength: strength,
+    images: images.map((u) => ({ image_url: u })),
+  });
+  const b64 = out.data && out.data[0] && out.data[0].b64_json;
+  if (!b64) throw Object.assign(new Error("no image came back"), { status: 502 });
+  return "data:image/jpeg;base64," + b64;
+}
+
 // Speech to text with Muse Voice Transcribe: a mono 16-bit WAV (16 or 24 kHz) in, the transcript out.
 // keywords bias recognition towards words it might mishear (the pet's name, "hay", "pellets").
 async function transcribe(wav, keywords = []) {
@@ -64,4 +75,4 @@ async function transcribe(wav, keywords = []) {
   return (JSON.parse(txt).transcript || "").trim();
 }
 
-module.exports = { spark, call, transcribe, SPARK };
+module.exports = { spark, call, transcribe, imageEdit, SPARK };

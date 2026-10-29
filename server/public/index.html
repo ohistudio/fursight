@@ -83,6 +83,18 @@
   .live { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.55); color: #fff; font-size: 13px; padding: 4px 10px; border-radius: 999px; }
   .live b { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--coral); margin-right: 6px; }
 
+  .check { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 2px solid var(--line); cursor: pointer; }
+  .check:last-child { border-bottom: 0; }
+  .box { width: 30px; height: 30px; flex: none; border-radius: 10px; border: 3px solid var(--line); display: grid; place-items: center; transition: transform .12s; }
+  .check.done .box { background: var(--fern); border-color: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); }
+  .check.done .box::after { content: ""; width: 12px; height: 7px; border: 4px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -2px); }
+  .check.done span { color: var(--muted); text-decoration: line-through; }
+  .check:active .box { transform: scale(.9); }
+  .streak { display: flex; align-items: center; gap: 10px; }
+  .flame { font-size: 30px; font-weight: 900; color: var(--sun-lip); }
+  .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
+  .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
+  .recap img { width: 100%; border-radius: 16px; display: block; margin-bottom: 12px; }
   .center { text-align: center; }
   .hero { padding: 34px 4px 10px; }
   .hero .big { width: 92px; height: 92px; margin: 0 auto 18px; border-radius: 28px; background: var(--fern); box-shadow: 0 7px 0 var(--fern-lip); display: grid; place-items: center; }
@@ -272,8 +284,17 @@ function carePlan(c) {
 
 // ---------------------------------------------------------------- tabs
 
+async function makeRecap(btn) {
+  btn.disabled = true; btn.textContent = "Making this week's card…";
+  try {
+    const r = await api("/api/recap", {});
+    toast(r.title); render();
+  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Make this week's card"; }
+}
+
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  $app.innerHTML = `<div class="stack">${header()}<button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  document.getElementById("recap").onclick = (e) => makeRecap(e.target);
   const { entries } = await hub("/diary?limit=80");
   const $l = document.getElementById("list");
   if (!entries.length) {
@@ -284,9 +305,11 @@ async function today() {
   $l.innerHTML = entries.map((e) => {
     const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
     const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
-    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam" }[e.kind] || cap(e.kind);
+    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
+    if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
+      <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p></div>`;
     return `${head}<div class="card entry pop" style="margin-bottom:10px">
       ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
@@ -295,9 +318,37 @@ async function today() {
   }).join("");
 }
 
-function care() {
-  const p = me.pets[0];
-  $app.innerHTML = `<div class="stack">${header()}${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
+// ---------------------------------------------------------------- daily care: tick the care plan's daily list
+
+const dayKey = (t) => new Date(t).toDateString();
+function careState(entries, items) {
+  const byDay = new Map();
+  for (const e of entries) if (e.kind === "care") { const d = dayKey(e.at); if (!byDay.has(d)) byDay.set(d, new Set()); byDay.get(d).add(e.title); }
+  const done = (d) => items.length && items.every((i) => byDay.get(d.toDateString())?.has(i));
+  const day = new Date(); if (!done(day)) day.setDate(day.getDate() - 1);
+  let streak = 0; while (done(day)) { streak++; day.setDate(day.getDate() - 1); }
+  return { today: byDay.get(new Date().toDateString()) || new Set(), streak };
+}
+const careItems = (p) => ((p.care && p.care.daily) || []).slice(0, 8);
+
+async function care() {
+  const p = me.pets[0], items = careItems(p);
+  $app.innerHTML = `<div class="stack">${header()}<div id="checklist"></div>${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
+  if (!items.length) return;
+  const { entries } = await hub("/diary?limit=200");
+  const st = careState(entries, items);
+  const left = items.filter((i) => !st.today.has(i)).length;
+  document.getElementById("checklist").innerHTML = `<div class="card pop">
+    <div class="row" style="justify-content:space-between"><h2>Today's care</h2>
+      <div class="streak"><span class="flame">${st.streak}</span><span class="muted" style="line-height:1.1">day<br>streak</span></div></div>
+    <div class="bar"><i style="width:${Math.round(((items.length - left) / items.length) * 100)}%"></i></div>
+    <p class="muted" style="margin:8px 0 4px">${left ? `${left} to go` : `All done for today. Lovely.`}</p>
+    ${items.map((i) => `<div class="check ${st.today.has(i) ? "done" : ""}" data-item="${esc(i)}"><div class="box"></div><span>${esc(i)}</span></div>`).join("")}</div>`;
+  for (const el of document.querySelectorAll(".check:not(.done)")) el.onclick = async () => {
+    el.classList.add("done");
+    try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "care", title: el.dataset.item, pet: p.name }) }); } catch (e) { el.classList.remove("done"); return toast(e.message); }
+    care();
+  };
 }
 
 function devices() {
@@ -309,6 +360,8 @@ function devices() {
     <h3 style="margin:18px 4px 0">Linked</h3>
     ${me.devices.map((d) => `<div class="card row pop"><div><h3>${esc(d.name)}</h3><div class="when">${icon[d.kind] || cap(d.kind)}${d.id === me.device ? " · this one" : ""} · seen ${ago(d.seen)}</div></div>
       ${d.id === me.device ? "" : `<button class="btn ghost small" data-remove="${d.id}" style="flex:none">Remove</button>`}</div>`).join("")}
+    <div class="card stack pop"><h3>Home</h3><p class="muted">${me.home ? "Home is set. The glasses show the pet cam first when you're away." : "Set home so the glasses know when you're away and lead with the pet cam."}</p>
+      <button class="btn ghost" id="sethome">${me.home ? "Update home to here" : "I'm home: set it here"}</button></div>
     <button class="btn ghost" id="out">Unlink this phone</button>
   </div>`;
   const $c = document.getElementById("code"), $b = document.getElementById("claim");
@@ -319,6 +372,14 @@ function devices() {
     catch (err) { toast(err.message); $b.disabled = false; }
   };
   for (const b of document.querySelectorAll("[data-remove]")) b.onclick = async () => { await hub("/devices/" + b.dataset.remove, { method: "DELETE" }); render(); };
+  document.getElementById("sethome").onclick = (e) => {
+    if (!navigator.geolocation) return toast("This browser can't share location");
+    e.target.disabled = true;
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try { await hub("/home", { method: "PUT", body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) }); toast("Home set"); render(); }
+      catch (err) { toast(err.message); e.target.disabled = false; }
+    }, () => { toast("Location wasn't shared"); e.target.disabled = false; }, { enableHighAccuracy: true, timeout: 15000 });
+  };
   document.getElementById("out").onclick = () => { if (confirm("Unlink this phone from FurSight?")) { hub("/devices/" + me.device, { method: "DELETE" }).finally(() => { token = null; store.set("fs.token", null); render(); }); } };
 }
 function ago(t) { const s = (Date.now() - t) / 1000; return s < 90 ? "just now" : s < 5400 ? Math.round(s / 60) + " min ago" : s < 129600 ? Math.round(s / 3600) + " h ago" : Math.round(s / 86400) + " days ago"; }

@@ -11,6 +11,7 @@
 //   GET  /hub/diary?limit=&before=        (token)                     -> { entries }  (no images)
 //   GET  /hub/diary/:id/image             (token)                     -> image/jpeg
 //   PUT  /hub/cams/:channel               (token) {name}              -> cam      (a webcam registering itself)
+//   PUT  /hub/home                        (token) {lat, lng, radius?} -> home     (where "home" is, for home/away)
 //   DELETE /hub/devices/:id               (token)                     -> ok
 //   POST /hub/link/start                  {kind, name}                -> { code, nonce }  (a device wants in)
 //   GET  /hub/link/poll?code=&nonce=                                  -> { status: waiting|linked|expired, token? }
@@ -97,7 +98,8 @@ export class Household {
       const pets = this.all("SELECT id, data, photo IS NOT NULL AS has_photo, updated FROM pets ORDER BY updated").map((r) => ({ id: r.id, ...JSON.parse(r.data), has_photo: !!r.has_photo, updated: r.updated }));
       const cams = this.all("SELECT channel, name, updated FROM cams ORDER BY updated");
       const devices = this.all("SELECT id, kind, name, created, seen FROM devices ORDER BY created");
-      return json({ household, device, pets, cams, devices });
+      const home = this.one("SELECT v FROM meta WHERE k = 'home'");
+      return json({ household, device, pets, cams, devices, home: home ? JSON.parse(home.v) : null });
     }
 
     let mm;
@@ -143,6 +145,14 @@ export class Household {
       const b = await req.json().catch(() => ({}));
       this.sql.exec("INSERT OR REPLACE INTO cams VALUES (?, ?, ?, ?)", mm[1], String(b.name || "Pet cam").slice(0, 40), device, Date.now());
       return json({ channel: mm[1], name: b.name || "Pet cam" });
+    }
+    if (p === "/home" && m === "PUT") {
+      const b = await req.json().catch(() => ({}));
+      const lat = Number(b.lat), lng = Number(b.lng), radius = Math.min(2000, Math.max(50, Number(b.radius) || 200));
+      if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return err("lat/lng needed");
+      const home = { lat: +lat.toFixed(5), lng: +lng.toFixed(5), radius };   // ~1 m precision is plenty
+      this.sql.exec("INSERT OR REPLACE INTO meta VALUES ('home', ?)", JSON.stringify(home));
+      return json(home);
     }
     if ((mm = p.match(/^\/devices\/([A-Za-z0-9]{12})$/)) && m === "DELETE") {
       this.sql.exec("DELETE FROM devices WHERE id = ?", mm[1]);
