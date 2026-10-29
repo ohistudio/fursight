@@ -42,6 +42,7 @@
 <main id="app"></main>
 <script src="/bean.js"></script>
 <script src="/tray.js"></script>
+<script src="/activity.js"></script>
 <script>
 // A simulated FurSight Tray: the litter tray with a scale and a camera looking down, standing in for the hardware
 // until it's built. It links like any FurSight device, then logs what the real Tray would: each visit (his weight,
@@ -134,12 +135,21 @@ function render() {
       <p class="muted" style="font-size:13px">Replay rewrites today so far (a simulator control). Slow day: visits leave almost nothing, the early sign of gut stasis. Auto: a visit every 90 seconds. Topping up the litter adds weight without a rabbit, and the Tray ignores it.</p>
     </div>
     <div class="card">
+      <h2>Pet cam activity</h2>
+      <p class="muted">${actLine()}</p>
+      <button class="btn ghost" id="actWeek">Fill a week of pet cam activity</button>
+      <button class="btn grape" id="flop">${esc(p.name)} flops now</button>
+      <p class="muted" style="font-size:13px">The real pet cam logs this by itself: free movement tracking, and one AI look each time he settles. These fill in simulated days for the demo.</p>
+    </div>
+    <div class="card">
       <h2>Tray camera</h2>
       <p class="muted">The camera looks down into the tray after a visit. Use a photo of his droppings to run the check.</p>
       <label class="btn sky" for="shot">Check droppings from a photo</label><input id="shot" type="file" accept="image/*" class="hidden">
       <div id="poo"></div>
     </div>`;
   $("hop").onclick = hop;
+  $("actWeek").onclick = fillActivity;
+  $("flop").onclick = flopNow;
   $("slow").onclick = () => { slow = !slow; store.set("fs.traySlow", slow ? "1" : null); render(); };
   $("auto").onclick = () => { if (auto) { clearInterval(auto); auto = null; } else auto = setInterval(hop, 90e3); render(); };
   $("topup").onclick = topUp;
@@ -174,6 +184,40 @@ async function replay(isSlow) {
     await hub("/diary", { method: "POST", body: JSON.stringify(v) });
   }
   slow = isSlow; store.set("fs.traySlow", slow ? "1" : null);
+  entries = (await hub("/diary?limit=200")).entries;
+  render();
+}
+// ---------------------------------------------------------------- pet cam activity, simulated
+
+function actLine() {
+  const a = FSActivity.summary(entries);
+  return a.has ? `Today: ${a.today.flops} flops, ${FSActivity.time(a.today.loaf + a.today.stretched + a.today.flop)} resting, ${FSActivity.time(a.today.active)} on the move.` : "No activity yet.";
+}
+async function fillActivity() {
+  for (const b of document.querySelectorAll("button")) b.disabled = true;
+  const now = new Date(), p = me.pets[0].name, r = (a, b) => Math.round(rnd(a, b));
+  for (let d = 7; d >= 1; d--) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d, 22), flops = r(2, 6);
+    await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "pose-day", title: "", at: day.getTime(), pet: p,
+      extra: { date: FSTray.key(day), loaf: r(70, 160), stretched: r(40, 110), flop: flops * r(6, 14), flops, sitting: r(60, 120), eating: r(70, 110), grooming: r(20, 45), active: r(120, 220), sim: true } }) });
+  }
+  // today so far: a few real-looking spells
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8).getTime(), spells = [["loaf", 25, 45], ["active", 30, 50], ["stretched", 15, 35], ["eating", 15, 25], ["loaf", 20, 40], ["flop", 6, 14], ["active", 20, 40]];
+  let t = start;
+  for (const [pose, a, b] of spells) {
+    const mins = r(a, b); if (t + mins * 60e3 > now) break;
+    await hub("/diary", { method: "POST", body: JSON.stringify(pose === "active" ? { kind: "active", title: "On the move", at: t + mins * 60e3, pet: p, extra: { mins, sim: true } }
+      : { kind: "pose", title: FSActivity.WORD[pose], at: t + mins * 60e3, pet: p, extra: { pose, mins, from: t, to: t + mins * 60e3, sim: true } }) });
+    t += mins * 60e3 + r(10, 40) * 60e3;
+  }
+  entries = (await hub("/diary?limit=200")).entries;
+  render();
+}
+async function flopNow() {
+  $("flop").disabled = true;
+  const p = me.pets[0], nick = String(p.nicknames || "").split(",").map((x) => x.trim()).filter(Boolean)[0], who = Math.random() < 0.5 && nick ? nick : p.name, now = Date.now();
+  await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "pose", title: "Flopped", at: now, pet: p.name, extra: { pose: "flop", mins: 12, from: now - 12 * 60e3, to: now, sim: true } }) });
+  await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "moment", title: `${who} is having a big flop`, pet: p.name, extra: { pose: "flop", sim: true } }) });
   entries = (await hub("/diary?limit=200")).entries;
   render();
 }

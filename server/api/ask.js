@@ -21,6 +21,7 @@ const { context, camFrame, camView, recent, addDiary } = require("../lib/hub");
 const FSCal = require("../public/calendar.js");
 const FSTray = require("../public/tray.js");
 const FSRoutine = require("../public/routines.js");
+const FSActivity = require("../public/activity.js");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -148,6 +149,18 @@ module.exports = handler(async (body, req) => {
         step: { tool: "tray", label: `Checked the litter tray: ${t.today.visits} visits, ${t.today.output_g} g${t.usual ? ` (usual ${t.usual.output_g} g by now)` : ""}, ${t.today.weight_g ? (t.today.weight_g / 1000).toFixed(2) + " kg" : "no weight yet"}`, detail: t.reasons.join("; ") || undefined } };
     },
   };
+  if (ctx) tools.check_activity = {
+    description: `What ${p.name} has been doing, from the pet cam: minutes loafing, stretched out, flopped, eating, grooming and on the move, today and this week; flops; the latest moment; and any warnings (chewing things that aren't food). A relaxed rabbit loafs, stretches and flops; an unwell one sits hunched and still. Use it for "how's he been", mood, energy and behaviour.`,
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    async run() {
+      const all = await recent(home.token, 200).catch(() => []), a = FSActivity.summary(all);
+      const warnings = all.filter((e) => e.kind === "warning" && e.at > Date.now() - 3 * 864e5).slice(0, 5).map((e) => ({ when: new Date(e.at).toISOString().slice(0, 16), what: e.title }));
+      if (!a.has && !warnings.length) return { output: { error: "No pet cam activity yet: a pet cam needs to be watching him." }, step: { tool: "activity", label: "No pet cam activity yet" } };
+      seen.set("activity", { kind: "activity" });
+      return { output: { id: "activity", today_minutes: a.today, week_minutes: a.week, latest_moment: a.moment ? { when: new Date(a.moment.at).toISOString().slice(0, 16), what: a.moment.title } : null, warnings, simulated: a.simulated },
+        step: { tool: "activity", label: `Checked his day: ${a.today.flops} flop${a.today.flops === 1 ? "" : "s"}, ${FSActivity.time(a.today.loaf + a.today.stretched + a.today.flop)} resting, ${FSActivity.time(a.today.active)} on the move` } };
+    },
+  };
   if (ctx) tools.read_calendar = {
     description: `${p.name}'s calendar: reminders the owner set (vet visits, vaccinations, birthday) for the next 60 days, and grooming and checks (coat, nails, bottom, teeth) with when each is due.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
@@ -193,7 +206,7 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;
-      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$/.test(e.kind));
+      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$|^(pose|active)/.test(e.kind));
       const out = list.slice(0, 25).map((e, i) => {
         const id = "d" + (seen.size + i + 1);
         seen.set(id, { kind: e.kind, what: e.title });
@@ -239,7 +252,7 @@ module.exports = handler(async (body, req) => {
       properties: {
         answer: { type: "string", description: "spoken style, at most 45 words, no lists, no markdown" },
         verdict: { type: "string", enum: ["safe", "caution", "toxic", "vet", "none"], description: "only for safety or health questions; vet = see a vet today" },
-        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"tray\", \"calendar\", \"reminder\", \"done\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
+        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"tray\", \"activity\", \"calendar\", \"reminder\", \"done\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
         about: { type: "string", description: "short name of the thing in the photo the answer is about, or empty" },
         box: { type: "array", items: { type: "integer" }, description: "[x_min,y_min,x_max,y_max] 0-1000 of that thing in the photo, or []" },
       },
