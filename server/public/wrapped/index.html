@@ -37,7 +37,22 @@
   .center { text-align: center; align-items: center; }
   .hint { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom)); left: 0; right: 0; text-align: center; font-size: 13px; opacity: .7; }
   .tapL, .tapR { position: absolute; top: 0; bottom: 0; z-index: 4; } .tapL { left: 0; width: 30%; } .tapR { right: 0; width: 70%; }
-  @media (prefers-reduced-motion: reduce) { .slide .pop, .slide.on .rise { animation: none; } }
+  /* a bit of life: stickers pop in, then sway and bob; small ones drift up behind the words */
+  .slide.on .alive { animation: pop .6s cubic-bezier(.3,1.6,.5,1) both, sway 3.4s ease-in-out .6s infinite alternate; }
+  @keyframes sway { from { transform: rotate(-6deg) translateY(0); } to { transform: rotate(5deg) translateY(-10px); } }
+  .mini { position: absolute; width: 58px; opacity: 0; pointer-events: none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.2)); z-index: 0; }
+  .slide.on .mini { animation: drift var(--d, 7s) linear var(--w, 0s) infinite; }
+  @keyframes drift { 0% { opacity: 0; transform: translateY(40px) rotate(var(--r, -10deg)); } 15% { opacity: .45; } 85% { opacity: .45; } 100% { opacity: 0; transform: translateY(-240px) rotate(calc(var(--r, -10deg) * -1)); } }
+  .slide > *:not(.mini):not(.blob) { position: relative; z-index: 1; }
+  .aka { display: flex; flex-wrap: wrap; gap: 10px; }
+  .aka span { background: #fff; color: var(--ink); border-radius: 999px; padding: 10px 18px; font-size: 24px; font-weight: 900; box-shadow: 0 5px 0 rgba(0,0,0,.18); opacity: 0; }
+  .slide.on .aka span { animation: pop .55s cubic-bezier(.3,1.6,.5,1) both; }
+  .parade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 4px; align-items: center; }
+  .parade figure { margin: 0; display: grid; justify-items: center; gap: 4px; }
+  .parade img { width: 100%; max-height: 120px; object-fit: contain; opacity: 0; filter: drop-shadow(0 6px 10px rgba(0,0,0,.22)); }
+  .slide.on .parade img { animation: pop .55s cubic-bezier(.3,1.6,.5,1) both, sway 3s ease-in-out 1s infinite alternate; }
+  .parade figcaption { font-size: 12px; font-weight: 800; text-align: center; opacity: .9; line-height: 1.15; }
+  @media (prefers-reduced-motion: reduce) { .slide .pop, .slide.on .rise, .slide.on .alive, .slide.on .mini, .slide.on .aka span, .slide.on .parade img { animation: none; opacity: 1; } .mini { display: none; } }
 </style>
 </head>
 <body>
@@ -72,13 +87,19 @@ async function build() {
   const since = Date.now() - 7 * 864e5, week = entries.filter((e) => e.at >= since);
   // the week's cut-outs of him (flop moments, what Ask saw), newest first; slides take one each, round again
   const stickers = week.filter((e) => e.has_image && e.kind !== "recap" && (e.png || (e.extra && e.extra.sticker))).map((e) => img(`/diary/${e.id}/image`));
-  const sticker = (i, size = 220) => (stickers.length ? `<img class="sticker pop" src="${stickers[i % stickers.length]}" alt="" style="width:auto;max-width:${size}px;max-height:${size}px;align-self:center">` : "");
+  const sticker = (i, size = 220) => (stickers.length ? `<img class="sticker alive" src="${stickers[i % stickers.length]}" alt="" style="width:auto;max-width:${size}px;max-height:${size}px;align-self:center">` : "");
+  // little versions of him drifting up behind a slide (each a different sticker, a different pace)
+  const minis = (from, n = 3) => stickers.length ? Array.from({ length: n }, (_, k) => `<img class="mini" src="${stickers[(from + k) % stickers.length]}" alt="" style="left:${[3, 84, 6, 80][k % 4]}%;top:${[84, 88, 14, 18][k % 4]}%;--d:${6 + k * 1.3}s;--w:${k * 1.1}s;--r:${k % 2 ? 9 : -12}deg">`).join("") : "";
   const a = FSActivity.summary(entries), days = FSActivity.days(entries, 7), tray = FSTray.summary(entries);
   const dayName = (k) => FSCal.day(k).toLocaleDateString(undefined, { weekday: "long" });
   const from = new Date(since).toLocaleDateString(undefined, { day: "numeric", month: "short" }), to = new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" });
   const S = [];
 
-  S.push({ bg: COLOURS[0], html: `<div class="k rise">${from} to ${to}</div><div class="rise" style="align-self:center">${stickers.length ? sticker(0, 260) : bean("safe", 200)}</div><h1 class="rise">${esc(name)}'s week,<br>wrapped</h1><p class="rise">Here's what FurSight noticed.</p>`, cls: "center" });
+  S.push({ bg: COLOURS[0], html: `<div class="k rise">${from} to ${to}</div>${minis(1)}<div style="align-self:center">${stickers.length ? sticker(0, 260) : bean("safe", 200)}</div><h1 class="rise">${esc(name)}'s week,<br>wrapped</h1><p class="rise">Here's what FurSight noticed.</p>`, cls: "center" });
+
+  // also known as: every nickname pops in, each with a little him
+  if (nicks.length) S.push({ bg: COLOURS[7], html: `<div class="k rise">Also known as</div><h1 class="rise">${esc(name)}, or</h1>
+    <div class="aka">${nicks.map((n, i) => `<span style="animation-delay:${0.25 + i * 0.22}s">${esc(n)}</span>`).join("")}</div>${sticker(3, 190)}${minis(2, 2)}` });
 
   if (a.has && a.week.loaf > 0) {
     const perDay = a.week.loaf / 7;
@@ -86,11 +107,11 @@ async function build() {
   }
   if (a.has && a.week.flops > 0) {
     const best = days.reduce((m, d) => (d.flops > m.flops ? d : m), days[0]);
-    S.push({ bg: COLOURS[4], html: `${sticker(1, 170)}<div class="k rise">Flop count</div><div class="big rise" data-count="${a.week.flops}">0</div><h1 class="rise">flops this week</h1>${a.week.flopsYou ? `<p class="rise" style="opacity:.75;font-size:14px">${a.week.flopsYou} spotted by you</p>` : ""}<p class="rise">${best.flops ? `His floppiest day was ${dayName(best.date)}, with ${best.flops}. A flop means he feels completely safe.` : "A flop means he feels completely safe."}</p>` });
+    S.push({ bg: COLOURS[4], html: `${minis(3, 2)}${sticker(1, 170)}<div class="k rise">Flop count</div><div class="big rise" data-count="${a.week.flops}">0</div><h1 class="rise">flops this week</h1>${a.week.flopsYou ? `<p class="rise" style="opacity:.75;font-size:14px">${a.week.flopsYou} spotted by you</p>` : ""}<p class="rise">${best.flops ? `His floppiest day was ${dayName(best.date)}, with ${best.flops}. A flop means he feels completely safe.` : "A flop means he feels completely safe."}</p>` });
   }
   const moment = week.find((e) => e.kind === "moment" && e.has_image);
   if (moment) S.push({ bg: COLOURS[5], html: `<div class="k rise">Moment of the week</div><img class="sticker pop" src="${img(`/diary/${moment.id}/image`)}" alt=""><h1 class="rise" style="text-align:center">${esc(moment.title)}</h1>`, cls: "center" });
-  if (a.has && a.week.active > 0) S.push({ bg: COLOURS[2], html: `<div class="k rise">Zoomies</div><h1 class="rise">On the move for</h1><div class="big rise" data-count="${Math.round(a.week.active)}" data-fmt="hm">0</div><p class="rise">Exploring, hopping and the odd binky.</p>` });
+  if (a.has && a.week.active > 0) S.push({ bg: COLOURS[2], html: `${sticker(4, 150)}<div class="k rise">Zoomies</div><h1 class="rise">${esc(nick(1))} was on the move for</h1><div class="big rise" data-count="${Math.round(a.week.active)}" data-fmt="hm">0</div><p class="rise">Exploring, hopping and the odd binky.</p>${minis(0, 3)}` });
 
   const ws = tray.week.filter((d) => d.weight_g);
   if (ws.length > 1) {
@@ -109,8 +130,13 @@ async function build() {
   const groomed = week.filter((e) => e.kind === "routine-done"), cared = week.filter((e) => e.kind === "care").length;
   if (groomed.length || cared) {
     const g = {}; for (const e of groomed) g[e.title] = (g[e.title] || 0) + 1;
-    S.push({ bg: COLOURS[2], html: `<div class="k rise">Good care</div><h1 class="rise">You looked after him</h1><div class="list rise">${cared ? `<div><b>${cared}</b>daily care jobs ticked</div>` : ""}${Object.entries(g).map(([t, n]) => `<div><b>${n}</b>${esc(t.toLowerCase())}</div>`).join("")}</div>` });
+    S.push({ bg: COLOURS[2], html: `<div class="k rise">Good care</div><h1 class="rise">You looked after ${esc(nick(2))}</h1><div class="list rise">${cared ? `<div><b>${cared}</b>daily care jobs ticked</div>` : ""}${Object.entries(g).map(([t, n]) => `<div><b>${n}</b>${esc(t.toLowerCase())}</div>`).join("")}</div>` });
   }
+
+  // caught on cam: every cut-out of the week, popping in one by one
+  const caught = week.filter((e) => e.has_image && e.kind !== "recap" && (e.png || (e.extra && e.extra.sticker))).slice(0, 6);
+  if (caught.length >= 2) S.push({ bg: COLOURS[1], html: `<div class="k rise">Caught on cam</div><h1 class="rise">${esc(nick(0))}'s best bits</h1>
+    <div class="parade">${caught.map((e, i) => `<figure><img src="${img(`/diary/${e.id}/image`)}" alt="" style="animation-delay:${0.2 + i * 0.15}s,${1 + i * 0.2}s"><figcaption>${esc(new Date(e.at).toLocaleDateString(undefined, { weekday: "short" }))}</figcaption></figure>`).join("")}</div>` });
 
   // this week's card, if one was made
   const card = week.find((e) => e.kind === "recap" && e.has_image);

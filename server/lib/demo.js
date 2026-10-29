@@ -6,7 +6,7 @@
 //
 // Used by /api/demo ("Try it with a demo rabbit" in the web app) and scripts/demo.js.
 //
-//   await makeDemo({ into: token, sticker })   a week of simulated stats in an EXISTING household instead: weight
+//   await makeDemo({ into: token, stickers })   a week of simulated stats in an EXISTING household instead: weight
 //   and tray, room temperature, activity and flops, and moments with a sticker. Nothing else there is touched,
 //   and every entry is marked simulated (extra.sim), so DELETE /hub/diary?sim=1 takes exactly these back out.
 const FSActivity = require("../public/activity.js");
@@ -52,7 +52,7 @@ async function photo(from) {
   } catch (e) { console.warn("No photo copied:", e.message); return null; }
 }
 
-async function makeDemo({ pic = null, sticker = null, tz = 0, into = null } = {}) {
+async function makeDemo({ pic = null, stickers = [], tz = 0, into = null } = {}) {
   TZ = Number.isFinite(Number(tz)) ? Number(tz) : 0;
   now = new Date();
   midnight = Math.floor((now.getTime() + TZ * 60e3) / D) * D - TZ * 60e3;
@@ -129,8 +129,12 @@ async function makeDemo({ pic = null, sticker = null, tz = 0, into = null } = {}
   // ---- moments, checks and care across the fortnight
   // his nicknames in the moments, as the pet cam would write them (the demo rabbit's, or yours)
   const nk = (i) => NICKS.length ? NICKS[i % NICKS.length] : NAME;
-  const momentDays = [[5, 15, `${nk(0)} is having a big flop`], [3, 14, `${nk(1)} is stretched out like a croissant`], hr > 9 ? [0, Math.min(hr - 0.2, 13.3), `${nk(2)} is having a big flop`] : [1, 16, "Bun Bun is having a big flop"]];
-  for (const [d, h, title] of momentDays) await go({ kind: "moment", title, at: at(d, h), ...(sticker || pic ? { image: sticker || pic } : {}), extra: { pose: "flop", sticker: !!sticker } });
+  const momentDays = [[6, 11, `${nk(0)} is having a big flop`], [5, 15, `${nk(1)} is stretched out like a croissant`], [4, 9, `${nk(2)} is loafing like a pro`],
+    [3, 14, `${nk(0)} flopped right by the hay`], [2, 17, `${nk(1)} is having a big stretch`], hr > 9 ? [0, Math.min(hr - 0.2, 13.3), `${nk(2)} is having a big flop`] : [1, 16, `${nk(2)} is having a big flop`]];
+  momentDays.forEach(([d, h, title], i) => {
+    const st = stickers.length ? stickers[i % stickers.length] : null;
+    go({ kind: "moment", title, at: at(d, h), ...(st || pic ? { image: st || pic } : {}), extra: { pose: i % 2 ? "stretched" : "flop", sticker: !!st } });
+  });
   await go({ kind: "droppings", title: "Droppings check", note: "38 found. Round, even, a good size. A healthy tray.", verdict: "safe", at: at(1, 9), extra: { count: 38, verdict: "normal" } });
   if (into) { await Promise.all(inflight); return { token, entries: n }; }   // just the stats; the rest is a demo household's
   await go({ kind: "warning", title: "Chewing a cable", note: `The pet cam saw ${NAME} chewing the lamp cable behind the sofa.`, verdict: "caution", at: at(2, 19) });

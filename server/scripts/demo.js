@@ -10,7 +10,9 @@ const WEB = process.env.WEB || "http://localhost:3030";
 
 (async () => {
   const pic = (await photo(process.argv[2])) || "data:image/jpeg;base64," + fs.readFileSync(path.join(__dirname, "../public/demo/xiaosi.jpg")).toString("base64");
-  const { token, entries } = await makeDemo({ pic, tz: -new Date().getTimezoneOffset() });
+  const stickers = ["xiaosi-sticker.png", "xiaosi-sticker-2.png", "xiaosi-sticker-3.png", "xiaosi-sticker-4.png"]
+    .map((f) => "data:image/png;base64," + fs.readFileSync(path.join(__dirname, "../public/demo", f)).toString("base64"));
+  const { token, entries } = await makeDemo({ pic, stickers, tz: -new Date().getTimezoneOffset() });
   console.log(`Demo household ready: ${entries} mock entries.`);
   console.log(`Open it:  ${WEB}/#t=${token}`);
   console.log(`Wrapped:  ${WEB}/wrapped/#t=${token}`);

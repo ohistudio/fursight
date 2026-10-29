@@ -52,15 +52,22 @@
     const nicks = String(pet.nicknames || "").split(/[,;\n]/).map((x) => x.trim()).filter(Boolean).slice(0, 3);
     g.font = "800 32px Nunito, sans-serif"; g.globalAlpha = 0.85; g.fillText(`${from} to ${to}${nicks.length ? "  ·  aka " + nicks.join(", ") : ""}`, 70, 156); g.globalAlpha = 1;
 
-    // his sticker: the latest cut-out from the week, else his photo in a circle
-    const st = week.find((e) => e.has_image && e.kind !== "recap" && (e.png || (e.extra && e.extra.sticker)));
+    // his stickers: the week's three latest cut-outs, the newest big in the middle, two smaller and tilted behind;
+    // with none, his photo in a circle
+    const sts = week.filter((e) => e.has_image && e.kind !== "recap" && (e.png || (e.extra && e.extra.sticker))).slice(0, 3);
     const top = 190, box = 470;
+    const place = (im, cx, cy, size, deg) => {
+      const s = Math.min(size / im.width, size / im.height), w = im.width * s, h = im.height * s;
+      g.save(); g.translate(cx, cy); g.rotate((deg * Math.PI) / 180);
+      g.shadowColor = "rgba(30,20,60,0.35)"; g.shadowBlur = 30; g.shadowOffsetY = 14;
+      g.drawImage(im, -w / 2, -h / 2, w, h); g.restore();
+    };
     try {
-      if (st) {
-        const im = await load(img(`/diary/${st.id}/image`)), s = Math.min(box / im.width, box / im.height);
-        g.shadowColor = "rgba(30,20,60,0.35)"; g.shadowBlur = 30; g.shadowOffsetY = 14;
-        g.drawImage(im, (W - im.width * s) / 2, top + (box - im.height * s) / 2, im.width * s, im.height * s);
-        g.shadowColor = "transparent";
+      if (sts.length) {
+        const ims = await Promise.all(sts.map((e) => load(img(`/diary/${e.id}/image`)).catch(() => null)));
+        if (ims[1]) place(ims[1], 230, top + 300, 290, -11);
+        if (ims[2]) place(ims[2], W - 230, top + 290, 290, 10);
+        if (ims[0]) place(ims[0], W / 2, top + box / 2, sts.length > 1 ? 420 : box, -2);
       } else if (pet.has_photo) {
         const im = await load(img(`/pets/${pet.id}/photo`)), r = 210, cx = W / 2, cy = top + box / 2, s = Math.max((r * 2) / im.width, (r * 2) / im.height);
         g.fillStyle = "#FFFFFF"; g.beginPath(); g.arc(cx, cy, r + 14, 0, Math.PI * 2); g.fill();
@@ -78,13 +85,13 @@
 
     // four tiles
     const { tiles, simulated } = facts(entries, recap);
-    const tw = (W - 200 - 24) / 2, th = 140;
+    const tw = (W - 200 - 24) / 2, th = 118;
     y += 6;
     tiles.forEach((t, i) => {
       const x = 100 + (i % 2) * (tw + 24), ty = y + Math.floor(i / 2) * (th + 20);
       g.fillStyle = "#F3EEFF"; rounded(g, x, ty, tw, th, 28); g.fill();
-      g.fillStyle = "#2B2A33"; g.font = "900 56px Nunito, sans-serif"; g.fillText(t.big, x + 28, ty + 72);
-      g.fillStyle = "#6B6977"; g.font = "800 28px Nunito, sans-serif"; g.fillText(t.label, x + 28, ty + 114);
+      g.fillStyle = "#2B2A33"; g.font = "900 52px Nunito, sans-serif"; g.fillText(t.big, x + 28, ty + 62);
+      g.fillStyle = "#6B6977"; g.font = "800 27px Nunito, sans-serif"; g.fillText(t.label, x + 28, ty + 100);
     });
     y += Math.ceil(tiles.length / 2) * (th + 20) + 26;
 
