@@ -64,6 +64,13 @@
   .del:hover { color: var(--coral-lip); } .recap .del { margin-top: 8px; justify-self: start; }
   .entry img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; flex: none; background: var(--line); }
   /* a cut-out sticker is shown whole, bigger, with no tile behind it */
+  .entry img, .recap img { cursor: zoom-in; }
+  .lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(20,19,26,.86); display: grid; place-items: center; padding: 20px; animation: lbIn .18s ease-out; cursor: zoom-out; }
+  .lightbox.out { opacity: 0; transition: opacity .18s; }
+  .lightbox img { max-width: min(100%, 900px); max-height: 86vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  .lightbox img.sticker { border-radius: 0; box-shadow: none; filter: drop-shadow(0 12px 24px rgba(0,0,0,.35)); }
+  .lightbox button { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: #fff; color: var(--ink); font: 900 18px Nunito, sans-serif; }
+  @keyframes lbIn { from { opacity: 0; transform: scale(.97); } }
   .entry img.sticker { width: 96px; height: 96px; object-fit: contain; border-radius: 0; background: none; filter: drop-shadow(0 3px 5px rgba(0,0,0,.18)); }
   .badge { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink); font-weight: 900; }
   .v-safe { background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); } .v-caution { background: var(--sun); box-shadow: 0 3px 0 var(--sun-lip); }
@@ -332,6 +339,17 @@ function welcome() {
 }
 function deviceName() { const ua = navigator.userAgent; return /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android phone" : /Mac/.test(ua) ? "Mac" : "Browser"; }
 
+// a picture, big, over everything; tap anywhere or press Escape to close
+function enlarge(src, sticker = false) {
+  const o = document.createElement("div");
+  o.className = "lightbox";
+  o.innerHTML = `<img src="${src}" alt="" class="${sticker ? "sticker" : ""}"><button aria-label="Close">✕</button>`;
+  const close = () => { o.classList.add("out"); setTimeout(() => o.remove(), 180); document.removeEventListener("keydown", esc); };
+  const esc = (e) => e.key === "Escape" && close();
+  o.onclick = close; document.addEventListener("keydown", esc);
+  document.body.appendChild(o);
+}
+
 // link a simulated device to this household without typing a code; returns its device key
 async function linkSimulated(kind, name) {
   const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind, name }) });
@@ -477,12 +495,14 @@ async function today() {
       <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p>
       <button class="del" data-del="${e.id}">Remove</button></div>`;
     return `${head}<div class="card entry pop" style="margin-bottom:10px" data-entry="${e.id}">
-      ${e.has_image ? `<img loading="lazy" class="${e.extra && e.extra.sticker ? "sticker" : ""}" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
+      ${e.has_image ? `<img loading="lazy" class="${e.png || (e.extra && e.extra.sticker) ? "sticker" : ""}" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
       ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}${recordDetails(e)}
       <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""} · <button class="del" data-del="${e.id}">Remove</button></div></div></div>`;
   }).join("");
   remindButtons($l);
+  // tap a picture to see it big
+  for (const im of $l.querySelectorAll(".entry img, .recap img")) im.onclick = () => enlarge(im.src, im.classList.contains("sticker"));
   // remove an entry: asks first, then it's gone from every device
   for (const b of $l.querySelectorAll("[data-del]")) b.onclick = async () => {
     if (!confirm("Remove this from the diary? It's removed on every device and can't be undone.")) return;
@@ -1084,16 +1104,22 @@ function cam() {
   const cams = me.cams;
   $app.innerHTML = `<div class="stack">${header()}
     <div class="camgrid">${cams.map((c) => `<div class="card stack pop"><div class="cam"><img data-ch="${c.channel}" alt="" title="Tap to zoom in"><video data-vid="${c.channel}" muted playsinline autoplay hidden title="Tap to zoom in"></video><div class="live" data-live="${c.channel}">connecting</div></div>
-      <div class="row" style="justify-content:space-between"><h3>${esc(c.name)}</h3><div class="row" style="gap:6px"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}">Wide</button></div></div></div>`).join("")}</div>
+      <div class="row" style="justify-content:space-between"><h3>${esc(c.name)}</h3><div class="row" style="gap:6px"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}">Wide</button></div><button class="del" data-rmcam="${c.channel}" style="justify-self:start">Remove this camera</button></div></div>`).join("")}</div>
     ${cams.length ? `<p class="muted center" style="font-size:13px">Tap a picture to zoom in there. FurSight zooms too when it looks for ${esc(me.pets[0].name)}.</p>` : ""}
     <div class="card stack pop"><h2>Room check</h2><p class="muted">What could ${esc(me.pets[0].name)} chew, swallow, get stuck in or pee on? FurSight looks and rings each one.</p>
       ${cams.map((c) => `<button class="btn ghost" data-room="${c.channel}">Check the ${esc(c.name)} view</button>`).join("")}
       <label class="btn ghost" for="roomPhoto">Check a photo of a room</label><input id="roomPhoto" type="file" accept="image/*" class="hidden">
       <div id="roomOut"></div></div>
     ${cams.length ? "" : `<div class="card center stack pop"><h3>No pet cam yet</h3><p class="muted">Any old laptop or phone with a camera can watch ${esc(me.pets[0].name)}'s space. Open FurSight on it and use it as a pet cam.</p></div>`}
-    <button class="btn sky" id="be">${store.get("fs.camName") ? `Start the ${esc(store.get("fs.camName"))} cam again` : "Use this device as a pet cam"}</button>
+    <button class="btn sky" id="be">Use this device as a pet cam</button>
     <label class="btn ghost small" for="clip" style="justify-self:center">For a demo: play a video as the pet cam</label><input id="clip" type="file" accept="video/*" class="hidden"></div>`;
-  document.getElementById("be").onclick = () => beCam(!!store.get("fs.camName"));
+  document.getElementById("be").onclick = chooseCam;
+  for (const b of document.querySelectorAll("[data-rmcam]")) b.onclick = async () => {
+    const c = me.cams.find((x) => x.channel === b.dataset.rmcam);
+    if (!confirm(`Remove the ${c ? c.name : ""} camera? Its device stops being a pet cam until it's set up again.`)) return;
+    try { await hub("/cams/" + b.dataset.rmcam, { method: "DELETE" }); if (store.get("fs.camChannel") === b.dataset.rmcam) store.set("fs.camOn", null); toast("Camera removed"); render(); }
+    catch (err) { toast(err.message); }
+  };
   document.getElementById("clip").onchange = (e) => e.target.files[0] && beCam(!!store.get("fs.camName"), e.target.files[0]);
   for (const b of document.querySelectorAll("[data-room]")) b.onclick = () => roomCheck({ cam: true, channel: b.dataset.room });
   document.getElementById("roomPhoto").onchange = async (e) => e.target.files[0] && roomCheck({ image: await shrink(e.target.files[0]) });
@@ -1153,6 +1179,24 @@ function cam() {
 // this browser becomes a pet cam: camera on, register with the household, send to the relay while watched
 // A device that was a pet cam goes back to being one after a reload or a restart (fs.camOn), with the same name
 // and channel, so viewers reconnect and no new camera is added.
+// Use this device as a pet cam: be one of the household's cameras (this device takes it over: same name, same
+// place, the old one is replaced) or add a new one. A device that already is one of them just carries on.
+function chooseCam() {
+  const mine = store.get("fs.camChannel");
+  if (!me.cams.length) return beCam(false);
+  stopCam();
+  $app.innerHTML = `<div class="stack pop"><h2>Which camera is this?</h2><p class="muted">Pick the camera this device replaces, so you don't end up with two, or add a new one.</p>
+    ${me.cams.map((c) => `<button class="btn ghost" data-be="${c.channel}">${c.channel === mine ? `Carry on as ${esc(c.name)}` : `Be the ${esc(c.name)}${/\bcam(era)?$/i.test(c.name) ? "" : " cam"}`}</button>`).join("")}
+    <button class="btn sky" id="beNew">A new camera</button>
+    <button class="btn ghost small" id="beBack" style="justify-self:center">Back</button></div>`;
+  for (const b of document.querySelectorAll("[data-be]")) b.onclick = () => {
+    const c = me.cams.find((x) => x.channel === b.dataset.be);
+    beCam(false, null, c.name, c.channel === mine ? null : c.channel);
+  };
+  document.getElementById("beNew").onclick = () => { store.set("fs.camName", null); beCam(false); };
+  document.getElementById("beBack").onclick = () => render();
+}
+
 // the simulated pet cam: this tab plays the demo recording through everything a real pet cam does
 async function demoCam() {
   $app.innerHTML = `<p class="muted center" style="padding:40px">Starting the simulated pet cam…</p>`;
@@ -1162,22 +1206,49 @@ async function demoCam() {
   } catch (e) { toast("Couldn't load the demo recording"); }
 }
 
+// a recording, as square frames in memory (12 a second, 360 px): played from here it can't be paused
+const CLIP_FPS = 12, CLIP_SIDE = 360;
+async function bakeClip(player) {
+  if (!player.requestVideoFrameCallback || !window.createImageBitmap) return null;
+  const out = [];
+  let next = 0;
+  player.loop = false; player.currentTime = 0; player.playbackRate = 2;
+  await new Promise((done) => {
+    const grab = async (_, meta) => {
+      if (meta.mediaTime >= next) {
+        const w = player.videoWidth, h = player.videoHeight, sq = Math.min(w, h);
+        out.push(await createImageBitmap(player, (w - sq) / 2, (h - sq) / 2, sq, sq, { resizeWidth: CLIP_SIDE, resizeHeight: CLIP_SIDE }));
+        next += 1 / CLIP_FPS;
+      }
+      if (player.ended || out.length >= 720) return done();
+      player.requestVideoFrameCallback(grab);
+    };
+    player.onended = done;
+    setTimeout(done, 20000);   // switched away mid-way (the video pauses): keep what's in hand
+    player.requestVideoFrameCallback(grab);
+    player.play();
+  });
+  player.onended = null; player.playbackRate = 1; player.loop = true; player.play();
+  return out.length >= 12 ? out : null;   // under a second's worth: play the video itself instead
+}
+
 // clip: a video file to play instead of the camera (for recording a demo); it goes through everything the camera
 // would, and the page says it's a recording.
-async function beCam(resume = false, clip = null, fixedName = null) {
+async function beCam(resume = false, clip = null, fixedName = null, replaces = null) {
   stopCam();
   const name = fixedName || (resume && store.get("fs.camName")) || prompt("Name this camera", store.get("fs.camName") || `${me.pets[0].name}'s pen`); if (!name) return render();
-  if (!fixedName) store.set("fs.camName", name);
+  if (!fixedName || !clip) store.set("fs.camName", name);   // the demo recording doesn't rename this device's cam
   if (!clip) store.set("fs.camOn", "1");   // a clip can't carry on after a reload
   let channel = store.get("fs.camChannel"), key = store.get("fs.camKey");
   const rnd = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"[b % 56]).join("");
   if (!channel || !key) { channel = rnd(16); key = rnd(24); store.set("fs.camChannel", channel); store.set("fs.camKey", key); }
-  await hub("/cams/" + channel, { method: "PUT", body: JSON.stringify({ name }) });
+  await hub("/cams/" + channel, { method: "PUT", body: JSON.stringify({ name, ...(replaces ? { replaces } : {}) }) });
   $tabs.classList.add("hidden");
   $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2>${clip ? `<span class="chip" style="justify-self:start">Playing a recording: ${esc(clip.name)}</span>` : ""}<p class="muted">Leave this open near ${esc(me.pets[0].name)}. It only sends pictures while someone is watching.</p>
     <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>
     <p class="muted center" id="act" style="font-size:14px">Watching for ${esc(me.pets[0].name)}</p>
     <button class="btn ghost" id="stop">Stop being a pet cam</button></div>`;
+  let clipFrames = null, clipT0 = 0;
   let ws, stream, timer, viewers = 0, jpeg = 0, alive = true, wake, rtc = null, lastJpeg = 0, view = { z: 1, x: 0.5, y: 0.5 };
   try { wake = await navigator.wakeLock?.request("screen"); } catch (e) {}
   if (clip) {
@@ -1186,6 +1257,13 @@ async function beCam(resume = false, clip = null, fixedName = null) {
     try { await player.play(); stream = player.captureStream ? player.captureStream() : player.mozCaptureStream(); }
     catch (e) { toast("Couldn't play that video here (try Chrome)"); return render(); }
     clip.player = player;   // keep it playing
+    window.__fsClipPlayer = player;   // (tests pause it to stand in for a background tab)
+    // Chrome pauses a video in a tab you've switched away from, which froze the stream: read the recording into
+    // memory once (about 6 s), then play it from there, which nothing pauses
+    const st = document.getElementById("st"); if (st) st.textContent = "getting the recording ready";
+    clipFrames = await bakeClip(player).catch(() => null);
+    clipT0 = performance.now();
+    stream = player.captureStream ? player.captureStream() : player.mozCaptureStream();   // the first one ended with the read-through
   }
   else try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false }); }
   catch (e) { toast("Couldn't open the camera"); return render(); }
@@ -1205,11 +1283,12 @@ async function beCam(resume = false, clip = null, fixedName = null) {
   // frames straight from the camera track: Chrome stops updating a <video> in a hidden tab, which froze the
   // stream as soon as you switched away from this page. The <video> stays as the preview (and the fallback).
   let frame = null, reading = true;
-  if (window.MediaStreamTrackProcessor) {
+  if (window.MediaStreamTrackProcessor && !clipFrames && stream.getVideoTracks()[0]) {
     const reader = new MediaStreamTrackProcessor({ track: stream.getVideoTracks()[0] }).readable.getReader();
     (async () => { while (reading) { const { value, done } = await reader.read(); if (done) break; const old = frame; frame = value; if (old) old.close(); } if (frame) frame.close(); })().catch(() => {});
   }
-  const src = () => frame ? { img: frame, w: frame.displayWidth, h: frame.displayHeight } : { img: v, w: v.videoWidth, h: v.videoHeight };
+  const src = () => clipFrames && clipFrames.length ? { img: clipFrames[Math.floor((performance.now() - clipT0) / (1000 / CLIP_FPS)) % clipFrames.length], w: CLIP_SIDE, h: CLIP_SIDE }
+    : frame ? { img: frame, w: frame.displayWidth, h: frame.displayHeight } : { img: v, w: v.videoWidth, h: v.videoHeight };
   const ticker = new Worker(URL.createObjectURL(new Blob(["setInterval(() => postMessage(0), 1000 / 15)"], { type: "text/javascript" })));
   timer = { stop: () => ticker.terminate() };
   ticker.onmessage = () => {
@@ -1228,7 +1307,7 @@ async function beCam(resume = false, clip = null, fixedName = null) {
   };
   // a recording doesn't keep his diary: what it shows didn't happen now
   const watch = clip ? 0 : watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
-  camStop = () => { alive = false; reading = false; timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
+  camStop = () => { alive = false; reading = false; if (clipFrames) clipFrames.forEach((b) => b.close()); timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { store.set("fs.camOn", null); stopCam(); render(); };
 }
 

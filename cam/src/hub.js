@@ -177,9 +177,9 @@ export class Household {
       // ?kinds=record,photo: only those (uploads can be dated years back, past the latest 200)
       const kinds = (url.searchParams.get("kinds") || "").split(",").filter((k) => /^[a-z-]{1,20}$/.test(k)).slice(0, 8);
       const entries = (kinds.length
-        ? this.all(`SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? AND json_extract(data, '$.kind') IN (${kinds.map(() => "?").join(",")}) ORDER BY at DESC LIMIT ?`, before, ...kinds, limit)
-        : this.all("SELECT id, at, data, image IS NOT NULL AS has_image FROM diary WHERE at < ? ORDER BY at DESC LIMIT ?", before, limit))
-        .map((r) => ({ id: r.id, at: r.at, ...JSON.parse(r.data), has_image: !!r.has_image }));
+        ? this.all(`SELECT id, at, data, image IS NOT NULL AS has_image, hex(substr(image, 1, 1)) = '89' AS png FROM diary WHERE at < ? AND json_extract(data, '$.kind') IN (${kinds.map(() => "?").join(",")}) ORDER BY at DESC LIMIT ?`, before, ...kinds, limit)
+        : this.all("SELECT id, at, data, image IS NOT NULL AS has_image, hex(substr(image, 1, 1)) = '89' AS png FROM diary WHERE at < ? ORDER BY at DESC LIMIT ?", before, limit))
+        .map((r) => ({ id: r.id, at: r.at, ...JSON.parse(r.data), has_image: !!r.has_image, ...(r.png ? { png: true } : {}) }));   // png: a cut-out sticker
       return json({ entries });
     }
     if ((mm = p.match(/^\/diary\/([A-Za-z0-9]{1,20})\/image$/)) && m === "GET") {
@@ -189,10 +189,16 @@ export class Household {
 
     if ((mm = p.match(/^\/cams\/([A-Za-z0-9]{16})$/)) && m === "PUT") {
       const b = await req.json().catch(() => ({}));
-      // one cam per device: a browser that lost its saved channel starts a new one, which replaces the old
+      // one cam per device: a browser that lost its saved channel starts a new one, which replaces the old.
+      // {replaces: channel}: this device takes over an existing cam (its name and its place in the list)
       this.sql.exec("DELETE FROM cams WHERE device = ? AND channel != ?", device, mm[1]);
+      if (/^[A-Za-z0-9]{16}$/.test(String(b.replaces || "")) && b.replaces !== mm[1]) this.sql.exec("DELETE FROM cams WHERE channel = ?", b.replaces);
       this.sql.exec("INSERT OR REPLACE INTO cams VALUES (?, ?, ?, ?)", mm[1], String(b.name || "Pet cam").slice(0, 40), device, Date.now());
       return json({ channel: mm[1], name: b.name || "Pet cam" });
+    }
+    if ((mm = p.match(/^\/cams\/([A-Za-z0-9]{16})$/)) && m === "DELETE") {
+      this.sql.exec("DELETE FROM cams WHERE channel = ?", mm[1]);
+      return json({ ok: true });
     }
     if (p === "/home" && m === "PUT") {
       const b = await req.json().catch(() => ({}));

@@ -58,10 +58,11 @@
   #quick button { font: 900 19px Nunito, sans-serif; color: #FFFFFF; background: #000000; border: 3px solid #3A3A44; border-radius: 18px; padding: 12px 10px; text-align: left; }
   #quick button.sel { border-color: #9B6CF0; background: #1C1530; }
   #q.sel { box-shadow: 0 0 0 3px #FFFFFF55; }
-  .seen { display: flex; gap: 12px; align-items: flex-start; margin-top: 8px; }
-  .seen .txt { flex: 1; min-width: 0; font-size: 19px; }
-  .seen .pic { flex: none; width: 200px; height: 200px; display: grid; place-items: center; }
-  .seen .pic img { max-width: 200px; max-height: 200px; }
+  /* what it saw: the sticker of him big and centred, the answer under it */
+  .seen { display: grid; gap: 8px; margin-top: 6px; }
+  .seen .txt { font-size: 19px; }
+  .seen .pic { height: 230px; display: grid; place-items: center; }
+  .seen .pic img { max-width: 100%; max-height: 230px; }
   .speaking::after { content: " ●"; color: #9B6CF0; }
   .item { display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 16px; border: 3px solid transparent; }
   .item.focus { border-color: #6CC4FF; }
@@ -388,8 +389,8 @@ async function ask(question) {
     }
     const cls = VERDICT[j.verdict] ? VERDICT[j.verdict][0] : "other";
     $("answer").innerHTML = `<div class="card ${cls === "toxic" || cls === "vet" ? "alert" : ""}">
-      <div class="row">${bean(VERDICT[j.verdict] ? j.verdict : "idle", 64)}<div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>
-      <div class="seen"><div class="txt">${esc(j.answer)}</div>${j.snapshot ? `<div class="pic" id="pic">${bean("thinking", 70)}</div>` : ""}</div>
+      ${j.snapshot ? "" : `<div class="row">${bean(VERDICT[j.verdict] ? j.verdict : "idle", 64)}<div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>`}
+      <div class="seen">${j.snapshot ? `<div class="pic" id="pic">${bean("thinking", 90)}</div>` : ""}<div class="txt">${esc(j.answer)}</div></div>
       <div class="when" style="margin-top:6px">${esc(how(j.steps) || "You asked: " + j.question)} · Up for more questions</div></div>`;
     say(j.answer);
     const title = followup ? followup.question : j.question;
@@ -399,7 +400,7 @@ async function ask(question) {
       const sticker = await makeSticker(j.snapshot.image, async (path, body) => (await fetch(API + path, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(body) })).json()).catch(() => null);
       image = sticker || j.snapshot.image;
       // the sticker of him, or the picture if he couldn't be cut out (never the picture first, then a swap)
-      if ($("pic")) $("pic").innerHTML = `<img alt="" src="${image}" style="${sticker ? "" : "width:200px;height:200px;object-fit:cover;border-radius:16px"}">`;
+      if ($("pic")) $("pic").innerHTML = `<img alt="" src="${image}" style="${sticker ? "" : "height:230px;width:100%;object-fit:cover;border-radius:16px"}">`;
     }
     hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title, note: j.answer, ...(image ? { image } : {}), verdict: VERDICT[j.verdict] ? j.verdict : undefined, extra: { sticker: !!(image && image.startsWith("data:image/png")), steps: (j.steps || []).map((s) => ({ tool: s.tool, label: s.label, detail: s.detail, kind: s.kind })), asked: followup ? followup.asked : undefined, reply: followup ? question : undefined } }) }).then(() => load()).catch(() => {});
     return j.answer;

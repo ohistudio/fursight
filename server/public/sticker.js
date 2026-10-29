@@ -28,7 +28,8 @@
     const size = Math.max(m.w * (W / m.image.w), m.h * (H / m.image.h)), bw = Math.max(6, size * 0.045);
     const [white, wg] = canvas(W, H);
     wg.drawImage(sil, 0, 0); wg.globalCompositeOperation = "source-in"; wg.fillStyle = "#fff"; wg.fillRect(0, 0, W, H);
-    const pad = Math.ceil(bw * 2.5), bx = m.x * (W / m.image.w) - pad, by = m.y * (H / m.image.h) - pad;
+    const pad = Math.ceil(bw * 3.4),   // room for the white edge, the shadow's blur and its drop, so nothing is clipped
+ bx = m.x * (W / m.image.w) - pad, by = m.y * (H / m.image.h) - pad;
     const ow = m.w * (W / m.image.w) + pad * 2, oh = m.h * (H / m.image.h) + pad * 2;
     const [out, og] = canvas(Math.ceil(ow), Math.ceil(oh));
     const [ring, rg] = canvas(out.width, out.height);
