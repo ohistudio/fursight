@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FurSight Tray</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+<style>
+  :root {
+    --fern: #3DBE6B; --fern-lip: #2A9A52; --sun: #FFB627; --sun-lip: #D9900A; --coral: #FF4D5E; --coral-lip: #D93545;
+    --sky: #2FA8F5; --sky-lip: #1E86C9; --grape: #9B6CF0; --grape-lip: #7A4ED1;
+    --ink: #2B2A33; --muted: #6B6977; --line: #E4E1EA; --bg: #F6F5F9; --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 700 16px/1.45 Nunito, system-ui, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 14px; }
+  h1, h2, h3 { font-weight: 900; margin: 0; } h1 { font-size: 26px; } h2 { font-size: 20px; }
+  p { margin: 0; } .muted { color: var(--muted); }
+  .card { background: var(--card); border: 2px solid var(--line); border-bottom-width: 5px; border-radius: 20px; padding: 16px; display: grid; gap: 10px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; min-height: 50px; padding: 10px 16px; border: 0; border-radius: 16px;
+         font: 900 16px Nunito, sans-serif; color: #fff; background: var(--fern); box-shadow: 0 5px 0 var(--fern-lip); cursor: pointer; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--fern-lip); }
+  .btn.grape { background: var(--grape); box-shadow: 0 5px 0 var(--grape-lip); } .btn.sky { background: var(--sky); box-shadow: 0 5px 0 var(--sky-lip); }
+  .btn.ghost { background: var(--card); color: var(--ink); border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
+  .btn.on { background: var(--sun); box-shadow: 0 5px 0 var(--sun-lip); color: #fff; border: 0; }
+  .btn:disabled { opacity: .5; }
+  .row { display: flex; gap: 10px; align-items: center; } .row > * { min-width: 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sim { background: var(--grape); color: #fff; border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 900; text-align: center; }
+  .scale { background: #22212A; color: #7CF0A3; border-radius: 18px; padding: 18px; text-align: center; font: 900 52px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+  .scale small { display: block; font: 800 14px Nunito, sans-serif; color: #A9A6B6; letter-spacing: 0; margin-top: 2px; }
+  .pill { display: inline-block; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 900; }
+  .s-normal { background: #E3F6EA; color: var(--fern-lip); } .s-watch { background: #FFF2D6; color: #B87700; } .s-vet { background: #FFE6E8; color: var(--coral-lip); } .s-none { background: var(--line); color: var(--muted); }
+  .stat b { display: block; font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; } .stat span { color: var(--muted); font-size: 13px; }
+  .code { font-size: 64px; font-weight: 900; letter-spacing: .14em; text-align: center; color: var(--fern); }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+  img.shot { width: 100%; border-radius: 14px; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script src="/bean.js"></script>
+<script src="/tray.js"></script>
+<script>
+// A simulated FurSight Tray: the litter tray with a scale and a camera looking down, standing in for the hardware
+// until it's built. It links like any FurSight device, then logs what the real Tray would: each visit (his weight,
+// how long, what he left), and the tray camera's droppings check. A week of history is filled in on first link
+// so the trends have something to stand on. Everything it writes is marked simulated.
+const HUB = "https://fursight-cam.wibble-crossplay.workers.dev";
+const API = location.origin.includes("localhost") ? "" : "https://fursight-seven.vercel.app";
+const $ = (id) => document.getElementById(id), $app = $("app");
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const rnd = (a, b) => a + Math.random() * (b - a);
+let token = store.get("fs.trayToken"), me = null, entries = [];
+let base = 4200 + Math.round(rnd(0, 300)), onTray = false, slow = store.get("fs.traySlow") === "1", auto = null;
+
+async function hub(path, opt = {}) {
+  const r = await fetch(HUB + "/hub" + path, { ...opt, headers: { "content-type": "application/json", ...(token ? { authorization: "Bearer " + token } : {}) } });
+  if (r.status === 401 && token) { token = null; store.set("fs.trayToken", null); link(); throw new Error("unlinked"); }
+  return r.json();
+}
+
+// ---------------------------------------------------------------- link, like any FurSight device
+
+async function link() {
+  $app.innerHTML = `<div class="sim">Simulated FurSight Tray · prototype</div>
+    <div class="card center"><div style="display:grid;place-items:center">${bean("idle", 90)}</div><h1>FurSight Tray</h1>
+    <p class="muted">On your phone, open FurSight, go to <b>Devices</b> and enter this code.</p><div class="code" id="code">····</div></div>`;
+  const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind: "tray", name: "FurSight Tray" }) });
+  $("code").textContent = s.code;
+  while (!token) {
+    await new Promise((r) => setTimeout(r, 1800));
+    const p = await hub(`/link/poll?code=${s.code}&nonce=${s.nonce}`);
+    if (p.status === "expired") return link();
+    if (p.status === "linked") { token = p.token; store.set("fs.trayToken", token); return start(); }
+  }
+}
+
+// ---------------------------------------------------------------- a believable week, on first link
+
+const petWeight = () => (me.pets[0] && Number(store.get("fs.trayWeight"))) || 1080;
+function visit(at, isSlow) {
+  return { kind: "tray", title: "Tray visit", at, pet: me.pets[0].name,
+    extra: { weight_g: Math.round(petWeight() + rnd(-14, 14) - (isSlow ? 25 : 0)), secs: Math.round(rnd(90, 420)), output_g: isSlow ? Math.round(rnd(0, 4)) : Math.round(rnd(14, 34)), sim: true } };
+}
+async function backfill() {
+  const now = new Date(), posts = [];
+  for (let d = 7; d >= 1; d--) {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d, 22);
+    posts.push({ kind: "tray-day", title: "Tray day", at: day.getTime(), pet: me.pets[0].name,
+      extra: { date: FSTray.key(day), visits: Math.round(rnd(8, 11)), output_g: Math.round(rnd(165, 225)), weight_g: Math.round(petWeight() + rnd(-12, 12)), sim: true } });
+  }
+  for (let t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 30).getTime(); t < now - 40 * 60e3; t += rnd(80, 110) * 60e3) posts.push(visit(t, false));
+  for (const p of posts) await hub("/diary", { method: "POST", body: JSON.stringify(p) });
+}
+
+// ---------------------------------------------------------------- the Tray
+
+async function start() {
+  me = await hub("/me");
+  if (!me.pets.length) { $app.innerHTML = `<div class="card center"><h2>Add your pet first</h2><p class="muted">Open FurSight on your phone and add your pet, then come back.</p></div>`; return; }
+  entries = (await hub("/diary?limit=200")).entries;
+  if (!entries.some((e) => FSTray.isTray(e))) {
+    $app.innerHTML = `<div class="card center"><div style="display:grid;place-items:center">${bean("thinking", 90)}</div><h2>Getting to know ${esc(me.pets[0].name)}'s tray</h2><p class="muted">Filling in a week of simulated history.</p></div>`;
+    await backfill();
+    entries = (await hub("/diary?limit=200")).entries;
+  }
+  render();
+}
+
+function render() {
+  const p = me.pets[0], s = FSTray.summary(entries), word = { normal: "All normal", watch: "Worth watching", vet: "Talk to your vet", none: "Learning his normal" }[s.status];
+  $app.innerHTML = `<div class="sim">Simulated FurSight Tray · prototype · the real one is a scale under the tray</div>
+    <div class="row" style="justify-content:space-between"><div><h1>FurSight Tray</h1><p class="muted">${esc(p.name)}'s litter tray</p></div><div id="bn">${bean(s.status === "vet" ? "toxic" : s.status === "watch" ? "caution" : "idle", 70)}</div></div>
+    <div class="scale" id="reading">${(base + s.today.output_g).toLocaleString()} g<small id="who">${onTray ? p.name + " is on the tray" : "tray and litter"}</small></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2>Today</h2><span class="pill s-${s.status}">${word}</span></div>
+      <div class="grid2">
+        <div class="stat"><b>${s.today.weight_g ? (s.today.weight_g / 1000).toFixed(2) + " kg" : "–"}</b><span>his weight${s.usual ? `, usual ${(s.usual.weight_g / 1000).toFixed(2)}` : ""}</span></div>
+        <div class="stat"><b>${s.today.visits}</b><span>visits${s.usual ? `, usual ${s.usual.visits} by now` : ""}</span></div>
+        <div class="stat"><b>${s.today.output_g} g</b><span>left in the tray${s.usual ? `, usual ${s.usual.output_g} g` : ""}</span></div>
+        <div class="stat"><b>${s.today.last_at ? new Date(s.today.last_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "–"}</b><span>last visit</span></div>
+      </div>
+      ${s.reasons.map((r) => `<p class="muted">• ${esc(r)}</p>`).join("")}
+    </div>
+    <div class="card">
+      <h2>Demo controls</h2>
+      <button class="btn" id="hop">${esc(p.name)} hops in</button>
+      <div class="grid2"><button class="btn ghost ${auto ? "on" : ""}" id="auto">${auto ? "Auto: on" : "Auto visits"}</button><button class="btn ghost ${slow ? "on" : ""}" id="slow">${slow ? "Slow day: on" : "Slow day"}</button></div>
+      <button class="btn ghost" id="topup">Top up the litter</button>
+      <div class="grid2"><button class="btn ghost" id="replaySlow">Replay today: slow</button><button class="btn ghost" id="replayNormal">Replay today: normal</button></div>
+      <p class="muted" style="font-size:13px">Replay rewrites today so far (a simulator control). Slow day: visits leave almost nothing, the early sign of gut stasis. Auto: a visit every 90 seconds. Topping up the litter adds weight without a rabbit, and the Tray ignores it.</p>
+    </div>
+    <div class="card">
+      <h2>Tray camera</h2>
+      <p class="muted">The camera looks down into the tray after a visit. Use a photo of his droppings to run the check.</p>
+      <label class="btn sky" for="shot">Check droppings from a photo</label><input id="shot" type="file" accept="image/*" class="hidden">
+      <div id="poo"></div>
+    </div>`;
+  $("hop").onclick = hop;
+  $("slow").onclick = () => { slow = !slow; store.set("fs.traySlow", slow ? "1" : null); render(); };
+  $("auto").onclick = () => { if (auto) { clearInterval(auto); auto = null; } else auto = setInterval(hop, 90e3); render(); };
+  $("topup").onclick = topUp;
+  $("replaySlow").onclick = () => replay(true);
+  $("replayNormal").onclick = () => replay(false);
+  $("shot").onchange = (e) => e.target.files[0] && droppings(e.target.files[0]);
+}
+
+// the reading climbs by about his weight, holds while he's in, then drops back with a little more than before
+async function hop() {
+  if (onTray) return;
+  const p = me.pets[0], v = visit(Date.now(), slow), s0 = FSTray.summary(entries).today.output_g;
+  onTray = true; render(); $("hop").disabled = true;
+  const show = (g, who) => { $("reading").innerHTML = `${Math.round(g).toLocaleString()} g<small>${who}</small>`; };
+  await ramp(base + s0, base + s0 + v.extra.weight_g, (g) => show(g, `${p.name} is on the tray`));
+  await new Promise((r) => setTimeout(r, 2200));
+  await ramp(base + s0 + v.extra.weight_g, base + s0 + v.extra.output_g, (g) => show(g, "tray and litter"));
+  onTray = false;
+  const e = await hub("/diary", { method: "POST", body: JSON.stringify(v) });
+  entries.unshift(e);
+  render();
+}
+function ramp(a, b, f) { return new Promise((done) => { const t0 = performance.now(); (function step(t) { const k = Math.min(1, (t - t0) / 600); f(a + (b - a) * (1 - Math.pow(1 - k, 3))); k < 1 ? requestAnimationFrame(step) : done(); })(t0); }); }
+// simulator only: today so far, again, as a slow or a normal day (earlier visits today stop counting)
+async function replay(isSlow) {
+  for (const b of document.querySelectorAll("button")) b.disabled = true;
+  const now = new Date(), from = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const r = await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "tray-reset", title: "", extra: { from, sim: true } }) });
+  const gap = isSlow ? [150, 200] : [80, 110];
+  for (let t = from + 7.5 * 36e5; t < now - (isSlow ? 3 : 0.7) * 36e5; t += rnd(...gap) * 60e3) {
+    const v = visit(t, isSlow); v.extra.replay = r.id;
+    await hub("/diary", { method: "POST", body: JSON.stringify(v) });
+  }
+  slow = isSlow; store.set("fs.traySlow", slow ? "1" : null);
+  entries = (await hub("/diary?limit=200")).entries;
+  render();
+}
+async function topUp() {
+  const s = FSTray.summary(entries).today.output_g;
+  await ramp(base + s, base + s + 800, (g) => { $("reading").innerHTML = `${Math.round(g).toLocaleString()} g<small>litter added, not a rabbit: re-zeroed</small>`; });
+  base += 800;
+  setTimeout(render, 1500);
+}
+
+// ---------------------------------------------------------------- the tray camera: droppings check
+
+async function droppings(file) {
+  $("poo").innerHTML = `<div class="row">${bean("thinking", 56)}<p class="muted">SAM is counting, Muse Spark is looking…</p></div>`;
+  try {
+    const image = await shrink(file);
+    const r = await fetch(API + "/api/droppings", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ image }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "no answer");
+    const v = { normal: "safe", watch: "caution", vet: "vet" }[j.verdict] || undefined;
+    $("poo").innerHTML = `<img class="shot" src="${await marked(image, j.boxes || [])}" alt=""><div class="row"><span class="pill s-${j.verdict}">${{ normal: "Normal", watch: "Worth watching", vet: "Talk to your vet" }[j.verdict] || "Checked"}</span><b>${j.count} dropping${j.count === 1 ? "" : "s"}</b></div><p>${esc(j.summary)}</p>`;
+    await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "droppings", title: "Droppings check", note: `${j.count} found. ${j.summary}`, verdict: v, image, pet: me.pets[0].name, extra: { count: j.count, verdict: j.verdict, sim_tray: true } }) });
+  } catch (e) { $("poo").innerHTML = `<p class="muted">Couldn't check that photo: ${esc(e.message)}</p>`; }
+}
+// SAM's finds, ringed on the photo
+function marked(src, boxes) {
+  return new Promise((ok) => { const i = new Image(); i.onload = () => {
+    const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
+    g.strokeStyle = "#9B6CF0"; g.lineWidth = Math.max(3, i.width / 260);
+    for (const b of boxes) { g.beginPath(); g.ellipse((b.x0 + b.x1) / 2 * i.width, (b.y0 + b.y1) / 2 * i.height, (b.x1 - b.x0) / 2 * i.width + 4, (b.y1 - b.y0) / 2 * i.height + 4, 0, 0, Math.PI * 2); g.stroke(); }
+    ok(c.toDataURL("image/jpeg", 0.85)); }; i.onerror = () => ok(src); i.src = src; });
+}
+function shrink(file) {
+  return new Promise((ok, bad) => { const i = new Image(); i.onload = () => { const s = Math.min(1, 1024 / Math.max(i.width, i.height)), c = document.createElement("canvas"); c.width = i.width * s; c.height = i.height * s; c.getContext("2d").drawImage(i, 0, 0, c.width, c.height); ok(c.toDataURL("image/jpeg", 0.85)); }; i.onerror = bad; i.src = URL.createObjectURL(file); });
+}
+
+token ? start().catch(() => link()) : link();
+</script>
+</body>
+</html>

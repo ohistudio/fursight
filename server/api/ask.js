@@ -19,6 +19,7 @@ const { handler, image, text, bad, household } = require("../lib/http");
 const { pet: readPet, describe } = require("../lib/pet");
 const { context, camFrame, camView, recent, addDiary } = require("../lib/hub");
 const FSCal = require("../public/calendar.js");
+const FSTray = require("../public/tray.js");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -134,6 +135,18 @@ module.exports = handler(async (body, req) => {
         step: { tool: "weather", label: `Checked the weather at home: ${Math.round(r.current.temperature_2m)}°C now, up to ${Math.round(max)}°C` } };
     },
   };
+  if (ctx) tools.check_litter_tray = {
+    description: `The FurSight Tray under ${p.name}'s litter tray: his weight each visit, how many visits today, and how much he's left (droppings and urine) against his usual by this time of day. Fewer visits or little output is an early sign of gut stasis. Use it for anything about his health, appetite, gut or weight.`,
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    async run() {
+      const t = FSTray.summary(await recent(home.token, 200).catch(() => []));
+      if (t.status === "none") return { output: { error: "There's no FurSight Tray linked." }, step: { tool: "tray", label: "No litter tray scale linked" } };
+      seen.set("tray", { kind: "tray" });
+      const drop = (await recent(home.token, 40).catch(() => [])).find((e) => e.kind === "droppings");
+      return { output: { id: "tray", status: t.status, reasons: t.reasons, today: t.today, usual: t.usual, week_weights_g: t.week.map((d) => d.weight_g), last_droppings_check: drop ? { when: new Date(drop.at).toISOString().slice(0, 16), verdict: drop.extra && drop.extra.verdict, note: drop.note } : null, simulated: t.simulated },
+        step: { tool: "tray", label: `Checked the litter tray: ${t.today.visits} visits, ${t.today.output_g} g${t.usual ? ` (usual ${t.usual.output_g} g by now)` : ""}, ${t.today.weight_g ? (t.today.weight_g / 1000).toFixed(2) + " kg" : "no weight yet"}`, detail: t.reasons.join("; ") || undefined } };
+    },
+  };
   if (ctx) tools.read_calendar = {
     description: `${p.name}'s calendar: reminders the owner set (vet visits, vaccinations, nail trims, weigh-ins) for the next 60 days.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
@@ -161,7 +174,7 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;
-      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && !["recap", "event", "event-cancel"].includes(e.kind));
+      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)/.test(e.kind));
       const out = list.slice(0, 25).map((e, i) => {
         const id = "d" + (seen.size + i + 1);
         seen.set(id, { kind: e.kind, what: e.title });
@@ -207,7 +220,7 @@ module.exports = handler(async (body, req) => {
       properties: {
         answer: { type: "string", description: "spoken style, at most 45 words, no lists, no markdown" },
         verdict: { type: "string", enum: ["safe", "caution", "toxic", "vet", "none"], description: "only for safety or health questions; vet = see a vet today" },
-        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"calendar\", \"reminder\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
+        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"tray\", \"calendar\", \"reminder\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
         about: { type: "string", description: "short name of the thing in the photo the answer is about, or empty" },
         box: { type: "array", items: { type: "integer" }, description: "[x_min,y_min,x_max,y_max] 0-1000 of that thing in the photo, or []" },
       },
@@ -229,7 +242,7 @@ module.exports = handler(async (body, req) => {
       }
       // "see a vet", by verdict or in the words, needs something real behind it
       if (a.verdict === "vet" || /\b(vet|veterinar)/i.test(a.answer || "")) {
-        const real = ev.filter((id) => ["photo", "owner"].includes(id) || (seen.get(id) && seen.get(id).kind === "cam") || (seen.get(id) && !["food", "ask", "care", "food_list"].includes(seen.get(id).kind)));
+        const real = ev.filter((id) => ["photo", "owner"].includes(id) || (seen.get(id) && seen.get(id).kind === "cam") || (seen.get(id) && !["food", "ask", "care", "food_list", "weather", "calendar"].includes(seen.get(id).kind)));
         if (!real.length || (real.length === 1 && real[0] === "owner" && !/\b(ate|eaten|eating|had|gave|swallow|chew|sick|not|won.?t|hasn.?t|isn.?t|stopp|hunch|grind|bloat|letharg|diarr|blood)/i.test(question)))
           problems.push("Sending someone to the vet needs something real: what you saw (photo or cam), a diary entry about his health, or the owner telling you something happened. A food check or a question is not a sign of illness.");
       }
@@ -250,7 +263,7 @@ module.exports = handler(async (body, req) => {
   };
 
   const intro = `You are FurSight, a calm, practical pet-care helper. The pet: ${describe(p)}. The owner is asking from their ${from}.
-Work like a careful vet nurse: look before you answer. Use your tools to gather what you need, calling several at once when you can, then call answer. Food entries in the diary are foods the owner checked: never treat one as something ${p.name} ate unless the owner says so. Don't guess about how ${p.name} is: find him on the pet cams (find_pet zooms in on him) or read the diary. Zoom in when you need a closer look. Check every food or plant you talk about against the safety list. If you still can't tell, ask the owner one thing instead of guessing.
+Work like a careful vet nurse: look before you answer. Use your tools to gather what you need, calling several at once when you can, then call answer. Food entries in the diary are foods the owner checked: never treat one as something ${p.name} ate unless the owner says so. Don't guess about how ${p.name} is: check the litter tray, find him on the pet cams (find_pet zooms in on him) or read the diary. Zoom in when you need a closer look. Check every food or plant you talk about against the safety list. If you still can't tell, ask the owner one thing instead of guessing.
 Answers: short and spoken, at most 45 words, no lists, no markdown, no em dashes. If you SEE or the diary SAYS something urgent for this species (for rabbits: not eating, no droppings, hunched, teeth grinding, bloating), say so plainly and set verdict "vet". Never reassure about health from a picture alone; say what to watch for. For food or plant safety, err on the side of caution.`;
   const first = [{ type: "input_text", text: question }];
   if (photo) first.push({ type: "input_text", text: from === "quest" ? "What the owner is looking at (cite as \"photo\"):" : "The owner's photo (cite as \"photo\"):" }, { type: "input_image", image_url: photo });

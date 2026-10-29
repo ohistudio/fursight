@@ -115,6 +115,7 @@
 
 <script src="/bean.js"></script>
 <script src="/calendar.js"></script>
+<script src="/tray.js"></script>
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
 // between Today, Care (tick the daily list), Ask, Pet cam and Diary; up/down picks a care item, pinch ticks it; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
@@ -126,7 +127,7 @@ if (q.get("fit")) $("frame").style.setProperty("--fit", q.get("fit"));
 if (q.get("at")) { const [x, y] = q.get("at").split(",").map(Number); $("frame").style.left = `calc(50% + ${x || 0}px)`; $("frame").style.top = `calc(50% + ${y || 0}px)`; }
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-let token = store.get("fs.glassesToken"), me = null, entries = [], coming = [], page = 0, scroll = 0;
+let token = store.get("fs.glassesToken"), me = null, entries = [], coming = [], tray = null, page = 0, scroll = 0;
 const PAGES = ["today", "care", "ask", "cam", "diary"];
 const API = location.origin.includes("localhost") ? "" : "https://fursight-seven.vercel.app";
 
@@ -159,7 +160,8 @@ async function load() {
   [me, { entries: all }] = await Promise.all([hub("/me"), hub("/diary?limit=120")]);
   // reminders live in the diary too: keep them for the calendar line, out of the diary views
   coming = FSCal.upcoming(all, 14);
-  entries = all.filter((e) => e.kind !== "event" && e.kind !== "event-cancel").slice(0, 40);
+  tray = FSTray.summary(all);
+  entries = all.filter((e) => !/^(event|tray)/.test(e.kind)).slice(0, 40);
   render();
 }
 
@@ -186,9 +188,11 @@ function render() {
   }
   $("alert").innerHTML = bad ? `<div class="card alert row"><div class="badge toxic">!</div><div><div class="big toxic">${esc(bad.title)}</div><div class="note">${esc(v(bad)[2])} · ${time(bad.at)}</div></div></div>`
     : today.length ? `<div class="card ok row"><div class="badge safe">✓</div><div class="big">All good today</div></div>` : "";
+  // the litter tray: a change in visits, output or weight leads the page
+  if (tray && (tray.status === "watch" || tray.status === "vet")) $("alert").innerHTML = `<div class="card ${tray.status === "vet" ? "alert" : ""} row" style="${tray.status === "watch" ? "border-color:#FFC23D" : ""}"><div class="badge ${tray.status === "vet" ? "toxic" : "caution"}">!</div><div><div class="big ${tray.status === "vet" ? "toxic" : "away"}">Litter tray</div><div class="note">${esc(tray.reasons[0] || "")}</div></div></div>` + (bad ? $("alert").innerHTML : "");
   if (away) $("alert").innerHTML = `<div class="card row" style="border-color:#FFC23D"><div class="badge caution">↗</div><div><div class="big away">You're out</div><div class="note">${me.cams[0] ? "Swipe to the pet cam, or tilt your head down to peek." : "Set up a pet cam to keep an eye on " + esc(pet.name) + "."}</div></div></div>` + $("alert").innerHTML;
   const items = careItems(), done = items.length && items.every((i) => careToday().today.has(i));
-  const mood = bad ? "toxic" : done ? "safe" : "idle";
+  const mood = bad || (tray && tray.status === "vet") ? "toxic" : tray && tray.status === "watch" ? "caution" : done ? "safe" : "idle";
   if ($("todayBean").dataset.mood !== mood) { $("todayBean").dataset.mood = mood; $("todayBean").innerHTML = bean(mood, 60); }
   const recap = entries.find((e) => e.kind === "recap" && Date.now() - e.at < 8 * 864e5);
   const last = recap || entries[0];
@@ -313,7 +317,7 @@ function say(text) {
 let pending = null;
 // one short line of what the agent did: "pet cam · diary · safety list · a check stopped 1 answer"
 function how(steps) {
-  const short = { cam: "pet cam", find: "pet cam", zoom: "pet cam", diary: "diary", care: "care plan", food: "safety list", photo: "photo", weather: "weather" };
+  const short = { tray: "litter tray", cam: "pet cam", find: "pet cam", zoom: "pet cam", diary: "diary", care: "care plan", food: "safety list", photo: "photo", weather: "weather" };
   const used = [...new Set((steps || []).filter((s) => short[s.tool] && !/off$/.test(s.label)).map((s) => short[s.tool]))];
   const checks = (steps || []).filter((s) => s.kind === "check").length;
   return [used.length ? "Looked at " + used.join(", ") : "", checks ? `${checks} answer${checks > 1 ? "s" : ""} stopped by a check` : ""].filter(Boolean).join(" · ");
