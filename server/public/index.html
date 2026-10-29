@@ -97,6 +97,7 @@
   .recap img { width: 100%; border-radius: 16px; display: block; margin-bottom: 12px; }
   .center { text-align: center; }
   .hero { padding: 34px 4px 10px; }
+  .beanbox { display: grid; place-items: center; margin: 0 auto 10px; }
   .hero .big { width: 92px; height: 92px; margin: 0 auto 18px; border-radius: 28px; background: var(--fern); box-shadow: 0 7px 0 var(--fern-lip); display: grid; place-items: center; }
   .spinner { width: 34px; height: 34px; border-radius: 50%; border: 5px solid var(--line); border-top-color: var(--sky); animation: spin .8s linear infinite; margin: 0 auto; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -115,6 +116,7 @@
   <button data-tab="devices"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></svg>Devices</button>
 </div></nav>
 
+<script src="/bean.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -181,7 +183,7 @@ function header() {
 
 function welcome() {
   $app.innerHTML = `<div class="hero center stack pop">
-    <div class="big"><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3.2" fill="#fff"/></svg></div>
+    <div class="beanbox">${bean("idle", 150)}</div>
     <h1>FurSight</h1>
     <p class="muted">Rabbits hide illness. FurSight notices.<br>It notices, your vet decides.</p>
   </div>
@@ -243,7 +245,7 @@ function addPet() {
   $name.oninput = ready;
   $go.onclick = async () => {
     const name = $name.value.trim(), notes = document.getElementById("notes").value.trim();
-    $app.innerHTML = `<div class="stack center" style="padding-top:60px"><div class="spinner"></div><h2>Getting to know ${esc(name)}</h2><p class="muted">Muse Spark is looking at the photo and writing a care plan.</p></div>`;
+    $app.innerHTML = `<div class="stack center" style="padding-top:40px"><div class="beanbox">${bean("thinking", 130)}</div><h2>Getting to know ${esc(name)}</h2><p class="muted">Muse Spark is looking at the photo and writing a care plan.</p></div>`;
     try { review(await api("/api/profile", { image: photo, name, notes }), { name, notes, photo }); }
     catch (err) { toast(err.message); addPet(); }
   };
@@ -286,10 +288,11 @@ function carePlan(c) {
 
 async function makeRecap(btn) {
   btn.disabled = true; btn.textContent = "Making this week's card…";
+  btn.insertAdjacentHTML("afterend", `<div class="card center stack pop" id="drawing"><div class="beanbox">${bean("thinking", 96)}</div><h3>Drawing ${esc(me.pets[0].name)}'s week</h3><p class="muted">Muse Spark reads the diary, then Muse Image draws the card. About a minute.</p></div>`);
   try {
     const r = await api("/api/recap", {});
     toast(r.title); render();
-  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Make this week's card"; }
+  } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Make this week's card"; document.getElementById("drawing")?.remove(); }
 }
 
 async function today() {
@@ -298,7 +301,7 @@ async function today() {
   const { entries } = await hub("/diary?limit=80");
   const $l = document.getElementById("list");
   if (!entries.length) {
-    $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
+    $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
     return;
   }
   let last = "";
@@ -339,7 +342,7 @@ async function care() {
   const st = careState(entries, items);
   const left = items.filter((i) => !st.today.has(i)).length;
   document.getElementById("checklist").innerHTML = `<div class="card pop">
-    <div class="row" style="justify-content:space-between"><h2>Today's care</h2>
+    <div class="row" style="justify-content:space-between"><div class="row" style="gap:8px">${bean(left ? "idle" : "safe", 46)}<h2 style="white-space:nowrap">Today's care</h2></div>
       <div class="streak"><span class="flame">${st.streak}</span><span class="muted" style="line-height:1.1">day<br>streak</span></div></div>
     <div class="bar"><i style="width:${Math.round(((items.length - left) / items.length) * 100)}%"></i></div>
     <p class="muted" style="margin:8px 0 4px">${left ? `${left} to go` : `All done for today. Lovely.`}</p>
