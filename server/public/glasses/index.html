@@ -490,6 +490,16 @@ function camLoop() {
   if (camAlive) return; camAlive = true;
   const cam = curCam();
   if (!cam) { $("camMsg").textContent = "No pet cam yet. Set one up in the FurSight app."; camAlive = false; return; }
+  // a recording: play the clip itself at full frame rate (smoother than pictures through the relay)
+  if (cam.clip) {
+    const vid = $("camVid");
+    Object.assign(vid, { src: API + cam.clip, loop: true, muted: true, hidden: false }); vid.play().catch(() => {});
+    $("camImg").hidden = true; $("camMsg").textContent = "";
+    $("live").classList.add("on"); $("camState").textContent = "recording";
+    const n = me.cams.length, i = me.cams.findIndex((c) => c.channel === cam.channel) + 1;
+    $("camMode").textContent = n > 1 ? `Cam ${i} of ${n}: up/down to switch · a recording` : "A recording, played here";
+    return;
+  }
   let last = 0, url = null, frames = 0, fps = 0;
   const showBlob = (b) => { const u = URL.createObjectURL(b); $("camImg").src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); frames++; $("camMsg").textContent = ""; };
   const status = setInterval(() => {
@@ -532,7 +542,7 @@ function camLoop() {
     }
   }
 }
-function camStop() { camAlive = false; if (camRtc) { camRtc.stop(); camRtc = null; $("camVid").hidden = true; $("camImg").hidden = false; } if (camSock) { camSock.close(); camSock = null; } }
+function camStop() { camAlive = false; { const v = $("camVid"); if (v.src && !v.srcObject) { v.pause(); v.removeAttribute("src"); v.load(); v.hidden = true; $("camImg").hidden = false; } } if (camRtc) { camRtc.stop(); camRtc = null; $("camVid").hidden = true; $("camImg").hidden = false; } if (camSock) { camSock.close(); camSock = null; } }
 
 // ---------------------------------------------------------------- navigation (Neural Band / touchpad arrive as keys)
 

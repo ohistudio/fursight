@@ -261,7 +261,7 @@ async function render() {
   $tabs.classList.remove("hidden");
   for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
   if (location.hash === "#upload") return uploadPage();
-  if (location.hash === "#democam") return demoCam();
+  if (/^#democam(=[\w.-]+\.mp4)?$/.test(location.hash)) return demoCam(location.hash.split("=")[1]);
   if (store.get("fs.camOn") === "1") return beCam(true);   // this device is the pet cam: carry on after a reload
   ({ today, care, calendar, stats, cam, devices })[tab]();
 }
@@ -1131,6 +1131,11 @@ function devices() {
   };
   // a simulated device links itself: this phone asks for a code, enters it, and hands the new key to the page
   document.getElementById("simCam").onclick = () => window.open("/#democam", "_blank");
+  fetch("/demo/clips.json").then((r) => r.json()).then((clips) => {
+    if (clips.length < 2) return;
+    document.getElementById("simCam").insertAdjacentHTML("afterend", clips.map((c) => `<button class="btn ghost small" data-clip="${esc(c.file)}" style="justify-self:start">Simulated pet cam: ${esc(c.name)}</button>`).join(""));
+    for (const b of document.querySelectorAll("[data-clip]")) b.onclick = () => window.open("/#democam=" + b.dataset.clip, "_blank");
+  }).catch(() => {});
   document.getElementById("simFill").onclick = async (e) => {
     e.target.disabled = true; e.target.textContent = "Filling a week (about 15 s)…";
     try { const r = await api("/api/demo", { into: true, tz: -new Date().getTimezoneOffset() }); toast(`Added ${r.entries} simulated entries`); tab = "stats"; store.set("fs.tab", tab); render(); }
@@ -1191,6 +1196,11 @@ function cam() {
   camStop = () => { alive = false; rtcs.forEach((r) => r.stop()); socks.forEach((w) => w.close()); };
   for (const c of cams) {
     const $i = document.querySelector(`[data-ch="${c.channel}"]`), $s = document.querySelector(`[data-live="${c.channel}"]`);
+    if (c.clip) {   // a recording: play the clip itself, smoothly (the cam tab still sends pictures for Ask)
+      const $v = document.querySelector(`[data-vid="${c.channel}"]`);
+      Object.assign($v, { src: c.clip, loop: true, muted: true, hidden: false }); $v.play().catch(() => {}); $i.hidden = true;
+      $s.innerHTML = "<b></b>recording"; continue;
+    }
     let last = 0, url = null, frames = 0;
     const show = (b) => { const u = URL.createObjectURL(b); $i.src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); frames++; };
     // digital zoom, shared with everyone watching and with FurSight: tap zooms in 2× where you tapped
@@ -1260,11 +1270,12 @@ function chooseCam() {
 }
 
 // the simulated pet cam: this tab plays the demo recording through everything a real pet cam does
-async function demoCam() {
+async function demoCam(file = "petcam.mp4") {
   $app.innerHTML = `<p class="muted center" style="padding:40px">Starting the simulated pet cam…</p>`;
   try {
-    const blob = await (await fetch("/demo/petcam.mp4")).blob();
-    beCam(false, new File([blob], "demo recording of Xiaosi.mp4", { type: "video/mp4" }), "Simulated pet cam");
+    const blob = await (await fetch("/demo/" + file)).blob();
+    // viewers are told the clip, so the glasses, web and Quest play it themselves at full frame rate
+    beCam(false, new File([blob], file, { type: "video/mp4" }), "Simulated pet cam", null, "/demo/" + file);
   } catch (e) { toast("Couldn't load the demo recording"); }
 }
 
@@ -1296,7 +1307,7 @@ async function bakeClip(player) {
 
 // clip: a video file to play instead of the camera (for recording a demo); it goes through everything the camera
 // would, and the page says it's a recording.
-async function beCam(resume = false, clip = null, fixedName = null, replaces = null) {
+async function beCam(resume = false, clip = null, fixedName = null, replaces = null, clipPath = null) {
   stopCam();
   const name = fixedName || (resume && store.get("fs.camName")) || prompt("Name this camera", store.get("fs.camName") || `${me.pets[0].name}'s pen`); if (!name) return render();
   if (!fixedName || !clip) store.set("fs.camName", name);   // the demo recording doesn't rename this device's cam
@@ -1304,7 +1315,7 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
   let channel = store.get("fs.camChannel"), key = store.get("fs.camKey");
   const rnd = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"[b % 56]).join("");
   if (!channel || !key) { channel = rnd(16); key = rnd(24); store.set("fs.camChannel", channel); store.set("fs.camKey", key); }
-  await hub("/cams/" + channel, { method: "PUT", body: JSON.stringify({ name, ...(replaces ? { replaces } : {}) }) });
+  await hub("/cams/" + channel, { method: "PUT", body: JSON.stringify({ name, ...(replaces ? { replaces } : {}), ...(clipPath ? { clip: clipPath } : {}) }) });
   $tabs.classList.add("hidden");
   $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2>${clip ? `<span class="chip" style="justify-self:start">Playing a recording: ${esc(clip.name)}</span>` : ""}<p class="muted">Leave this open near ${esc(me.pets[0].name)}, with his hay, food bowl and water in view. It only sends pictures while someone is watching, and checks the hay and bowls every couple of hours.</p>
     <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>

@@ -29,8 +29,10 @@ namespace FurSight
 
         // the pet cam to watch (until the household lists its cameras): relay base URL + channel id
         // the household's camera wins over the one in the local settings file
-        static string _camChannel, _camName;
-        public static void UseCam(string channel, string name) { _camChannel = channel; _camName = name; }
+        static string _camChannel, _camName, _camClip;
+        public static void UseCam(string channel, string name, string clip = null) { _camChannel = channel; _camName = name; _camClip = clip; }
+        // a cam playing a recording: the clip's address on the web app, so the window plays it itself (smoothly)
+        public static string CamClip => string.IsNullOrEmpty(_camClip) ? null : Settings.server.TrimEnd('/') + _camClip;
         public static string CamRelay => string.IsNullOrEmpty(Settings.camRelay) ? "https://fursight-cam.wibble-crossplay.workers.dev" : Settings.camRelay;
         public static string CamChannel => _camChannel ?? Settings.camChannel;
         public static string CamName => _camName ?? (string.IsNullOrEmpty(Settings.camName) ? "Pet cam" : Settings.camName);

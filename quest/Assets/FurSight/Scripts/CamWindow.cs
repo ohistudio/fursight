@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Video;
 
 namespace FurSight
 {
@@ -32,6 +33,8 @@ namespace FurSight
         readonly ConcurrentQueue<byte[]> _incoming = new ConcurrentQueue<byte[]>();
         CancellationTokenSource _cts;
         bool _socketOpen;
+        VideoPlayer _player;
+        RenderTexture _rt;
 
         public static void Toggle()
         {
@@ -94,9 +97,32 @@ namespace FurSight
 
             StartCoroutine(Juice.Pop(transform, 0f, 0.3f));
             Sfx.Tick(transform.position);
+            Connect();
+        }
+
+        // a live cam: its pictures from the relay; a recording: the clip itself, played here at full frame rate
+        void Connect()
+        {
+            if (!string.IsNullOrEmpty(FurSightApi.CamClip)) { PlayClip(FurSightApi.CamClip); return; }
             if (!string.IsNullOrEmpty(FurSightApi.CamChannel)) { _ = Socket(); StartCoroutine(FallbackIfNoSocket()); }
             else _status.text = "no camera linked";
         }
+
+        void PlayClip(string url)
+        {
+            if (_player == null)
+            {
+                _player = gameObject.AddComponent<VideoPlayer>();
+                _player.playOnAwake = false; _player.isLooping = true; _player.audioOutputMode = VideoAudioOutputMode.None;
+                _player.renderMode = VideoRenderMode.RenderTexture;
+                _rt = new RenderTexture(480, 480, 0);
+                _player.targetTexture = _rt;
+                _player.prepareCompleted += (vp) => { vp.Play(); _picMat.SetTexture("_BaseMap", _rt); _picMat.SetColor("_BaseColor", Color.white); };
+            }
+            _player.source = VideoSource.Url; _player.url = url; _player.Prepare();
+        }
+
+        void StopClip() { if (_player != null) { _player.Stop(); _player.url = null; } }
 
         // show the next camera: drop the old connection, start on the new one
         void Switch(int step)
@@ -109,7 +135,8 @@ namespace FurSight
             _picMat.SetColor("_BaseColor", new Color(0.12f, 0.12f, 0.14f));
             _title.text = FurSightApi.CamName;
             Sfx.Tick(transform.position);
-            _ = Socket(); StartCoroutine(FallbackIfNoSocket());
+            StopClip();
+            Connect();
             Status();
         }
 
@@ -185,6 +212,7 @@ namespace FurSight
         void Status()
         {
             if (_status == null) return;
+            if (_player != null && _player.isPlaying) { _status.text = (HubClient.Cams != null && HubClient.Cams.Count > 1 ? $"{HubClient.CamIndex() + 1}/{HubClient.Cams.Count} · " : "") + "recording"; _dot.sharedMaterial = Shapes.Flat(Theme.Coral); return; }
             bool live = _lastFrame > 0f && Time.time - _lastFrame < 3f;
             var cams = HubClient.Cams;
             string which = cams != null && cams.Count > 1 ? $"{HubClient.CamIndex() + 1}/{cams.Count} · " : "";
@@ -226,6 +254,6 @@ namespace FurSight
             StartCoroutine(Juice.ShrinkAway(transform));
         }
 
-        void OnDestroy() { _cts?.Cancel(); if (_tex != null) Destroy(_tex); if (_open == this) _open = null; }
+        void OnDestroy() { _cts?.Cancel(); if (_tex != null) Destroy(_tex); if (_rt != null) _rt.Release(); if (_open == this) _open = null; }
     }
 }

@@ -107,7 +107,7 @@ namespace FurSight
             if (Cams == null || Cams.Count < 2) return false;
             var c = CamAt(CamIndex() + step);
             PlayerPrefs.SetString("fs.cam", (string)c["channel"]); PlayerPrefs.Save();
-            FurSightApi.UseCam((string)c["channel"], (string)c["name"]);
+            FurSightApi.UseCam((string)c["channel"], (string)c["name"], (string)c["clip"]);
             return true;
         }
 
@@ -132,7 +132,7 @@ namespace FurSight
                 profile.notes = (sex == "male" ? "Male (he/him). " : sex == "female" ? "Female (she/her). " : "") + (notes ?? "");
             }
             var cams = Me["cams"] as JArray;
-            if (cams != null && cams.Count > 0) { var c = CamAt(CamIndex()); FurSightApi.UseCam((string)c["channel"], (string)c["name"]); }
+            if (cams != null && cams.Count > 0) { var c = CamAt(CamIndex()); FurSightApi.UseCam((string)c["channel"], (string)c["name"], (string)c["clip"]); }
             Debug.Log($"[FurSight] household {Me["household"]}: {profile?.petName}, {cams?.Count ?? 0} camera(s)");
         }
 
