@@ -50,13 +50,15 @@ add(group("lamp", c))
 rx, ry = iso(580, 412, 0)
 add(group("cablering", f'<ellipse cx="{rx:.1f}" cy="{ry:.1f}" rx="48" ry="27" fill="{CORAL}" fill-opacity=".12" stroke="{CORAL}" stroke-width="4" stroke-dasharray="7 5"/>', True))
 
-# a square of chocolate someone dropped
-ch = prism(548, 262, 0, 588, 290, 7, "#6B3F22", "#55311A", "#47280F", sw=1.6)
-for i in range(1, 4): ch += line((548 + i * 10, 262, 7), (548 + i * 10, 290, 7), "#4A2A12", 1.4)
-ch += line((548, 276, 7), (588, 276, 7), "#4A2A12", 1.4) + poly([(540, 284, 0), (570, 284, 0), (574, 300, 0), (544, 300, 0)], "#D9D6DF", extra='opacity=".9"')
-add(group("choc", ch))
-cx_, cy_ = iso(568, 276, 0)
-add(group("chocglow", f'<ellipse cx="{cx_:.1f}" cy="{cy_:.1f}" rx="44" ry="25" fill="{CORAL}" fill-opacity=".14" stroke="{CORAL}" stroke-width="4" stroke-dasharray="7 5"/>', True))
+# half an avocado someone left on the floor: healthy for us, can be fatal for a rabbit (persin)
+ax_, ay_ = iso(566, 272, 0)
+avo = (f'<g transform="translate({ax_:.1f} {ay_ - 12:.1f}) rotate(-18)"><ellipse cx="0" cy="18" rx="26" ry="7" fill="{INK}" opacity=".12"/>'
+       f'<path d="M0 -26 C16 -26 24 -6 24 6 C24 20 13 26 0 26 C-13 26 -24 20 -24 6 C-24 -6 -16 -26 0 -26 Z" fill="#3E6B2A" stroke="{INK}" stroke-width="2"/>'
+       f'<path d="M0 -21 C12 -21 19 -5 19 6 C19 17 10 21 0 21 C-10 21 -19 17 -19 6 C-19 -5 -12 -21 0 -21 Z" fill="#C9DB7A"/>'
+       f'<circle cx="0" cy="8" r="9" fill="#8A5A2B" stroke="{INK}" stroke-width="1.6"/><circle cx="-3" cy="5" r="2.4" fill="#B07B3A"/></g>')
+add(group("avo", avo))
+gx_, gy_ = iso(566, 272, 0)
+add(group("avoglow", f'<ellipse cx="{gx_:.1f}" cy="{gy_:.1f}" rx="46" ry="26" fill="{CORAL}" fill-opacity=".14" stroke="{CORAL}" stroke-width="4" stroke-dasharray="7 5"/>', True))
 
 # a strawberry: the treat he loves, and the worry since his GI stasis
 bx_, by_ = iso(360, 330, 0)
@@ -121,10 +123,46 @@ def card(id_, x, y, colour, mark, title, word, word_col, sub, w=250):
                  f'<text x="{x + 58}" y="{y + 29}" font-size="17" font-weight="900" fill="{INK}">{title}</text><text x="{x + 58}" y="{y + 49}" font-size="14" font-weight="900" fill="{word_col}">{word}</text>'
                  f'<text x="{x + 18}" y="{y + 69}" font-size="12.5" font-weight="800" fill="{MUTED}">{sub}</text>', True)
 add(card("cardCable", 1150, 640, CORAL, "!", "Room check", "Cable within reach", "#D93545", "pet cam · run it behind the sofa"))
-add(card("cardChoc", 1160, 400, CORAL, "✕", "Chocolate", "Don't", "#D93545", "food check · toxic to rabbits"))
+add(card("cardAvo", 1160, 400, CORAL, "✕", "Avocado", "Don't", "#D93545", "food check · persin can be fatal", w=260))
 add(card("cardHay", 820, 70, SUN, "!", "Hay", "40% gone since 8 am", SUN_LIP, "pet cam · eating normally"))
 add(card("cardTray", 60, 470, GRAPE, "✓", "Litter tray", "1.10 kg · 9 visits", GRAPE_LIP, "FurSight Tray · weight steady"))
 add(card("cardBerry", 1150, 520, SUN, "!", "Strawberry", "Small treat only", SUN_LIP, "had some 2 days ago · OK again Sun", w=270))
+
+# ask from the glasses or the Quest
+ask = (f'<g filter="url(#soft)"><rect x="60" y="250" width="330" height="96" rx="20" fill="#FFFFFF"/><rect x="60" y="340" width="330" height="8" rx="4" fill="{GRAPE}"/></g>'
+       f'<g transform="translate(80 270)" fill="none" stroke="{INK}" stroke-width="4"><rect x="0" y="4" width="26" height="20" rx="8"/><rect x="34" y="4" width="26" height="20" rx="8"/><path d="M26 13 H34"/><rect x="38" y="9" width="10" height="8" rx="2" fill="{FERN}" stroke="none"/></g>'
+       f'<g transform="translate(84 304)"><rect width="56" height="30" rx="11" fill="{INK}"/><circle cx="17" cy="15" r="6" fill="{SKY}"/><circle cx="39" cy="15" r="6" fill="{SKY}"/></g>'
+       f'<text x="160" y="284" font-size="15" font-weight="900" fill="{MUTED}">You ask: what\'s he doing?</text>'
+       f'<text x="160" y="310" font-size="20" font-weight="900" fill="{INK}">Having a big flop</text>'
+       f'<text x="160" y="330" font-size="13" font-weight="800" fill="{GRAPE_LIP}">Ray-Ban Display · Meta Quest · iPhone</text>')
+add(group("cardAsk", ask, True))
+# away from home: a phone with a FurSight notification carrying a sticker of him
+away = (f'<g filter="url(#soft)"><rect x="1190" y="230" width="250" height="440" rx="38" fill="{INK}"/></g><rect x="1202" y="244" width="226" height="412" rx="28" fill="#EDE7F7"/>'
+        f'<rect x="1272" y="254" width="86" height="18" rx="9" fill="{INK}"/>'
+        f'<text x="1315" y="320" text-anchor="middle" font-size="40" font-weight="900" fill="{INK}">14:20</text>'
+        f'<rect x="1214" y="350" width="202" height="190" rx="18" fill="#FFFFFF"/>'
+        f'<rect x="1226" y="362" width="18" height="18" rx="5" fill="{GRAPE}"/><text x="1252" y="376" font-size="12" font-weight="900" fill="{MUTED}">FURSIGHT · now</text>'
+        f'<text x="1226" y="402" font-size="15" font-weight="900" fill="{INK}">Xiaosi is being cheeky</text>'
+        f'<image id="awaySticker" x="1255" y="410" width="120" height="120"/>'
+        f'<rect x="1214" y="552" width="202" height="44" rx="14" fill="#FFFFFF"/><text x="1232" y="580" font-size="14" font-weight="800" fill="{MUTED}">Ask how he is…</text>')
+add(group("cardAway", away, True))
+
+# his week on a card (the weekly fact card, in miniature); the page fills in his stickers
+X0, Y0 = 1110, 120
+wk = (f'<g filter="url(#soft)"><rect x="{X0}" y="{Y0}" width="320" height="400" rx="24" fill="{GRAPE}"/></g>'
+      f'<circle cx="{X0 + 290}" cy="{Y0 + 30}" r="70" fill="#FFFFFF" opacity=".1"/>'
+      f'<text x="{X0 + 22}" y="{Y0 + 36}" font-size="17" font-weight="900" fill="#FFFFFF">XIAOSI&#39;S WEEK</text>'
+      f'<text x="{X0 + 22}" y="{Y0 + 56}" font-size="11.5" font-weight="800" fill="#F3EEFF">23 to 29 Oct · aka Little Loaf, Mr Si</text>'
+      f'<image class="wk" data-k="eating" x="{X0 + 14}" y="{Y0 + 72}" width="96" height="96" transform="rotate(-9 {X0 + 62} {Y0 + 120})"/>'
+      f'<image class="wk" data-k="alert" x="{X0 + 212}" y="{Y0 + 70}" width="96" height="96" transform="rotate(8 {X0 + 260} {Y0 + 118})"/>'
+      f'<image class="wk" data-k="stretch" x="{X0 + 80}" y="{Y0 + 70}" width="160" height="110"/>'
+      f'<rect x="{X0 + 14}" y="{Y0 + 192}" width="292" height="196" rx="18" fill="#FFFFFF"/>'
+      f'<text x="{X0 + 30}" y="{Y0 + 224}" font-size="19" font-weight="900" fill="{INK}">Little Loaf&#39;s lazy week</text>')
+for i, (big, lab) in enumerate([("1.10 kg", "weight, steady"), ("17", "flops"), ("14 h 54", "loafing"), ("9", "tray visits a day")]):
+    x, y = X0 + 26 + (i % 2) * 140, Y0 + 238 + (i // 2) * 66
+    wk += (f'<rect x="{x}" y="{y}" width="128" height="56" rx="12" fill="#F3EEFF"/><text x="{x + 12}" y="{y + 27}" font-size="19" font-weight="900" fill="{INK}">{big}</text>'
+           f'<text x="{x + 12}" y="{y + 46}" font-size="11" font-weight="800" fill="{MUTED}">{lab}</text>')
+add(group("cardWeek", wk, True))
 
 add('<g id="bunwrap"><ellipse id="bunshadow" cx="0" cy="0" rx="34" ry="9" fill="#2B2A33" opacity=".14"/><image id="bun" x="0" y="0" width="10" height="10"/></g>')
 add('</svg>')
@@ -134,9 +172,10 @@ def b64(name, box=170):
     im = Image.open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "server/public/demo", name)); im.thumbnail((box, box))
     b = io.BytesIO(); im.save(b, "PNG", optimize=True)
     return {"src": "data:image/png;base64," + base64.b64encode(b.getvalue()).decode(), "w": im.size[0], "h": im.size[1]}
-spots = {"pen": (300, 300), "gate": (500, 330), "cable": (600, 400), "choc": (560, 250), "hay": (290, 175), "hunch": (300, 230)}
+spots = {"pen": (300, 300), "gate": (500, 330), "cable": (612, 396), "avo": (585, 250), "hay": (290, 175), "hunch": (300, 230), "away": (420, 360)}
 scene = {"spots": {k: iso(x, y, 0) for k, (x, y) in spots.items()},
-         "stickers": {"side": b64("xiaosi-sticker-3.png"), "sit": b64("xiaosi-sticker-2.png"), "hunch": b64("xiaosi-sticker.png"), "back": b64("xiaosi-sticker-4.png")}}
+         "stickers": {"side": b64("xiaosi-sticker-3.png"), **{k: b64(f"story/{k}.png") for k in ["bum", "loaf", "eating", "alert", "grooming", "standing", "stretch"]}},
+         "targets": {"cable": iso(580, 412, 0), "avo": iso(566, 272, 0)}}
 dest = os.path.join(os.path.dirname(os.path.dirname(HERE)), "server/public/intro")
 os.makedirs(dest, exist_ok=True)
 open(os.path.join(dest, "intro.svg"), "w").write("\n".join(out))

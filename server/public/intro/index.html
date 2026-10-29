@@ -35,8 +35,9 @@
 <div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="cap"><span id="capText"></span></div></div></div>
 <div id="hint">R or click to replay</div>
 <script>
-// FurSight's intro: Xiaosi's story in the kit schematic's style. He had GI stasis; since then every treat feels
-// like a risk; he roams, chews cables, finds chocolate. Then the kit arrives and each worry gets an answer.
+// FurSight's intro: Xiaosi's story in the kit schematic's style, with his own stickers. He had GI stasis; since
+// then every treat feels like a risk; he roams, chews a cable, finds avocado (healthy for us, can be fatal for
+// him). Then the kit arrives and each worry gets an answer.
 // The scene (props in groups, his stickers, where he goes) comes from docs/kit-src/make_intro.py.
 const $ = (id) => document.getElementById(id);
 let S, run = 0;
@@ -77,24 +78,28 @@ async function hop(spot, ms, r, hops = 3) {
 const breathe = (ms, r) => tween(ms, r, (k) => { const s = Math.sin(k * Math.PI * 2 * ms / 1800); bun.sy = 1 - s * .025; bun.sx = 1 + s * .02; });
 const nod = (ms, r) => tween(ms, r, (k) => { bun.tilt = Math.max(0, Math.sin(k * Math.PI * 2 * ms / 500)) * 9 * bun.face; });
 const chew = (ms, r) => tween(ms, r, (k) => { bun.tilt = Math.sin(k * Math.PI * 2 * ms / 160) * 3; bun.sy = 1 + Math.sin(k * Math.PI * 2 * ms / 160) * .02; });
+// turn to look at something (the stickers face right as drawn)
+const faceTo = (t) => { bun.face = S.targets[t][0] < bun.x ? -1 : 1; draw(); };
+const pose = (p, face = 1) => { bun.pose = p; bun.face = face; draw(); };
 const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 1.08 - (k - .7) / .3 * .08; });
 
 // ---------------------------------------------------------------- the story
 async function story(r) {
-  for (const id of ["cablering", "chocglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardChoc", "cardHay", "cardTray", "cardBerry", "berry", "berryq"]) show(id, false);
+  for (const id of ["cablering", "avoglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardAvo", "cardHay", "cardTray", "cardBerry", "berry", "berryq", "cardAsk", "cardAway", "cardWeek"]) show(id, false);
   $("dim").style.opacity = 0; card(""); $("capText").classList.remove("on");
-  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "sit", lift: 0, tilt: 0, sx: 1, sy: 1, size: 0 }); draw();
+  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 0 }); draw();
 
   card(`<div><h1>FurSight</h1><p>a story about Xiaosi</p></div>`); await wait(2200, r); card("");
   await pop(r);
-  await caption("Meet Xiaosi.", 1800, r);
+  await Promise.all([breathe(1800, r), caption("Meet Xiaosi.", 1800, r)]);
+  pose("alert");
   await Promise.all([breathe(2200, r), caption("He loves a treat. We love giving him one.", 2200, r)]);
 
   // the scare
-  bun.pose = "hunch"; draw(); $("dim").style.opacity = .42;
+  pose("loaf"); $("dim").style.opacity = .42;
   await Promise.all([breathe(3000, r), caption("A few months ago, he got GI stasis. His gut just stopped.", 3000, r, true)]);
   await caption("Rabbits hide illness until it's serious.", 2400, r, true);
-  $("dim").style.opacity = 0; bun.pose = "sit"; draw();
+  $("dim").style.opacity = 0; pose("alert");
   show("berry"); await wait(500, r); show("berryq");
   await caption("Since then, every treat feels like a risk.", 2600, r);
   show("berryq", false);
@@ -103,34 +108,50 @@ async function story(r) {
   bun.pose = "side"; draw();
   await caption("And when he roams free...", 900, r);
   await hop("gate", 1300, r, 3); await hop("cable", 1100, r, 2);
-  show("cablering");
+  faceTo("cable"); show("cablering");
   await Promise.all([chew(2000, r), caption("...cables look like chew toys.", 2000, r)]);
-  await hop("choc", 1300, r, 3);
-  show("chocglow");
-  await Promise.all([nod(2200, r), caption("And chocolate is toxic to rabbits.", 2200, r)]);
-  await hop("hay", 1800, r, 4);
-  bun.pose = "back"; draw();
+  await hop("avo", 1300, r, 3);
+  pose("standing"); show("avoglow");
+  await Promise.all([nod(2600, r), caption("You'd think avocado is good for him. It can be fatal.", 2600, r)]);
+  pose("side"); await hop("hay", 1800, r, 4);
+  pose("eating");
   await Promise.all([nod(2400, r), caption("Hay should be most of what he eats. Less hay is the first sign.", 2400, r)]);
-  show("cablering", false); show("chocglow", false);
+  show("cablering", false); show("avoglow", false);
 
   // the kit
-  bun.pose = "sit"; draw();
-  await caption("So we built FurSight.", 1600, r, true);
+  pose("grooming");
+  await Promise.all([breathe(1600, r), caption("So we built FurSight.", 1600, r, true)]);
   show("cam1"); await wait(500, r);
   await caption("A cam on his pen, for his hay, food and water.", 1900, r);
-  show("cam2"); await wait(400, r);
-  await caption("A cam that follows him when he roams.", 1800, r);
+  show("cam2"); await wait(300, r);
+  pose("bum");
+  await Promise.all([hop("away", 1800, r, 3), caption("A cam that follows him when he roams.", 1800, r)]);
+  pose("bum", 1);
   show("trayscale"); await wait(300, r); show("traytop");
   await caption("And a litter tray that weighs him every visit.", 2000, r);
 
   // and each worry gets an answer
-  show("cardBerry"); await caption("It remembers every treat, and when he can have the next.", 2600, r);
-  show("cardChoc"); show("chocglow"); await caption("It checks food before you share it.", 2000, r);
-  show("cardCable"); show("cablering"); await caption("It spots what he could chew.", 1800, r);
+  pose("alert");
+  show("cardBerry"); await caption("Show FurSight the treats you give him. It remembers, and tells you if and when he can have the next.", 3600, r);
+  show("cardAvo"); show("avoglow"); await caption("It checks food before you share it.", 2200, r);
+  show("cardCable"); show("cablering"); await caption("It warns you about hazards before he finds them.", 2400, r);
   show("cardHay"); show("cardTray"); await caption("And it notices when something changes.", 2400, r);
+  for (const id of ["cardBerry", "cardAvo", "cardCable", "cardHay", "cardTray", "cablering", "avoglow"]) show(id, false);
 
-  for (const id of ["cardBerry", "cardChoc", "cardCable", "cardHay", "cardTray", "cablering", "chocglow"]) show(id, false);
-  await Promise.all([breathe(2200, r), caption("Treat him. Without the worry.", 2200, r)]);
+  // wherever you are
+  pose("grooming");
+  show("cardAsk"); await Promise.all([breathe(2800, r), caption("It links to your Ray-Ban Display and Meta Quest, so you can just ask.", 2800, r)]);
+  const st = S.stickers.bum.src, as = $("awaySticker"); as.setAttribute("href", st); as.setAttributeNS("http://www.w3.org/1999/xlink", "href", st);
+  show("cardAway"); await caption("When you're away, it sends you funny stickers, and you can ask how he is.", 3400, r);
+  show("cardAsk", false); show("cardAway", false);
+
+  // his week, on a card
+  pose("stretch");
+  for (const im of document.querySelectorAll("image.wk")) { const src = S.stickers[im.dataset.k].src; im.setAttribute("href", src); im.setAttributeNS("http://www.w3.org/1999/xlink", "href", src); }
+  show("cardWeek"); await Promise.all([breathe(3000, r), caption("And every week, his week on a card: flops, weight, the lot.", 3000, r)]);
+  show("cardWeek", false);
+  pose("stretch");
+  await Promise.all([breathe(2600, r), caption("Treat him. Without the worry.", 2600, r)]);
   $("capText").classList.remove("on");
   card(`<div style="background:rgba(246,245,249,.92);padding:40px 60px;border-radius:40px"><h1>FurSight</h1><p>It notices. Your vet decides.</p></div>`);
 }
