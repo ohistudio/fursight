@@ -63,6 +63,8 @@
   .del { border: 0; background: none; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer; }
   .del:hover { color: var(--coral-lip); } .recap .del { margin-top: 8px; justify-self: start; }
   .entry img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; flex: none; background: var(--line); }
+  /* a cut-out sticker is shown whole, bigger, with no tile behind it */
+  .entry img.sticker { width: 96px; height: 96px; object-fit: contain; border-radius: 0; background: none; filter: drop-shadow(0 3px 5px rgba(0,0,0,.18)); }
   .badge { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink); font-weight: 900; }
   .v-safe { background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); } .v-caution { background: var(--sun); box-shadow: 0 3px 0 var(--sun-lip); }
   .v-toxic, .v-vet { background: var(--coral); box-shadow: 0 3px 0 var(--coral-lip); } .v-other { background: var(--sky); box-shadow: 0 3px 0 var(--sky-lip); }
@@ -475,7 +477,7 @@ async function today() {
       <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p>
       <button class="del" data-del="${e.id}">Remove</button></div>`;
     return `${head}<div class="card entry pop" style="margin-bottom:10px" data-entry="${e.id}">
-      ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
+      ${e.has_image ? `<img loading="lazy" class="${e.extra && e.extra.sticker ? "sticker" : ""}" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
       ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}${recordDetails(e)}
       <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""} · <button class="del" data-del="${e.id}">Remove</button></div></div></div>`;

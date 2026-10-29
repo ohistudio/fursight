@@ -153,8 +153,17 @@ module.exports = handler(async (body, req) => {
     description: `The FurSight Tray under ${p.name}'s litter tray: his weight each visit, how many visits today, and how much he's left (droppings and urine) against his usual by this time of day. Fewer visits or little output is an early sign of gut stasis. Use it for anything about his health, appetite, gut or weight.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
     async run() {
-      const t = FSTray.summary(await recent(home.token, 200).catch(() => []));
+      const all = await recent(home.token, 200).catch(() => []);
+      const t = FSTray.summary(all);
       if (t.status === "none") return { output: { error: "There's no FurSight Tray linked." }, step: { tool: "tray", label: "No litter tray scale linked" } };
+      // a Tray that has gone quiet is probably off or unplugged: zero visits then says nothing about droppings
+      const lastTray = Math.max(0, ...all.filter((e) => /^tray/.test(e.kind)).map((e) => e.at));
+      const quietH = Math.round((Date.now() - lastTray) / 36e5);
+      if (quietH >= 8) {
+        seen.set("tray", { kind: "tray-off" });
+        return { output: { id: "tray", tray_quiet: `The Tray hasn't sent anything for ${quietH} hours. It's probably switched off, unplugged or out of range, so today's zero visits say NOTHING about his droppings or eating. Never treat this as a sign of illness or a reason to see the vet; at most suggest checking the Tray is on.`, week_weights_g: t.week.map((d) => d.weight_g) },
+          step: { tool: "tray", label: `Checked the litter tray: nothing from it for ${quietH} h, it may be off` } };
+      }
       seen.set("tray", { kind: "tray" });
       const drop = (await recent(home.token, 40).catch(() => [])).find((e) => e.kind === "droppings");
       return { output: { id: "tray", status: t.status, reasons: t.reasons, today: t.today, usual: t.usual, week_weights_g: t.week.map((d) => d.weight_g), last_droppings_check: drop ? { when: new Date(drop.at).toISOString().slice(0, 16), verdict: drop.extra && drop.extra.verdict, note: drop.note } : null, simulated: t.simulated },
@@ -325,7 +334,7 @@ module.exports = handler(async (body, req) => {
       }
       // "see a vet", by verdict or in the words, needs something real behind it
       if (a.verdict === "vet" || /\b(vet|veterinar)/i.test(a.answer || "")) {
-        const real = ev.filter((id) => ["photo", "owner"].includes(id) || (seen.get(id) && seen.get(id).kind === "cam") || (seen.get(id) && !["food", "ask", "care", "food_list", "weather", "calendar"].includes(seen.get(id).kind)));
+        const real = ev.filter((id) => ["photo", "owner"].includes(id) || (seen.get(id) && seen.get(id).kind === "cam") || (seen.get(id) && !["food", "ask", "care", "food_list", "weather", "calendar", "tray-off"].includes(seen.get(id).kind)));
         if (!real.length || (real.length === 1 && real[0] === "owner" && !/\b(ate|eaten|eating|had|gave|swallow|chew|sick|not|won.?t|hasn.?t|isn.?t|stopp|hunch|grind|bloat|letharg|diarr|blood)/i.test(question)))
           problems.push("Sending someone to the vet needs something real: what you saw (photo or cam), a diary entry about his health, or the owner telling you something happened. A food check or a question is not a sign of illness.");
       }

@@ -121,7 +121,7 @@ struct AskView: View {
                 // keep the diary in step with the other devices
                 if a.obj("needs") == nil {
                     let steps = a.arr("steps").map { ["tool": $0.str("tool"), "label": $0.str("label"), "detail": $0.str("detail"), "kind": $0.str("kind")] }
-                    var entry: [String: Any] = ["kind": "ask", "title": a.str("question"), "note": a.str("answer"), "extra": ["steps": steps]]
+                    var entry: [String: Any] = ["kind": "ask", "title": a.str("question"), "note": a.str("answer"), "extra": ["steps": steps, "sticker": sticker != nil]]
                     if let picture { entry["image"] = picture }
                     if ["safe", "caution", "toxic", "vet"].contains(a.str("verdict")) { entry["verdict"] = a.str("verdict") }
                     _ = try? await API.hub("/diary", method: "POST", body: entry)

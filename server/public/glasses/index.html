@@ -53,6 +53,15 @@
   #q, #n { width: 100%; box-sizing: border-box; font: 800 22px Nunito, sans-serif; color: #FFFFFF; background: #000000; border: 3px solid #9B6CF0; border-radius: 20px; padding: 14px 16px; outline: none; }
   #q:focus { border-color: #C8A8FF; }
   #answer .big { font-size: 22px; }
+  /* quick questions: no need to write anything. Up and down move between them, Select asks */
+  #quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  #quick button { font: 900 19px Nunito, sans-serif; color: #FFFFFF; background: #000000; border: 3px solid #3A3A44; border-radius: 18px; padding: 12px 10px; text-align: left; }
+  #quick button.sel { border-color: #9B6CF0; background: #1C1530; }
+  #q.sel { box-shadow: 0 0 0 3px #FFFFFF55; }
+  .seen { display: flex; gap: 12px; align-items: flex-start; margin-top: 8px; }
+  .seen .txt { flex: 1; min-width: 0; font-size: 19px; }
+  .seen .pic { flex: none; width: 200px; height: 200px; display: grid; place-items: center; }
+  .seen .pic img { max-width: 200px; max-height: 200px; }
   .speaking::after { content: " ●"; color: #9B6CF0; }
   .item { display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 16px; border: 3px solid transparent; }
   .item.focus { border-color: #6CC4FF; }
@@ -111,7 +120,7 @@
   <div class="page" id="p-ask">
     <div class="k">Ask about <span id="askPet">your pet</span></div>
     <input id="q" type="text" placeholder="Pinch to ask: say or write it" autocomplete="off">
-    <div class="sub" id="askHint" style="margin-top:8px">FurSight looks through the pet cam and today's diary.</div>
+    <div id="quick"></div>
     <div id="answer"></div>
   </div>
   <!-- diary -->
@@ -192,6 +201,7 @@ function render() {
   const pet = me.pets[0];
   $("pet").textContent = pet ? pet.name : "Add your pet";
   $("askPet").textContent = pet ? pet.name : "your pet";
+  if ($("quick").style.display !== "none") renderQuick();
   $("date").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
   const today = entries.filter((e) => new Date(e.at).toDateString() === new Date().toDateString());
   $("nChecks").textContent = today.filter((e) => e.kind === "food").length;
@@ -359,6 +369,8 @@ async function ask(question) {
   if (!question) return null;
   if (PAGES[page] !== "ask") go(PAGES.indexOf("ask"));
   const followup = pending; pending = null;
+  // the answer gets the whole screen; Up brings the box and the quick questions back
+  $("quick").style.display = "none"; $("q").style.display = "none";
   $("answer").innerHTML = `<div class="card row">${bean("thinking", 64)}<div class="sub">Looking${me && me.cams.length ? " through the pet cam" : ""}…</div></div>`;
   try {
     const r = await fetch(API + "/api/ask", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token },
@@ -377,9 +389,8 @@ async function ask(question) {
     const cls = VERDICT[j.verdict] ? VERDICT[j.verdict][0] : "other";
     $("answer").innerHTML = `<div class="card ${cls === "toxic" || cls === "vet" ? "alert" : ""}">
       <div class="row">${bean(VERDICT[j.verdict] ? j.verdict : "idle", 64)}<div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>
-      ${j.snapshot ? `<img id="snap" alt="" style="float:right;width:150px;height:150px;object-fit:cover;border-radius:16px;margin:8px 0 4px 12px" src="${j.snapshot.image}">` : ""}
-      <div style="margin-top:8px;font-size:19px">${esc(j.answer)}</div>
-      <div class="when" style="margin-top:6px;clear:both">${esc(how(j.steps) || "You asked: " + j.question)}</div></div>`;
+      <div class="seen"><div class="txt">${esc(j.answer)}</div>${j.snapshot ? `<div class="pic" id="pic">${bean("thinking", 70)}</div>` : ""}</div>
+      <div class="when" style="margin-top:6px">${esc(how(j.steps) || "You asked: " + j.question)} · Up for more questions</div></div>`;
     say(j.answer);
     const title = followup ? followup.question : j.question;
     // what it saw through the pet cam: cut him out as a sticker if SAM finds him, else keep the snapshot
@@ -387,9 +398,10 @@ async function ask(question) {
     if (j.snapshot) {
       const sticker = await makeSticker(j.snapshot.image, async (path, body) => (await fetch(API + path, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(body) })).json()).catch(() => null);
       image = sticker || j.snapshot.image;
-      if (sticker && $("snap")) Object.assign($("snap").style, { objectFit: "contain", borderRadius: "0" }), $("snap").src = sticker;
+      // the sticker of him, or the picture if he couldn't be cut out (never the picture first, then a swap)
+      if ($("pic")) $("pic").innerHTML = `<img alt="" src="${image}" style="${sticker ? "" : "width:200px;height:200px;object-fit:cover;border-radius:16px"}">`;
     }
-    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title, note: j.answer, ...(image ? { image } : {}), verdict: VERDICT[j.verdict] ? j.verdict : undefined, extra: { steps: (j.steps || []).map((s) => ({ tool: s.tool, label: s.label, detail: s.detail, kind: s.kind })), asked: followup ? followup.asked : undefined, reply: followup ? question : undefined } }) }).then(() => load()).catch(() => {});
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title, note: j.answer, ...(image ? { image } : {}), verdict: VERDICT[j.verdict] ? j.verdict : undefined, extra: { sticker: !!(image && image.startsWith("data:image/png")), steps: (j.steps || []).map((s) => ({ tool: s.tool, label: s.label, detail: s.detail, kind: s.kind })), asked: followup ? followup.asked : undefined, reply: followup ? question : undefined } }) }).then(() => load()).catch(() => {});
     return j.answer;
   } catch (e) {
     $("answer").innerHTML = `<div class="card"><div class="sub">Couldn't answer just now. Try again.</div></div>`;
@@ -400,6 +412,22 @@ async function ask(question) {
 // "change", not key by key: take whichever comes first, once.
 // On the glasses the composer commits the whole text at once; on a desktop keyboard "input" fires per key,
 // so "input" waits for a short pause and "change" (Enter / leaving the field) sends straight away.
+// quick questions: Up and Down move between the box and these, Select asks (askSel -1 is the box)
+let askSel = -1;
+const quickQs = () => { const n = (me && me.pets[0] && me.pets[0].name) || "him"; return [`What's ${n} doing?`, `Is ${n} OK today?`, "Eating and pooping OK?", `Too warm for ${n}?`]; };
+function renderQuick() {
+  $("quick").style.display = "";
+  $("quick").innerHTML = quickQs().map((q, i) => `<button class="${i === askSel ? "sel" : ""}" data-q="${i}">${esc(q)}</button>`).join("");
+  for (const b of $("quick").querySelectorAll("button")) b.onclick = () => ask(quickQs()[Number(b.dataset.q)]);
+  $("q").classList.toggle("sel", askSel === -1);
+}
+function askKey(k) {
+  const answered = $("quick").style.display === "none";
+  if (k === "ArrowUp" && answered) { $("answer").innerHTML = ""; $("q").style.display = ""; askSel = 0; renderQuick(); return; }
+  if (k === "ArrowDown") { askSel = Math.min(askSel + (askSel === -1 ? 1 : 2), 3); if (askSel === 2 && quickQs().length < 3) askSel = 1; renderQuick(); return; }
+  if (k === "ArrowUp") { askSel = askSel <= 1 ? -1 : askSel - 2; renderQuick(); return; }
+  if (k === "Enter" || k === " ") { if (askSel === -1) { $("q").focus(); $("q").click(); } else ask(quickQs()[askSel]); }
+}
 let askTimer = 0;
 function askFromField() { clearTimeout(askTimer); const v = $("q").value.trim(); if (!v) return; $("q").value = ""; $("q").blur(); ask(v); }
 $("q").addEventListener("input", () => { clearTimeout(askTimer); askTimer = setTimeout(askFromField, 1200); });
@@ -492,6 +520,7 @@ function camStop() { camAlive = false; if (camRtc) { camRtc.stop(); camRtc = nul
 function go(i) {
   page = (i + PAGES.length) % PAGES.length;
   show(PAGES[page]);
+  if (PAGES[page] === "ask" && $("quick").style.display !== "none") renderQuick();
   $("dots").innerHTML = PAGES.map((_, k) => `<i class="${k === page ? "on" : ""}"></i>`).join("");
   if (PAGES[page] === "cam") camLoop(); else camStop();
 }
@@ -508,7 +537,7 @@ window.addEventListener("keydown", (e) => {
   else if (PAGES[page] === "cam" && (k === "ArrowDown" || k === "ArrowUp")) { camVideo = !camVideo; store.set("fs.camVideo", camVideo ? "1" : null); camStop(); camLoop(); }
   else if (PAGES[page] === "diary" && k === "ArrowDown") { scroll = Math.min(scroll + 1, Math.max(0, entries.length - 4)); renderDiary(); }
   else if (PAGES[page] === "diary" && k === "ArrowUp") { scroll = Math.max(0, scroll - 1); renderDiary(); }
-  else if ((k === "Enter" || k === " ") && PAGES[page] === "ask") { $("q").focus(); $("q").click(); }
+  else if (PAGES[page] === "ask" && ["ArrowUp", "ArrowDown", "Enter", " "].includes(k)) askKey(k);
   else if ((k === "Enter" || k === " ") && PAGES[page] === "note") { $("n").focus(); $("n").click(); }
   else if (k === "Enter" || k === " ") load();
 });
