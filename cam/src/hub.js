@@ -167,6 +167,11 @@ export class Household {
       this.notify(id, entry, device, !!image);
       return json({ id, at, ...entry, has_image: !!image });
     }
+    // remove an entry (the owner's call, from the web app's diary): gone for every device, picture included
+    if ((mm = p.match(/^\/diary\/([A-Za-z0-9]{1,24})$/)) && m === "DELETE") {
+      this.sql.exec("DELETE FROM diary WHERE id = ?", mm[1]);
+      return json({ ok: true, id: mm[1] });
+    }
     if (p === "/diary" && m === "GET") {
       const limit = Math.min(200, Number(url.searchParams.get("limit")) || 50), before = Number(url.searchParams.get("before")) || 9e15;
       // ?kinds=record,photo: only those (uploads can be dated years back, past the latest 200)

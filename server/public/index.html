@@ -60,6 +60,8 @@
 
   /* diary */
   .entry { display: flex; gap: 12px; align-items: flex-start; }
+  .del { border: 0; background: none; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer; }
+  .del:hover { color: var(--coral-lip); } .recap .del { margin-top: 8px; justify-self: start; }
   .entry img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; flex: none; background: var(--line); }
   .badge { width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--ink); font-weight: 900; }
   .v-safe { background: var(--fern); box-shadow: 0 3px 0 var(--fern-lip); } .v-caution { background: var(--sun); box-shadow: 0 3px 0 var(--sun-lip); }
@@ -469,15 +471,27 @@ async function today() {
       : { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", video: "Video", record: "Vet record", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
-    if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
-      <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p></div>`;
-    return `${head}<div class="card entry pop" style="margin-bottom:10px">
+    if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px" data-entry="${e.id}">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
+      <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p>
+      <button class="del" data-del="${e.id}">Remove</button></div>`;
+    return `${head}<div class="card entry pop" style="margin-bottom:10px" data-entry="${e.id}">
       ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
       ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}${recordDetails(e)}
-      <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""}</div></div></div>`;
+      <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""} · <button class="del" data-del="${e.id}">Remove</button></div></div></div>`;
   }).join("");
   remindButtons($l);
+  // remove an entry: asks first, then it's gone from every device
+  for (const b of $l.querySelectorAll("[data-del]")) b.onclick = async () => {
+    if (!confirm("Remove this from the diary? It's removed on every device and can't be undone.")) return;
+    b.disabled = true;
+    try {
+      await hub("/diary/" + b.dataset.del, { method: "DELETE" });
+      const card = $l.querySelector(`[data-entry="${b.dataset.del}"]`);
+      if (card) { card.style.transition = "opacity .2s, transform .2s"; card.style.opacity = "0"; card.style.transform = "scale(.96)"; setTimeout(() => card.remove(), 200); }
+      toast("Removed");
+    } catch (err) { b.disabled = false; toast(err.message); }
+  };
 }
 
 // ---------------------------------------------------------------- uploads: old photos, videos and vet records
