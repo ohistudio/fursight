@@ -453,9 +453,11 @@ function camLoop() {
     vid.hidden = !on; $("camImg").hidden = on;
     if (on && vid.requestVideoFrameCallback) vid.requestVideoFrameCallback(onFrame);
   } });
+  const beat = setInterval(() => sock.readyState === 1 ? sock.send("ping") : sock.readyState > 1 && clearInterval(beat), 20e3);   // keeps an idle socket open
   camSock.onopen = () => (opened = true);
   camSock.onmessage = (e) => {
     if (typeof e.data !== "string") return showBlob(e.data);
+    if (e.data === "pong") return;
     try { if (camRtc) camRtc.message(JSON.parse(e.data)); } catch (er) {}
   };
   camSock.onclose = () => { camSock = null; if (camRtc) { camRtc.stop(); camRtc = null; vid.hidden = true; $("camImg").hidden = false; } if (camAlive && !opened) poll(); else if (camAlive) setTimeout(() => { camAlive = false; clearInterval(status); camLoop(); }, 1500); };

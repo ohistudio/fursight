@@ -44,6 +44,15 @@
         live = true; wait = 15e3; clearTimeout(giveUp);
         send(ws, { rtc: "on" }); onLive(true);
       };
+      // a connection can stay "connected" while no frames arrive (the camera page asleep in the background):
+      // if the picture hasn't moved for 6 s, go back to JPEGs and try video again shortly
+      let at = -1, still = 0;
+      const watchdog = setInterval(() => {
+        if (pc !== me) return clearInterval(watchdog);
+        if (!live) return;
+        if (video.currentTime === at) { if ((still += 2) >= 6) { clearInterval(watchdog); wait = 5e3; fallback(); } }
+        else { at = video.currentTime; still = 0; }
+      }, 2000);
       await me.setLocalDescription(await me.createOffer());
       ready = Promise.resolve();
       send(ws, { rtc: { sdp: me.localDescription } });

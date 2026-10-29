@@ -76,6 +76,8 @@ export class Channel {
     this.pollers = new Map();
     this.view = { z: 1, x: 0.5, y: 0.5 };
     ctx.blockConcurrencyWhile(async () => { this.view = (await ctx.storage.get("view")) || this.view; });
+    // heartbeats are answered without waking the object
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
   // zoom 1-4, centre kept so the crop stays inside the picture; tell the camera and everyone watching

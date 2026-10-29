@@ -1071,12 +1071,15 @@ function cam() {
       if (on && $v.requestVideoFrameCallback) $v.requestVideoFrameCallback(onFrame);
     } });
     if (rtc) rtcs.push(rtc);
+    // a heartbeat: on video the socket carries almost nothing, and an idle socket is closed after ~100 s
+    const beat = setInterval(() => ws.readyState === 1 ? ws.send("ping") : ws.readyState > 1 && clearInterval(beat), 20e3);
     ws.onopen = () => (opened = true);
     ws.onmessage = (e) => {
       if (typeof e.data !== "string") return show(e.data);
+      if (e.data === "pong") return;
       try { const m = JSON.parse(e.data); if (rtc && rtc.message(m)) return; if (m.view) showView(m.view); } catch (er) {}
     };
-    ws.onclose = () => { if (alive && !opened) poll(); };
+    ws.onclose = () => { clearInterval(beat); if (alive && !opened) poll(); else if (alive) setTimeout(() => { if (alive) { stopCam(); cam(); } }, 1500); };
     setTimeout(() => { if (!opened) ws.close(); }, 4000);
     async function poll() {
       const me_ = Math.random().toString(36).slice(2, 10);
@@ -1114,11 +1117,16 @@ async function beCam() {
     if (rtc) rtc.stop();
     ws = new WebSocket(RELAY.replace("https", "wss") + `/c/${channel}/send?k=${key}`);
     rtc = FSRtc.serve({ ws, relay: RELAY, channel, canvas: c, fps: 15 });
-    ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (rtc && rtc.message(m)) return; viewers = m.viewers ?? viewers; jpeg = m.jpeg ?? viewers; if (m.view) view = m.view; } catch (er) {} };
+    ws.onopen = () => { const beat = setInterval(() => ws.readyState === 1 ? ws.send("ping") : clearInterval(beat), 20e3); };
+    ws.onmessage = (e) => { if (e.data === "pong") return; try { const m = JSON.parse(e.data); if (rtc && rtc.message(m)) return; viewers = m.viewers ?? viewers; jpeg = m.jpeg ?? viewers; if (m.view) view = m.view; } catch (er) {} };
     ws.onclose = () => { if (alive) setTimeout(connect, 2000); };
   };
   connect();
-  timer = setInterval(() => {
+  // the clock runs in a worker: Chrome slows timers on a page in the background to once a second (once a
+  // minute after a while), which would freeze the video when this window isn't in front
+  const ticker = new Worker(URL.createObjectURL(new Blob(["setInterval(() => postMessage(0), 1000 / 15)"], { type: "text/javascript" })));
+  timer = { stop: () => ticker.terminate() };
+  ticker.onmessage = () => {
     const st = document.getElementById("st"), onVideo = rtc ? rtc.count() : 0;
     if (st) st.innerHTML = (viewers ? `<b></b>live to ${viewers}${onVideo ? ` (${onVideo} on video)` : ""}` : "ready, nobody watching") + (view.z > 1 ? ` · ${view.z}× zoom` : "");
     if (!ws || ws.readyState !== 1 || !viewers || !v.videoWidth) return;
@@ -1130,9 +1138,9 @@ async function beCam() {
     if (!jpeg || Date.now() - lastJpeg < 160 || ws.bufferedAmount > 24 * 1024) return;
     lastJpeg = Date.now();
     c.toBlob((b) => b && ws.readyState === 1 && ws.send(b), "image/jpeg", 0.65);
-  }, 1000 / 15);
+  };
   const watch = watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
-  camStop = () => { alive = false; clearInterval(timer); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
+  camStop = () => { alive = false; timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { stopCam(); render(); };
 }
 
