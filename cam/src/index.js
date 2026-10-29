@@ -5,8 +5,14 @@
 //   WS  /c/<channel>/send?k=  webcam page -> binary JPEG frames; gets {viewers:n} back
 //   WS  /c/<channel>/watch    glasses page <- binary JPEG frames
 //   GET /c/<channel>/frame.jpg  latest frame, for a browser that can't hold a socket
+//   GET /c/<channel>/ice      ICE servers for WebRTC (STUN, plus Cloudflare TURN when TURN_KEY_ID/TURN_KEY_TOKEN are set)
 //   GET|POST /c/<channel>/view  the camera's digital zoom { z: 1-4, x, y } (centre, 0-1 of the full picture);
 //                             a watcher can also send {"view":{...}} on its socket. The webcam page crops to it.
+//
+// Video: a watcher that can do WebRTC sends {rtc:{sdp|candidate}} on its socket; the relay passes it to the
+// webcam page as {from, rtc} and the answers back as {rtc}, so the video itself goes straight between them. A
+// watcher sends {rtc:"on"} once video is playing: it gets no more JPEGs, and the webcam page stops making them
+// when nobody else needs them ({viewers, jpeg}). If video fails it sends {rtc:"off"} and JPEGs start again.
 //
 // A channel id is 16 random characters and is the only way to see the camera, so it's never listed.
 // The first webcam page to send on a channel claims it with its key; nobody else can send there.
@@ -38,11 +44,27 @@ export default {
     if (url.pathname === "/g/icon.png") return new Response(ICON, { headers: { "content-type": "image/png", "cache-control": "public, max-age=86400", "access-control-allow-origin": "*" } });
     let m = url.pathname.match(/^\/g\/([A-Za-z0-9]{16})$/);
     if (m) return html(GLASSES);
-    m = url.pathname.match(/^\/c\/([A-Za-z0-9]{16})\/(send|watch|frame\.jpg|view)$/);
+    m = url.pathname.match(/^\/c\/([A-Za-z0-9]{16})\/(send|watch|frame\.jpg|view|ice)$/);
     if (!m || !ID.test(m[1])) return new Response("not found", { status: 404 });
+    if (m[2] === "ice") return ice(env);
     return env.CHANNELS.get(env.CHANNELS.idFromName(m[1])).fetch(req);
   },
 };
+
+// STUN finds a direct path for most home networks; TURN relays the video when it can't (strict NATs, some VPNs)
+async function ice(env) {
+  const cors = { "access-control-allow-origin": "*", "content-type": "application/json", "cache-control": "no-store" };
+  let servers = [{ urls: "stun:stun.cloudflare.com:3478" }];
+  if (env.TURN_KEY_ID && env.TURN_KEY_TOKEN) {
+    try {
+      const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`, {
+        method: "POST", headers: { authorization: `Bearer ${env.TURN_KEY_TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ ttl: 86400 }),
+      });
+      if (r.ok) { const j = await r.json(); servers = [].concat(j.iceServers || []); }
+    } catch (e) {}
+  }
+  return new Response(JSON.stringify({ iceServers: servers }), { headers: cors });
+}
 
 const POLL_SEEN = 3000; // a polling viewer counts as watching for this long after its last fetch
 
@@ -76,8 +98,13 @@ export class Channel {
     return this.sockets("watch").filter((ws) => ws !== leaving).length + this.pollers.size;
   }
 
+  // viewers still on JPEGs (not on video): the webcam page only makes JPEGs while this is above 0
+  jpegViewers(leaving = null) {
+    return this.sockets("watch").filter((ws) => ws !== leaving && !(ws.deserializeAttachment() || {}).rtc).length + this.pollers.size;
+  }
+
   tellSender(leaving = null) {
-    const msg = JSON.stringify({ viewers: this.viewers(leaving) });
+    const msg = JSON.stringify({ viewers: this.viewers(leaving), jpeg: this.jpegViewers(leaving) });
     for (const ws of this.sockets("send")) { try { ws.send(msg); } catch (e) {} }
   }
 
@@ -111,15 +138,18 @@ export class Channel {
       if (owner && owner !== key) return new Response("this channel belongs to another camera", { status: 403 });
       if (!owner) await this.ctx.storage.put("key", key);
       for (const old of this.sockets("send")) { try { old.close(4000, "replaced"); } catch (e) {} }
+      // a new webcam page has no video connections: watchers on video start again
+      for (const w of this.sockets("watch")) { try { w.send(JSON.stringify({ rtc: "restart" })); } catch (e) {} }
     }
     const pair = new WebSocketPair();
     this.ctx.acceptWebSocket(pair[1], [what]);
     if (what === "watch") {
+      pair[1].serializeAttachment({ id: crypto.randomUUID().slice(0, 8), rtc: false });
       if (this.frame) pair[1].send(this.frame);
       pair[1].send(JSON.stringify({ view: this.view }));
       queueMicrotask(() => this.tellSender());
     } else {
-      pair[1].send(JSON.stringify({ viewers: this.viewers(), view: this.view }));
+      pair[1].send(JSON.stringify({ viewers: this.viewers(), jpeg: this.jpegViewers(), view: this.view }));
     }
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
@@ -132,10 +162,26 @@ export class Channel {
   webSocketMessage(ws, data) {
     const [tag] = this.ctx.getTags(ws);
     if (data === "ping") { try { ws.send("pong"); } catch (e) {} return; }
-    if (tag === "watch" && typeof data === "string") { try { const m = JSON.parse(data); if (m.view) this.setView(m.view); } catch (e) {} return; }
-    if (tag !== "send" || typeof data === "string" || data.byteLength > 512 * 1024) return;
+    if (typeof data === "string") {
+      let m; try { m = JSON.parse(data); } catch (e) { return; }
+      if (tag === "watch") {
+        if (m.view) this.setView(m.view);
+        if (m.rtc === "on" || m.rtc === "off") {
+          ws.serializeAttachment({ ...ws.deserializeAttachment(), rtc: m.rtc === "on" });
+          this.tellSender();
+        } else if (m.rtc) {
+          const msg = JSON.stringify({ from: ws.deserializeAttachment().id, rtc: m.rtc });
+          for (const s of this.sockets("send")) { try { s.send(msg); } catch (e) {} }
+        }
+      } else if (tag === "send" && m.to && m.rtc) {
+        const w = this.sockets("watch").find((x) => (x.deserializeAttachment() || {}).id === m.to);
+        if (w) { try { w.send(JSON.stringify({ rtc: m.rtc })); } catch (e) {} }
+      }
+      return;
+    }
+    if (tag !== "send" || data.byteLength > 512 * 1024) return;
     this.frame = data; this.at = Date.now();
-    for (const v of this.sockets("watch")) { try { v.send(data); } catch (e) {} }
+    for (const v of this.sockets("watch")) { if ((v.deserializeAttachment() || {}).rtc) continue; try { v.send(data); } catch (e) {} }
   }
 
   webSocketClose(ws) { this.closed(ws); }
@@ -143,6 +189,9 @@ export class Channel {
   closed(ws) {
     const watcher = this.ctx.getTags(ws)[0] === "watch";
     try { ws.close(1000, "bye"); } catch (e) {}
-    if (watcher) this.tellSender(ws);
+    if (!watcher) return;
+    this.tellSender(ws);
+    const msg = JSON.stringify({ from: (ws.deserializeAttachment() || {}).id, rtc: "bye" });
+    for (const s of this.sockets("send")) { try { s.send(msg); } catch (e) {} }
   }
 }

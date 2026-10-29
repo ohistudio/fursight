@@ -40,7 +40,7 @@
   .stat span { color: #9F9DAA; font-size: 14px; }
 
   #cam { position: absolute; left: 20px; top: 46px; width: 380px; height: 330px; border-radius: 22px; overflow: hidden; }
-  #cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #cam img, #cam video { width: 100%; height: 100%; object-fit: cover; display: block; }
   #camMsg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #C9C7D2; padding: 30px; }
   .live { display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #4A4A52; margin-right: 8px; vertical-align: 2px; }
   .live.on { background: #FF6B78; }
@@ -91,7 +91,7 @@
   <!-- pet cam -->
   <div class="page" id="p-cam">
     <div class="row" style="justify-content:space-between"><div class="big"><span class="live" id="live"></span><span id="camName">Pet cam</span></div><div class="sub" id="camState"></div></div>
-    <div id="cam"><img id="camImg" alt=""><div id="camMsg">Waking the camera</div></div>
+    <div id="cam"><img id="camImg" alt=""><video id="camVid" muted playsinline autoplay hidden></video><div id="camMsg">Waking the camera</div></div>
   </div>
   <!-- daily care -->
   <div class="page" id="p-care">
@@ -121,6 +121,7 @@
 <script src="/routines.js"></script>
 <script src="/activity.js"></script>
 <script src="/climate.js"></script>
+<script src="/rtc.js"></script>
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
 // between Today, Care (tick the daily list), Ask, Pet cam and Diary; up/down picks a care item, pinch ticks it; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
@@ -389,7 +390,7 @@ $("q").addEventListener("change", askFromField);
 
 // ---------------------------------------------------------------- pet cam: the household's camera, a few pictures a second
 
-let camAlive = false, camSock = null;
+let camAlive = false, camSock = null, camRtc = null;
 // Frames arrive pushed over a socket (one connection, no round trip per picture); if the socket won't open,
 // fall back to asking for the latest picture back to back.
 function camLoop() {
@@ -403,14 +404,24 @@ function camLoop() {
     fps = frames; frames = 0;
     const live = Date.now() - last < 3000;
     $("live").classList.toggle("on", live);
-    $("camState").textContent = live ? fps + " fps" : last ? "paused" : "waking";
+    $("camState").textContent = live ? (camRtc && camRtc.live ? "video " : "") + fps + " fps" : last ? "paused" : "waking";
   }, 1000);
   let opened = false;
   camSock = new WebSocket(HUB.replace("https", "wss") + `/c/${cam.channel}/watch`);
   camSock.binaryType = "blob";
+  // real video over WebRTC once it connects; the pictures keep coming until then, and if it drops
+  const vid = $("camVid"), sock = camSock;
+  const onFrame = () => { if (!camRtc || !camRtc.live || camSock !== sock) return; last = Date.now(); frames++; $("camMsg").textContent = ""; vid.requestVideoFrameCallback(onFrame); };
+  camRtc = FSRtc.watch({ ws: camSock, relay: HUB, channel: cam.channel, video: vid, onLive: (on) => {
+    vid.hidden = !on; $("camImg").hidden = on;
+    if (on && vid.requestVideoFrameCallback) vid.requestVideoFrameCallback(onFrame);
+  } });
   camSock.onopen = () => (opened = true);
-  camSock.onmessage = (e) => { if (typeof e.data !== "string") showBlob(e.data); };
-  camSock.onclose = () => { camSock = null; if (camAlive && !opened) poll(); else if (camAlive) setTimeout(() => { camAlive = false; clearInterval(status); camLoop(); }, 1500); };
+  camSock.onmessage = (e) => {
+    if (typeof e.data !== "string") return showBlob(e.data);
+    try { if (camRtc) camRtc.message(JSON.parse(e.data)); } catch (er) {}
+  };
+  camSock.onclose = () => { camSock = null; if (camRtc) { camRtc.stop(); camRtc = null; vid.hidden = true; $("camImg").hidden = false; } if (camAlive && !opened) poll(); else if (camAlive) setTimeout(() => { camAlive = false; clearInterval(status); camLoop(); }, 1500); };
   setTimeout(() => { if (!opened && camSock) camSock.close(); }, 4000);
   async function poll() {
     const viewer = "glasses" + Math.random().toString(36).slice(2, 8);
@@ -423,7 +434,7 @@ function camLoop() {
     }
   }
 }
-function camStop() { camAlive = false; if (camSock) { camSock.close(); camSock = null; } }
+function camStop() { camAlive = false; if (camRtc) { camRtc.stop(); camRtc = null; $("camVid").hidden = true; $("camImg").hidden = false; } if (camSock) { camSock.close(); camSock = null; } }
 
 // ---------------------------------------------------------------- navigation (Neural Band / touchpad arrive as keys)
 

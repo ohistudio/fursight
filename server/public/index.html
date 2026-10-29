@@ -142,7 +142,7 @@
   select { font: 800 16px Nunito, sans-serif; padding: 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
   .birthday { background: linear-gradient(180deg, #F3EDFF, var(--card)); border-color: #D9C8FF; }
   .camgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
-  .camgrid .cam img { cursor: zoom-in; }
+  .camgrid .cam img, .camgrid .cam video { cursor: zoom-in; }
   .how { margin-top: 8px; }
   .how summary { cursor: pointer; font-weight: 900; font-size: 13px; color: var(--grape-lip); list-style: none; }
   .how summary::-webkit-details-marker { display: none; }
@@ -185,6 +185,7 @@
 <script src="/activity.js"></script>
 <script src="/sticker.js"></script>
 <script src="/climate.js"></script>
+<script src="/rtc.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -681,8 +682,12 @@ function activityCard(a, p) {
       <tr class="unseen"><td>Not seen</td><td>${FSActivity.time(a.today.unseen)}</td><td>${FSActivity.time(a.week.unseen)}</td></tr></table>
     <p class="when">Only what the cams saw is counted. Not seen means out of view, another room, the cam off or the night: FurSight doesn't guess.${a.week.flopsYou ? ` ${a.week.flopsYou} flop${a.week.flopsYou === 1 ? "" : "s"} this week ${a.week.flopsYou === 1 ? "was" : "were"} added by you.` : ""}</p>
     ${a.treats.today.length ? `<p class="muted"><b>Treats today:</b> ${a.treats.today.map((t) => esc(t.item + (t.amount ? ` (${t.amount})` : ""))).join(", ")}</p>` : ""}
-    <button class="btn ghost" id="logOpen">Add what the cams missed</button>
+    <button class="btn ghost" id="logOpen">Add a note</button>
     <div id="logForm" class="stack hidden">
+      <textarea id="noteText" rows="2" maxlength="400" placeholder="e.g. fed him a strawberry, brushed his coat"></textarea>
+      <button class="btn grape" id="noteSave">Add note</button>
+      <div id="noteOut" class="stack"></div>
+      <p class="muted" style="font-size:14px">Or pick one. What you add counts, marked as yours.</p>
       <div class="chips">${Object.entries({ treat: "Treat", greens: "Greens", flop: "Flop", loaf: "Loaf", zoomies: "Zoomies", droppings: "Good droppings", note: "Note" }).map(([k, w]) => `<button class="chip pick" data-log="${k}">${w}</button>`).join("")}</div>
       <input id="logItem" class="hidden" maxlength="60" placeholder="What? e.g. a slice of apple">
       <select id="logAmount" class="hidden"><option value="tiny">A tiny bit</option><option value="small">A small piece</option><option value="handful">A handful</option></select>
@@ -696,7 +701,19 @@ function logForm(p) {
   if (!open) return;
   const $f = document.getElementById("logForm"), $item = document.getElementById("logItem"), $amt = document.getElementById("logAmount"), $save = document.getElementById("logSave");
   let what = null;
-  open.onclick = () => { $f.classList.toggle("hidden"); open.classList.add("hidden"); };
+  open.onclick = () => { $f.classList.toggle("hidden"); open.classList.add("hidden"); document.getElementById("noteText").focus(); };
+  // your own words: /api/note checks a food and puts the day it's OK again on the calendar, ticks care, marks grooming
+  const $note = document.getElementById("noteText"), $nb = document.getElementById("noteSave"), $out = document.getElementById("noteOut");
+  $nb.onclick = async () => {
+    if (!$note.value.trim()) return $note.focus();
+    $nb.disabled = true; $nb.textContent = "Reading it…";
+    try {
+      const r = await api("/api/note", { text: $note.value.trim(), tz: -new Date().getTimezoneOffset() });
+      $note.value = "";
+      $out.innerHTML = r.done.map((d) => `<p style="margin:0${d.verdict === "toxic" ? ";color:var(--coral)" : ""}">${d.verdict === "toxic" ? "⚠️ " : "✓ "}${esc(d.said)}</p>`).join("");
+    } catch (e) { toast(e.message); }
+    $nb.disabled = false; $nb.textContent = "Add note";
+  };
   for (const b of $f.querySelectorAll("[data-log]")) b.onclick = () => {
     what = b.dataset.log;
     for (const o of $f.querySelectorAll("[data-log]")) o.classList.toggle("on", o === b);
@@ -709,8 +726,8 @@ function logForm(p) {
     if (["treat", "greens", "note"].includes(what) && !$item.value.trim()) return $item.focus();
     $save.disabled = true;
     let r;
-    try { r = await api("/api/log", { what, item: $item.value.trim(), amount: $amt.value }); } catch (e) { $save.disabled = false; return toast(e.message); }
-    toast(r.never ? "Careful: that's on his never list" : "Added. Thanks for filling the gap");
+    try { r = await api("/api/log", { what, item: $item.value.trim(), amount: $amt.value, tz: -new Date().getTimezoneOffset() }); } catch (e) { $save.disabled = false; return toast(e.message); }
+    toast(r.never ? "Careful: that's on his never list" : r.said || "Added. Thanks for filling the gap");
     care();
   };
 }
@@ -1012,7 +1029,7 @@ function stopCam() { if (camStop) { camStop(); camStop = null; } }
 function cam() {
   const cams = me.cams;
   $app.innerHTML = `<div class="stack">${header()}
-    <div class="camgrid">${cams.map((c) => `<div class="card stack pop"><div class="cam"><img data-ch="${c.channel}" alt="" title="Tap to zoom in"><div class="live" data-live="${c.channel}">connecting</div></div>
+    <div class="camgrid">${cams.map((c) => `<div class="card stack pop"><div class="cam"><img data-ch="${c.channel}" alt="" title="Tap to zoom in"><video data-vid="${c.channel}" muted playsinline autoplay hidden title="Tap to zoom in"></video><div class="live" data-live="${c.channel}">connecting</div></div>
       <div class="row" style="justify-content:space-between"><h3>${esc(c.name)}</h3><div class="row" style="gap:6px"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}">Wide</button></div></div></div>`).join("")}</div>
     ${cams.length ? `<p class="muted center" style="font-size:13px">Tap a picture to zoom in there. FurSight zooms too when it looks for ${esc(me.pets[0].name)}.</p>` : ""}
     <div class="card stack pop"><h2>Room check</h2><p class="muted">What could ${esc(me.pets[0].name)} chew, swallow, get stuck in or pee on? FurSight looks and rings each one.</p>
@@ -1025,8 +1042,9 @@ function cam() {
   for (const b of document.querySelectorAll("[data-room]")) b.onclick = () => roomCheck({ cam: true, channel: b.dataset.room });
   document.getElementById("roomPhoto").onchange = async (e) => e.target.files[0] && roomCheck({ image: await shrink(e.target.files[0]) });
   // frames pushed over a socket per camera (no round trip per picture); polling if a socket won't open
-  let alive = true; const socks = [];
-  camStop = () => { alive = false; socks.forEach((w) => w.close()); };
+  // video over WebRTC when it connects (FSRtc), the pictures otherwise
+  let alive = true; const socks = [], rtcs = [];
+  camStop = () => { alive = false; rtcs.forEach((r) => r.stop()); socks.forEach((w) => w.close()); };
   for (const c of cams) {
     const $i = document.querySelector(`[data-ch="${c.channel}"]`), $s = document.querySelector(`[data-live="${c.channel}"]`);
     let last = 0, url = null, frames = 0;
@@ -1036,18 +1054,28 @@ function cam() {
     const $z = document.querySelector(`[data-z="${c.channel}"]`);
     const showView = (v) => { view = v; $z.textContent = (Math.round(v.z * 10) / 10) + "×"; };
     const setView = (v) => { if (ws.readyState === 1) ws.send(JSON.stringify({ view: v })); else fetch(`${RELAY}/c/${c.channel}/view`, { method: "POST", body: JSON.stringify(v) }).then((r) => r.json()).then(showView).catch(() => {}); };
-    $i.onclick = (e) => {
-      const r = $i.getBoundingClientRect(), u = (e.clientX - r.left) / r.width, w = (e.clientY - r.top) / r.height;
+    const $v = document.querySelector(`[data-vid="${c.channel}"]`);
+    $i.onclick = $v.onclick = (e) => {
+      const r = e.currentTarget.getBoundingClientRect(), u = (e.clientX - r.left) / r.width, w = (e.clientY - r.top) / r.height;
       setView({ z: Math.min(4, view.z * 2), x: view.x + (u - 0.5) / view.z, y: view.y + (w - 0.5) / view.z });
     };
     document.querySelector(`[data-out="${c.channel}"]`).onclick = () => setView({ ...view, z: Math.max(1, view.z / 2) });
     document.querySelector(`[data-wide="${c.channel}"]`).onclick = () => setView({ z: 1, x: 0.5, y: 0.5 });
-    const tick = setInterval(() => { if (!alive) return clearInterval(tick); $s.innerHTML = Date.now() - last < 3000 ? `<b></b>live · ${frames} fps` : last ? "paused" : "waking the camera"; frames = 0; }, 1000);
+    const tick = setInterval(() => { if (!alive) return clearInterval(tick); $s.innerHTML = Date.now() - last < 3000 ? `<b></b>live${rtc && rtc.live ? " video" : ""} · ${frames} fps` : last ? "paused" : "waking the camera"; frames = 0; }, 1000);
     let opened = false;
     const ws = new WebSocket(RELAY.replace("https", "wss") + `/c/${c.channel}/watch`); socks.push(ws);
     ws.binaryType = "blob";
+    const onFrame = () => { if (!alive || !rtc.live) return; last = Date.now(); frames++; $v.requestVideoFrameCallback(onFrame); };
+    const rtc = FSRtc.watch({ ws, relay: RELAY, channel: c.channel, video: $v, onLive: (on) => {
+      $v.hidden = !on; $i.hidden = on;
+      if (on && $v.requestVideoFrameCallback) $v.requestVideoFrameCallback(onFrame);
+    } });
+    if (rtc) rtcs.push(rtc);
     ws.onopen = () => (opened = true);
-    ws.onmessage = (e) => { if (typeof e.data !== "string") return show(e.data); try { const m = JSON.parse(e.data); if (m.view) showView(m.view); } catch (er) {} };
+    ws.onmessage = (e) => {
+      if (typeof e.data !== "string") return show(e.data);
+      try { const m = JSON.parse(e.data); if (rtc && rtc.message(m)) return; if (m.view) showView(m.view); } catch (er) {}
+    };
     ws.onclose = () => { if (alive && !opened) poll(); };
     setTimeout(() => { if (!opened) ws.close(); }, 4000);
     async function poll() {
@@ -1076,29 +1104,35 @@ async function beCam() {
     <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>
     <p class="muted center" id="act" style="font-size:14px">Watching for ${esc(me.pets[0].name)}</p>
     <button class="btn ghost" id="stop">Stop being a pet cam</button></div>`;
-  let ws, stream, timer, viewers = 0, alive = true, wake, view = { z: 1, x: 0.5, y: 0.5 };
+  let ws, stream, timer, viewers = 0, jpeg = 0, alive = true, wake, rtc = null, lastJpeg = 0, view = { z: 1, x: 0.5, y: 0.5 };
   try { wake = await navigator.wakeLock?.request("screen"); } catch (e) {}
   try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false }); }
   catch (e) { toast("Couldn't open the camera"); return render(); }
   const v = document.getElementById("v"); v.srcObject = stream;
   const c = document.createElement("canvas"); c.width = c.height = 480; const g = c.getContext("2d");
   const connect = () => {
+    if (rtc) rtc.stop();
     ws = new WebSocket(RELAY.replace("https", "wss") + `/c/${channel}/send?k=${key}`);
-    ws.onmessage = (e) => { try { const m = JSON.parse(e.data); viewers = m.viewers ?? viewers; if (m.view) view = m.view; } catch (er) {} };
+    rtc = FSRtc.serve({ ws, relay: RELAY, channel, canvas: c, fps: 15 });
+    ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (rtc && rtc.message(m)) return; viewers = m.viewers ?? viewers; jpeg = m.jpeg ?? viewers; if (m.view) view = m.view; } catch (er) {} };
     ws.onclose = () => { if (alive) setTimeout(connect, 2000); };
   };
   connect();
   timer = setInterval(() => {
-    const st = document.getElementById("st"); if (st) st.innerHTML = (viewers ? `<b></b>live to ${viewers}` : "ready, nobody watching") + (view.z > 1 ? ` · ${view.z}× zoom` : "");
-    if (!ws || ws.readyState !== 1 || !viewers || ws.bufferedAmount > 24 * 1024 || !v.videoWidth) return;
+    const st = document.getElementById("st"), onVideo = rtc ? rtc.count() : 0;
+    if (st) st.innerHTML = (viewers ? `<b></b>live to ${viewers}${onVideo ? ` (${onVideo} on video)` : ""}` : "ready, nobody watching") + (view.z > 1 ? ` · ${view.z}× zoom` : "");
+    if (!ws || ws.readyState !== 1 || !viewers || !v.videoWidth) return;
     // the full picture is the centre square; the view crops into it (digital zoom, from full resolution)
     const s = Math.min(v.videoWidth, v.videoHeight), cs = s / view.z;
     const sx = (v.videoWidth - s) / 2 + view.x * s - cs / 2, sy = (v.videoHeight - s) / 2 + view.y * s - cs / 2;
-    g.drawImage(v, sx, sy, cs, cs, 0, 0, 480, 480);
+    g.drawImage(v, sx, sy, cs, cs, 0, 0, 480, 480);   // the video track is this canvas, so it's drawn 15 times a second
+    // pictures only for watchers not on video, at most 6 a second, and skipped when the uplink is behind
+    if (!jpeg || Date.now() - lastJpeg < 160 || ws.bufferedAmount > 24 * 1024) return;
+    lastJpeg = Date.now();
     c.toBlob((b) => b && ws.readyState === 1 && ws.send(b), "image/jpeg", 0.65);
-  }, 1000 / 6);
+  }, 1000 / 15);
   const watch = watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
-  camStop = () => { alive = false; clearInterval(timer); clearInterval(watch); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
+  camStop = () => { alive = false; clearInterval(timer); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { stopCam(); render(); };
 }
 

@@ -1,15 +1,20 @@
 // Food check: "can my pet eat this?" from one camera frame.
 //
-//   POST /api/food  { image: "data:image/jpeg;base64,...", pet: { name, species, breed, notes }, question? }
-//   ->  { items: [{ food, verdict: safe|caution|toxic, reason, portion, instead, box: [x1,y1,x2,y2] (0-1000),
-//                   checked, overridden? }], held: index|null, ms }
+//   POST /api/food  { image: "data:image/jpeg;base64,...", pet: { name, species, breed, notes }, question?, tz? }
+//   ->  { items: [{ food, verdict: safe|caution|toxic, reason, portion, instead, wait_days, box: [x1,y1,x2,y2] (0-1000),
+//                   checked, overridden?, fed?: { days_ago, next, wait_left, said } }], held: index|null, ms }
+//
+// From a linked device, each food also says when the pet last had it ("fed", from "We fed him this" or a note),
+// and whether to wait before the next one.
 //
 // One Muse Spark call names each food in view, judges it for this pet and says where it is in the frame
 // (0-1000 grid, so the headset can lift it into the room with depth). The species list then gets the last
 // word: it can make a verdict stricter, never softer. "held" is the item being held up / closest to centre.
 const { spark } = require("../lib/meta");
-const { handler, image, text, bad } = require("../lib/http");
+const { handler, image, text, bad, household } = require("../lib/http");
 const { guard } = require("../lib/verdict");
+const { recent } = require("../lib/hub");
+const fed = require("../lib/fed");
 
 const SCHEMA = {
   type: "object",
@@ -24,10 +29,11 @@ const SCHEMA = {
           reason: { type: "string", description: "one short sentence, specific to this pet" },
           portion: { type: "string", description: "how much is OK, or 'none'" },
           instead: { type: "string", description: "a better choice for this pet, short" },
+          wait_days: { type: "integer", description: "days to wait after giving this before giving it again: 0 if fine every day (hay, everyday greens), fruit and sugary treats usually 2 to 4, toxic 0" },
           box: { type: "array", items: { type: "integer" }, description: "[x_min, y_min, x_max, y_max] on a 0-1000 grid, origin top-left" },
           held: { type: "boolean", description: "true if this is the item being held up or presented to the camera" },
         },
-        required: ["food", "verdict", "reason", "portion", "instead", "box", "held"],
+        required: ["food", "verdict", "reason", "portion", "instead", "wait_days", "box", "held"],
       },
     },
     unsure: { type: "boolean", description: "true if the food can't be identified with confidence" },
@@ -45,8 +51,10 @@ For each food you can see (ignore non-food objects, hands, plates and packaging 
 When you are not sure what the food is or whether it is safe, choose the more cautious verdict and set unsure. Never call something safe because it is probably fine.
 Portions in plain household terms. Keep reason under 20 words. No em dashes. Boxes must tightly cover the food on a 0-1000 grid.`;
 
-module.exports = handler(async (body) => {
+module.exports = handler(async (body, req) => {
   const img = image(body.image);
+  const home = household(req);
+  const diary = home ? recent(home.token, 200).catch(() => []) : Promise.resolve([]);   // fetched while Spark looks
   const pet = {
     name: text(body.pet?.name, 40),
     species: text(body.pet?.species, 40) || "rabbit",
@@ -76,6 +84,12 @@ module.exports = handler(async (body) => {
     // nothing flagged as held: take the item nearest the middle of the frame
     const d = (b) => Math.hypot((b[0] + b[2]) / 2 - 500, (b[1] + b[3]) / 2 - 500);
     held = items.reduce((best, it, i) => (d(it.box) < d(items[best].box) ? i : best), 0);
+  }
+  const entries = await diary, tz = fed.tzOf(body.tz);
+  for (const it of items) {
+    const st = fed.status(entries, it.food, pet, tz);
+    if (st) it.fed = { days_ago: st.days_ago, next: st.next, wait_left: st.wait_left, said: st.said };
+    it.wait_days = it.verdict === "toxic" ? 0 : Math.max(0, Math.min(30, Math.round(Number(it.wait_days) || 0)));
   }
   return { items, held: held < 0 ? null : held, unsure: !!data.unsure, ms: Date.now() - t0 };
 });

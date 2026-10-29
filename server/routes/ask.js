@@ -23,6 +23,7 @@ const FSTray = require("../public/tray.js");
 const FSRoutine = require("../public/routines.js");
 const FSActivity = require("../public/activity.js");
 const FSClimate = require("../public/climate.js");
+const fed = require("../lib/fed");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -207,6 +208,16 @@ module.exports = handler(async (body, req) => {
     description: `Add something the cams missed, only when the owner tells you it happened: a treat or greens they gave him (item and amount), a flop, loaf or zoomies they saw, good droppings, or a short note. Not for questions ("can he have apple?" is a question, not a treat).`,
     parameters: { type: "object", properties: { what: { type: "string", enum: Object.keys(FSActivity.LOG) }, item: { type: "string", description: "for a treat, greens or note: what, in a few words" }, amount: { type: "string", enum: ["tiny", "small", "handful", ""] } }, required: ["what", "item", "amount"], additionalProperties: false },
     async run({ what, item, amount }) {
+      // a treat or greens: saved with when he can have it again, and that day goes on the calendar
+      if ((what === "treat" || what === "greens") && text(item, 60)) {
+        const rule = lookup(p.species, text(item, 60));
+        const verdict = rule ? rule.verdict : what === "greens" ? "safe" : "caution";
+        try {
+          const r = await fed.record(home.token, { name: p.name, care: ctx.pet && ctx.pet.care }, { food: text(item, 60), verdict, wait_days: verdict === "safe" ? 0 : 3, amount }, fed.tzOf(body.tz));
+          seen.set("log", { kind: "log", what: r.title });
+          return { output: { id: "log", saved: true, title: r.title, can_have_again: r.next, had_before: r.had ? r.had.said : null, on_never_list: r.toxic ? r.said : null }, step: { tool: "diary", label: `Added to the diary: ${r.title}${r.next ? `, OK again ${fed.nice(r.next)}` : ""}`, detail: r.toxic ? r.said : undefined } };
+        } catch (e) { return { output: { error: "Couldn't save it." } }; }
+      }
       const ent = FSActivity.entry({ name: p.name, care: ctx.pet && ctx.pet.care }, what, text(item, 60), amount);
       if (!ent) return { output: { error: "Say what it was." } };
       const e = await addDiary(home.token, ent);
@@ -258,10 +269,12 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { food: { type: "string" } }, required: ["food"], additionalProperties: false },
     async run({ food }) {
       const name = text(food, 60).toLowerCase(), rule = lookup(p.species, name);
+      const had = ctx ? fed.status(await recent(home.token, 200).catch(() => []), name, p, fed.tzOf(body.tz)) : null;
       foods.set(name, rule);
       seen.set("food:" + name, { kind: "food_list" });
       return {
-        output: rule ? { id: "food:" + name, verdict: rule.verdict, why: rule.why, instead: rule.instead } : { id: "food:" + name, verdict: "not_listed", note: "Not on the list: judge it yourself, cautiously." },
+        output: { ...(rule ? { id: "food:" + name, verdict: rule.verdict, why: rule.why, instead: rule.instead } : { id: "food:" + name, verdict: "not_listed", note: "Not on the list: judge it yourself, cautiously." }),
+          last_had: had ? had.said : null, wait_days_left: had ? had.wait_left : 0 },
         step: { tool: "food", label: rule ? `Checked the safety list: ${name}, ${rule.verdict === "toxic" ? "don't" : rule.verdict === "caution" ? "small treat only" : "safe"}` : `Checked the safety list: ${name}, not listed` },
       };
     },
@@ -324,7 +337,7 @@ module.exports = handler(async (body, req) => {
   };
 
   const intro = `You are FurSight, a calm, practical pet-care helper. The pet: ${describe(p)}. The owner is asking from their ${from}.
-Work like a careful vet nurse: look before you answer. Use your tools to gather what you need, calling several at once when you can, then call answer. Food entries in the diary are foods the owner checked: never treat one as something ${p.name} ate unless the owner says so. Don't guess about how ${p.name} is: check the litter tray, find him on the pet cams (find_pet zooms in on him) or read the diary. Zoom in when you need a closer look. Check every food or plant you talk about against the safety list. If you still can't tell, ask the owner one thing instead of guessing.
+Work like a careful vet nurse: look before you answer. Use your tools to gather what you need, calling several at once when you can, then call answer. Food entries in the diary are foods the owner checked: never treat one as something ${p.name} ate unless the owner says so. Don't guess about how ${p.name} is: check the litter tray, find him on the pet cams (find_pet zooms in on him) or read the diary. Zoom in when you need a closer look. Check every food or plant you talk about against the safety list. If check_food says he had it recently and wait_days_left is above 0, say it's fine in general but to wait: when he last had it and the day it's OK again (it's on the calendar). If you still can't tell, ask the owner one thing instead of guessing.
 Answers: short and spoken, at most 45 words, no lists, no markdown, no em dashes. If you SEE or the diary SAYS something urgent for this species (for rabbits: not eating, no droppings, hunched, teeth grinding, bloating), say so plainly and set verdict "vet". Never reassure about health from a picture alone; say what to watch for. For food or plant safety, err on the side of caution.`;
   const first = [{ type: "input_text", text: question }];
   if (photo) first.push({ type: "input_text", text: from === "quest" ? "What the owner is looking at (cite as \"photo\"):" : "The owner's photo (cite as \"photo\"):" }, { type: "input_image", image_url: photo });

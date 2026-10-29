@@ -1,7 +1,9 @@
 import SwiftUI
 
-// Add what the cams missed: a treat or greens you gave him, a flop you saw, good droppings, a note. It goes through
-// /api/log, which checks a treat against his never list.
+// Add what the cams missed. "Add a note" takes your own words ("fed him a strawberry, brushed his coat") and
+// /api/note does each thing: checks the food and puts the day it's OK again on the calendar, ticks his care,
+// marks grooming done. Or pick one of the buttons, which go through /api/log (a treat is checked against his
+// never list).
 struct LogView: View {
     let pet: String
     var done: () -> Void
@@ -12,6 +14,9 @@ struct LogView: View {
     @State private var saving = false
     @State private var warning: String?
     @State private var error: String?
+    @State private var note = ""
+    @State private var noting = false
+    @State private var noted: [[String: Any]] = []
 
     private let kinds: [(String, String, String)] = [("treat", "Treat", "carrot.fill"), ("greens", "Greens", "leaf.fill"), ("flop", "Flop", "zzz"), ("loaf", "Loaf", "circle.fill"), ("zoomies", "Zoomies", "hare.fill"), ("droppings", "Good droppings", "checkmark.circle.fill"), ("note", "Note", "pencil")]
     private var food: Bool { what == "treat" || what == "greens" }
@@ -20,7 +25,17 @@ struct LogView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("The cams only see part of \(pet)'s day. Add what they missed and it counts, marked as yours.").font(.nunito(15, black: false)).foregroundStyle(Color.muted)
+                    Text("Add a note").font(.nunito(20))
+                    TextField("e.g. fed him a strawberry, brushed his coat", text: $note, axis: .vertical).lineLimit(2...5)
+                        .font(.nunito(17, black: false)).padding(12).background(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.line, lineWidth: 2))
+                    Button(noting ? "Reading it…" : "Add note") { Task { await addNote() } }
+                        .buttonStyle(ChunkyButton(color: .grape, lip: .grapeLip)).disabled(noting || note.trimmingCharacters(in: .whitespaces).isEmpty)
+                    ForEach(Array(noted.enumerated()), id: \.offset) { _, d in
+                        let toxic = d.str("verdict") == "toxic"
+                        Label(d.str("said"), systemImage: toxic ? "exclamationmark.triangle.fill" : d.str("type") == "fed" ? "calendar.badge.clock" : "checkmark.circle.fill")
+                            .font(.nunito(15, black: false)).foregroundStyle(toxic ? Color.coral : Color.ink)
+                    }
+                    Text("Or pick one. The cams only see part of \(pet)'s day: what you add counts, marked as yours.").font(.nunito(15, black: false)).foregroundStyle(Color.muted).padding(.top, 8)
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                         ForEach(kinds, id: \.0) { k in
                             Button { what = k.0; warning = nil } label: {
@@ -46,9 +61,17 @@ struct LogView: View {
                 }.padding(16)
             }
             .background(Color.page.ignoresSafeArea())
-            .navigationTitle("Add what we missed").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Add a note").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
         }
+    }
+
+    private func addNote() async {
+        noting = true; defer { noting = false }
+        do {
+            let r = try await API.server("api/note", ["text": note, "tz": TimeZone.current.secondsFromGMT() / 60])
+            noted = r.arr("done"); note = ""; done()
+        } catch { self.error = error.localizedDescription }
     }
 
     private func save() async {

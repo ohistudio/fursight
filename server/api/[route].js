@@ -3,9 +3,11 @@
 const routes = {
   ask: require("../routes/ask"),
   droppings: require("../routes/droppings"),
+  fed: require("../routes/fed"),
   food: require("../routes/food"),
   ideas: require("../routes/ideas"),
   log: require("../routes/log"),
+  note: require("../routes/note"),
   notify: require("../routes/notify"),
   photo: require("../routes/photo"),
   pose: require("../routes/pose"),

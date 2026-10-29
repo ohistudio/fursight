@@ -155,7 +155,7 @@ struct TodayView: View {
             if let treats = a.obj("treats")?["today"] as? [[String: Any]], !treats.isEmpty {
                 Text("Treats today: " + treats.map { $0.str("item") + ($0.str("amount").isEmpty ? "" : " (\($0.str("amount")))") }.joined(separator: ", ")).font(.nunito(14, black: false))
             }
-            Button { logging = true } label: { Label("Add what the cams missed", systemImage: "plus") }
+            Button { logging = true } label: { Label("Add a note", systemImage: "square.and.pencil") }
                 .buttonStyle(ChunkyButton(color: .grape, lip: .grapeLip))
             if a["simulated"] as? Bool == true { Text("Includes simulated days").font(.nunito(12)).foregroundStyle(Color.muted) }
         }.card()

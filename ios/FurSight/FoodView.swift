@@ -8,6 +8,9 @@ struct FoodView: View {
     @State private var items: [[String: Any]] = []
     @State private var checking = false
     @State private var error: String?
+    @State private var petName = "him"
+    @State private var fed: [String: String] = [:]      // food -> what saving "We fed him this" said
+    @State private var feeding: String?
 
     var body: some View {
         NavigationStack {
@@ -42,11 +45,34 @@ struct FoodView: View {
             Text(i.str("reason")).font(.nunito(15, black: false))
             if !i.str("portion").isEmpty { Text("How much: " + i.str("portion")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if !i.str("instead").isEmpty { Text("Instead: " + i.str("instead")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
+            // when he last had it, and whether to wait (from "We fed him this" and notes)
+            if let had = i["fed"] as? [String: Any], !had.str("said").isEmpty {
+                Label(had.str("said"), systemImage: (had["wait_left"] as? Int ?? 0) > 0 ? "calendar.badge.clock" : "clock")
+                    .font(.nunito(14)).foregroundStyle((had["wait_left"] as? Int ?? 0) > 0 ? Color.sunLip : Color.muted)
+            }
+            if v != "toxic" {
+                if let done = fed[i.str("food")] {
+                    Label(done, systemImage: "checkmark.circle.fill").font(.nunito(14)).foregroundStyle(Color.fern)
+                } else {
+                    Button(feeding == i.str("food") ? "Marking…" : "We fed \(petName) this") { Task { await markFed(i) } }
+                        .buttonStyle(ChunkyButton(color: .fern, lip: .fernLip)).disabled(feeding != nil)
+                }
+            }
         }.card(c)
     }
 
+    // saved with when he can have it again; that day goes on the calendar
+    func markFed(_ i: [String: Any]) async {
+        let food = i.str("food")
+        feeding = food; defer { feeding = nil }
+        do {
+            let r = try await API.server("api/fed", ["food": food, "verdict": i.str("verdict"), "wait_days": i["wait_days"] as? Int ?? 3, "tz": TimeZone.current.secondsFromGMT() / 60])
+            fed[food] = r.str("said")
+        } catch { self.error = error.localizedDescription }
+    }
+
     func check(_ img: UIImage) {
-        photo = img; items = []; checking = true; error = nil
+        photo = img; items = []; fed = [:]; checking = true; error = nil
         let small = img.resized(1024)
         guard let jpeg = small.jpegData(compressionQuality: 0.8) else { return }
         let url = "data:image/jpeg;base64," + jpeg.base64EncodedString()
@@ -54,7 +80,8 @@ struct FoodView: View {
             do {
                 let me = try await API.hub("/me")
                 let pet = me.arr("pets").first ?? [:]
-                let r = try await API.server("api/food", ["image": url, "pet": ["name": pet.str("name"), "species": pet.str("species"), "breed": pet.str("breed"), "notes": pet.str("notes")]])
+                if !pet.str("name").isEmpty { petName = pet.str("name") }
+                let r = try await API.server("api/food", ["image": url, "pet": ["name": pet.str("name"), "species": pet.str("species"), "breed": pet.str("breed"), "notes": pet.str("notes")], "tz": TimeZone.current.secondsFromGMT() / 60])
                 items = r.arr("items")
                 for i in items {
                     _ = try? await API.hub("/diary", method: "POST", body: ["kind": "food", "title": i.str("food").capitalized, "note": i.str("reason"), "verdict": i.str("verdict"), "image": url])
