@@ -24,6 +24,28 @@
   .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 10px 22px; border-radius: 16px; background: var(--grape-lip); color: #fff; font: 900 17px Nunito, sans-serif; text-decoration: none; box-shadow: 0 5px 0 #5B35A8; }
   .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
   a { color: var(--grape-lip); }
+  /* the schematic, drawn inline so it can build up piece by piece (for the trailer); press R or tap Replay */
+  #kitsvg svg { display: block; width: 100%; height: auto; border-radius: 18px; }
+  .play .b0, .play .b1, .play .b2, .play .b3, .play .b4, .play .b5, .play .b6, .play .b7, .play .b8, .play .b9, .play .b10 { opacity: 0; animation: kIn .8s cubic-bezier(.2,.9,.3,1) forwards; }
+  .play .b0 { animation-delay: .1s } .play .b1 { animation-delay: .5s } .play .b2 { animation-delay: 1.2s } .play .b3 { animation-delay: 1.9s }
+  .play .b4 { animation-delay: 2.6s } .play .b5 { animation-delay: 3.2s } .play .b6 { animation-delay: 3.8s } .play .b7 { animation-delay: 4.5s }
+  .play .b8 { animation-delay: 5.2s } .play .b9 { animation-delay: 6.2s } .play .b10 { animation-delay: 7.2s }
+  @keyframes kIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  .play .cone polygon { animation: cone 2.6s ease-in-out infinite; }
+  @keyframes cone { 0%, 100% { opacity: .07; } 50% { opacity: .17; } }
+  .play .ring { animation: ring 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes ring { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(1.08); } }
+  .play .bun { animation: bun 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  @keyframes bun { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, .97); } }
+  .play .flow { stroke-dasharray: 10 8; animation: flow .9s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -18; } }
+  @media (prefers-reduced-motion: reduce) { .play * { animation: none !important; opacity: 1 !important; } }
+  /* ?trailer: just the schematic, filling the screen, for recording */
+  body.trailer main > :not(#kitsvg) { display: none; }
+  body.trailer main { max-width: none; min-height: 100vh; padding: 0; display: grid; place-items: center; }
+  body.trailer #kitsvg { width: min(100vw, 148vh); }
+  body.trailer #kitsvg svg { border-radius: 0; }
+  .replay { justify-self: start; border: 2px solid var(--line); background: var(--card); border-radius: 12px; padding: 6px 14px; font: 900 15px Nunito, sans-serif; color: var(--ink); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -33,7 +55,8 @@
     <p class="muted" style="margin-top:8px">Rabbits hide illness. The kit watches the small daily things that change first: how much hay goes, his weight, what he leaves in the tray, how he rests. It notices, your vet decides.</p>
   </div>
 
-  <a href="kit.svg" title="Open the schematic full size"><img class="schematic" src="kit.svg" alt="Schematic of a room with a rabbit pen: FurSight Cam 1 on an arm looking down into the pen, FurSight Cam 2 on a shelf watching the room, the FurSight Tray (a litter tray on a scale with a camera and a temperature sensor), a hay rack, food and water bowls, and the phone, Ray-Ban Display and Quest connected through the household hub to the Meta Model API."></a>
+  <div id="kitsvg" role="img" aria-label="Schematic of the FurSight kit"><a href="kit.svg"><img class="schematic" src="kit.svg" alt="Schematic of a room with a rabbit pen: FurSight Cam 1 on an arm looking down into the pen, FurSight Cam 2 on a shelf watching the room, the FurSight Tray (a litter tray on a scale with a camera and a temperature sensor), a hay rack, food and water bowls, and the phone, Ray-Ban Display and Quest connected through the household hub to the Meta Model API."></a></div>
+  <button class="replay" id="replay">Replay the build</button>
 
   <div class="grid">
     <div class="card">
@@ -65,5 +88,15 @@
     <a class="btn" href="/">Open FurSight</a>
   </div>
 </main>
+<script>
+// draw the schematic inline (the picture above is the fallback) and build it up piece by piece
+const box = document.getElementById("kitsvg");
+if (new URLSearchParams(location.search).has("trailer")) document.body.classList.add("trailer");
+const play = () => { box.classList.remove("play"); void box.offsetWidth; box.classList.add("play"); };
+fetch("kit.svg").then((r) => r.text()).then((svg) => { box.innerHTML = svg; play(); }).catch(() => {});
+document.getElementById("replay").onclick = play;
+addEventListener("keydown", (e) => { if (e.key === "r" || e.key === "R") play(); });
+box.addEventListener("click", (e) => { if (document.body.classList.contains("trailer")) { e.preventDefault(); play(); } });
+</script>
 </body>
 </html>
