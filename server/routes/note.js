@@ -3,9 +3,9 @@
 // and saved with when he can have it again (on the calendar), a daily care task is ticked, a grooming routine is
 // marked done, a date goes on the calendar, and anything else is kept as a note.
 //
-//   POST /api/note  { text, tz? }  (a household device)
-//   -> { done: [{ type, title, said, verdict? }], said }
-const { spark } = require("../lib/meta");
+//   POST /api/note  { text | audio: "<base64 WAV, mono 16-bit 16 kHz>", tz? }  (a household device; Quest speaks it)
+//   -> { heard, done: [{ type, title, said, verdict? }], said }
+const { spark, transcribe } = require("../lib/meta");
 const { handler, text, household } = require("../lib/http");
 const { context, recent, addDiary } = require("../lib/hub");
 const { guard } = require("../lib/verdict");
@@ -43,9 +43,13 @@ const SCHEMA = {
 module.exports = handler(async (body, req) => {
   const home = household(req);
   if (!home) throw Object.assign(new Error("link this phone first"), { status: 401, expose: true });
-  const said = text(body.text, 400);
-  if (!said) throw Object.assign(new Error("write what happened"), { status: 400, expose: true });
   const [ctx, entries] = await Promise.all([context(home.token), recent(home.token, 200).catch(() => [])]);
+  let said = text(body.text, 400);
+  if (!said && body.audio) {
+    if (typeof body.audio !== "string" || body.audio.length > 4_000_000) throw Object.assign(new Error("audio must be base64 WAV under ~3 MB"), { status: 400, expose: true });
+    said = text(await transcribe(Buffer.from(body.audio, "base64"), [ctx.pet && ctx.pet.name, "hay", "pellets", "coriander", "brushed", "nails"].filter(Boolean)), 400);
+  }
+  if (!said) throw Object.assign(new Error(body.audio ? "didn't catch that" : "write what happened"), { status: 400, expose: true });
   const p = ctx.pet;
   if (!p) throw Object.assign(new Error("add your pet first"), { status: 400, expose: true });
   const tz = fed.tzOf(body.tz), today = fed.dayKey(Date.now(), tz);
@@ -102,5 +106,5 @@ A question ("can he have apple?") is not a fed action. Prefer care or routine ov
     await addDiary(home.token, ent);
     done.push({ type: "note", title: ent.title, said: `Kept as a note: ${ent.title}.` });
   }
-  return { done, said: done.map((d) => d.said).join(" ") };
+  return { heard: said, done, said: done.map((d) => d.said).join(" ") };
 });

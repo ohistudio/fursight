@@ -7,7 +7,9 @@ namespace FurSight
 {
     // "Can he eat this?" Hold the food up and press Check food on the hand menu (or A; Space in the editor).
     // One frame goes to the server's /api/food (Muse Spark + the species safety list); the verdict comes back
-    // with where the food was in the frame, and a card appears on the food in the room.
+    // with where the food was in the frame, and a card appears on the food in the room. Once linked to a household,
+    // the card also says when the pet last had it (and whether to wait), and "We fed him this" saves it with the
+    // day it's OK again on the calendar (/api/fed).
     public class FoodCheck : MonoBehaviour
     {
         [Header("Placement")]
@@ -57,6 +59,7 @@ namespace FurSight
                 {
                     image = "data:image/jpeg;base64," + System.Convert.ToBase64String(shot.jpeg),
                     pet = PetProfile.Current.ForServer(),
+                    tz = TzMinutes,
                 });
                 Debug.Log($"[FurSight] food check {Time.realtimeSinceStartup - t0:F1}s: {res.ToString(Newtonsoft.Json.Formatting.None)}");
                 Show(res, shot);
@@ -89,10 +92,41 @@ namespace FurSight
                 var box = it["box"]?.ToObject<int[]>();
                 if (box == null || box.Length != 4) continue;
                 string verdict = (string)it["verdict"];
-                _cards.Add(VerdictCard.Verdict(shot.WorldPoint(box), (string)it["food"], verdict, (string)it["reason"], i == held ? Extra(it, verdict) : null, i == held));
+                var card = VerdictCard.Verdict(shot.WorldPoint(box), (string)it["food"], verdict, (string)it["reason"], i == held ? Extra(it, verdict) : null, i == held);
+                _cards.Add(card);
+                if (i == held && verdict != "toxic" && HubClient.Linked)
+                {
+                    var item = it;
+                    card.AddAction($"We fed {PetProfile.Current.petName} this", Theme.Fern, Theme.FernLip, () => _ = Fed(card, item));
+                }
                 if (i == held) HubClient.Diary("food", Capital((string)it["food"]), (string)it["reason"] + Plain(Extra(it, verdict)), verdict, shot.jpeg);
             }
         }
+
+        public static int TzMinutes => (int)System.TimeZoneInfo.Local.GetUtcOffset(System.DateTime.Now).TotalMinutes;
+
+        // saved with how long to wait before the next one; that day goes on the household calendar
+        async Task Fed(VerdictCard card, JToken it)
+        {
+            card.SetAction("Marking…");
+            try
+            {
+                var r = await FurSightApi.Post("/api/fed", new { food = (string)it["food"], verdict = (string)it["verdict"], wait_days = it["wait_days"]?.Type == JTokenType.Integer ? (int)it["wait_days"] : 3, tz = TzMinutes });
+                string next = (string)r["next"];
+                card.SetAction(string.IsNullOrEmpty(next) ? "Marked" : "OK again " + Day(next), Theme.Sky);
+                Sfx.Safe(card.transform.position);
+                StartCoroutine(Juice.Buzz(0.2f, 0.05f));
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[FurSight] fed failed: " + e.Message);
+                card.SetAction("Couldn't save, try later", Theme.Coral);
+            }
+        }
+
+        // "2026-11-01" -> "Sun 1 Nov"
+        static string Day(string ymd) => System.DateTime.TryParseExact(ymd, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d)
+            ? d.ToString("ddd d MMM", System.Globalization.CultureInfo.GetCultureInfo("en-GB")) : ymd;
 
         static string Capital(string s) => string.IsNullOrEmpty(s) ? "Food" : char.ToUpper(s[0]) + s.Substring(1);
         static string Plain(string rich) => string.IsNullOrEmpty(rich) ? "" : " " + System.Text.RegularExpressions.Regex.Replace(rich, "<[^>]+>", "");
@@ -100,10 +134,18 @@ namespace FurSight
         // the line under the reason: how much for a treat, a better choice for a don't
         static string Extra(JToken it, string verdict)
         {
-            string portion = (string)it["portion"], instead = (string)it["instead"];
-            if (verdict == "caution" && !string.IsNullOrEmpty(portion) && portion != "none") return "<color=#2B2A33>How much:</color> " + portion;
-            if (verdict == "toxic" && !string.IsNullOrEmpty(instead)) return "<color=#2B2A33>Instead:</color> " + instead;
-            return null;
+            string portion = (string)it["portion"], instead = (string)it["instead"], line = null;
+            if (verdict == "caution" && !string.IsNullOrEmpty(portion) && portion != "none") line = "<color=#2B2A33>How much:</color> " + portion;
+            if (verdict == "toxic" && !string.IsNullOrEmpty(instead)) line = "<color=#2B2A33>Instead:</color> " + instead;
+            // when he last had it: amber while it's still too soon
+            var fed = it["fed"];
+            if (fed != null && fed.Type == JTokenType.Object && !string.IsNullOrEmpty((string)fed["said"]))
+            {
+                bool wait = fed["wait_left"]?.Type == JTokenType.Integer && (int)fed["wait_left"] > 0;
+                string had = (wait ? "<color=#D9900A>" : "<color=#2B2A33>") + (string)fed["said"] + "</color>";
+                line = line == null ? had : line + "\n" + had;
+            }
+            return line;
         }
     }
 }

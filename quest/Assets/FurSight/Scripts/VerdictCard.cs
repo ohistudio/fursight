@@ -23,6 +23,9 @@ namespace FurSight
         public System.Func<float> Level;   // optional live level (0-1), e.g. the mic while listening
         Transform _spinner;
         Bean _bean;
+        float _h;                 // the card face's height, for hanging an action button under it
+        Transform _action;
+        TextMeshPro _actionText;
 
         // ---------------------------------------------------------------- verdict
 
@@ -62,6 +65,7 @@ namespace FurSight
             body.rectTransform.sizeDelta = new Vector2(bodyW * 100f, bodyH * 100f + 1f);
             float h = pad + header + (bodyH > 0f ? gap + bodyH : 0f) + pad;
             float top = h / 2f;
+            c._h = h;
             c._card.localPosition = new Vector3(0f, lift + h / 2f + Lip, 0f);
 
             Shapes.MakeSlab("Lip", c._card, Shapes.RoundedRectRing(W, h, R), Thick, lip, lip, new Vector3(0f, -Lip, 0.003f));
@@ -157,6 +161,46 @@ namespace FurSight
                 Shapes.MakeSlab("Bang", badge, Shapes.RoundedRectRing(0.0062f, 0.019f, 0.0031f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, 0.0035f, 0f) + z);
                 Shapes.MakeSlab("Dot", badge, Shapes.CircleRing(0.0036f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, -0.0105f, 0f) + z);
             }
+        }
+
+        // ---------------------------------------------------------------- one follow-up action
+
+        // a chunky pill hanging under the card ("We fed him this"); pressing it runs onPress once
+        const float ActW = 0.2f, ActH = 0.042f;
+
+        public void AddAction(string label, Color col, Color lip, System.Action onPress)
+        {
+            if (_card == null || _action != null) return;
+            _action = new GameObject("Action").transform;
+            _action.SetParent(_card, false);
+            _action.localPosition = new Vector3(0f, -_h / 2f - Lip - ActH / 2f - 0.014f, 0f);
+            Pill(col, lip);
+            _actionText = Text(_action, label, Theme.Black, 17f, Color.white, new Vector2(-ActW / 2f + 0.014f, 0f), ActW - 0.028f, 0.03f, 9f);
+            _actionText.alignment = TextAlignmentOptions.Center;
+            bool pressed = false;
+            CardButton.Add(_action.gameObject, 0.05f, () => { if (pressed) return; pressed = true; KeepOpen(); onPress(); });
+            StartCoroutine(Juice.Pop(_action, 0.55f, 0.25f, 2.2f));
+        }
+
+        void Pill(Color col, Color lip)
+        {
+            Shapes.MakeSlab("Lip", _action, Shapes.RoundedRectRing(ActW, ActH, ActH / 2f), Thick, lip, lip, new Vector3(0f, -0.005f, 0.003f));
+            Shapes.MakeSlab("Face", _action, Shapes.RoundedRectRing(ActW, ActH, ActH / 2f), Thick, col, lip, Vector3.zero);
+        }
+
+        // after pressing: "Marking…", then what happened
+        public void SetAction(string label, Color? col = null)
+        {
+            if (_actionText == null) return;
+            _actionText.text = label;
+            if (col.HasValue)
+            {
+                foreach (Transform t in _action) if (t.name == "Face" || t.name == "Lip") Destroy(t.gameObject);
+                var lip = col.Value * 0.82f; lip.a = 1f;
+                Pill(col.Value, lip);
+            }
+            StartCoroutine(Juice.Pop(_action, 0f, 0.2f, 2f));
+            _until = Time.time + 12f;   // let them read it, then tidy away
         }
 
         // ---------------------------------------------------------------- checking

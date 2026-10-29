@@ -5,9 +5,11 @@ using UnityEngine;
 
 namespace FurSight
 {
-    // The three things you can do from the hand menu:
+    // The things you can do from the hand menu:
     //   Check food: one frame to /api/food (FoodCheck does it)
     //   Ask: a frame for context + your spoken question (MicRecorder) to /api/ask, answer pinned to what it's about
+    //   Note: say what you did ("fed him a strawberry, brushed his coat"); /api/note checks the food and puts the
+    //         day it's OK again on the calendar, ticks his care, marks grooming done
     //   Take photo: a frame to /api/photo for a diary note, saved on the headset with the picture
     public class FurSightActions : MonoBehaviour
     {
@@ -25,7 +27,7 @@ namespace FurSight
         {
             Instance = this;
             _mic = GetComponent<MicRecorder>() ?? gameObject.AddComponent<MicRecorder>();
-            _mic.Finished += OnQuestion;
+            _mic.Finished += (wav) => { if (_noting) OnNote(wav); else OnQuestion(wav); };
         }
 
         Vector3 InFront(float down = 0.1f)
@@ -43,12 +45,13 @@ namespace FurSight
         // ---------------------------------------------------------------- ask
 
         public bool Listening => _mic.Recording;
+        bool _noting;   // the mic is taking a note, not a question
 
         public void Ask()
         {
             if (_mic.Recording) { _mic.Stop(); return; }   // pressing Ask again finishes the question
             if (Busy || !Ready()) return;
-            Busy = true;
+            Busy = true; _noting = false;
             _askShot = PetCamera.Instance.Take();          // what you're looking at, for context
             Sfx.Snap(InFront());
             Clear();
@@ -103,6 +106,57 @@ namespace FurSight
                 Debug.LogWarning("[FurSight] ask failed: " + e.Message);
                 if (_status != null) _status.Dismiss();
                 _last = VerdictCard.Verdict(InFront(), "Couldn't answer", "none", "Try again in a moment.", null);
+            }
+            finally { Busy = false; }
+        }
+
+        // ---------------------------------------------------------------- note
+
+        public void Note()
+        {
+            if (_mic.Recording) { _mic.Stop(); return; }   // pressing Note again finishes it
+            if (Busy) return;
+            if (!HubClient.Linked) { Clear(); _last = VerdictCard.Verdict(InFront(), "Link first", "none", "Notes go in your household's diary. Link this headset in the FurSight app.", null); return; }
+            Busy = true; _noting = true;
+            Sfx.Tick(InFront());
+            Clear();
+            _status = VerdictCard.Checking(InFront(0.12f), "Say what you did, like \"fed him a strawberry\"", "Listening", Theme.Ink);
+            _status.Level = () => _mic.Level;
+            _mic.Begin();
+        }
+
+        async void OnNote(byte[] wav)
+        {
+            _noting = false;
+            if (_status != null) _status.Dismiss();
+            if (wav == null)
+            {
+                _last = VerdictCard.Verdict(InFront(), "Didn't catch that", "none", "Press Note and speak after the ring appears.", null);
+                Busy = false;
+                return;
+            }
+            _status = VerdictCard.Checking(InFront(0.12f), "Adding it to the diary", "Saving", Theme.Ink);
+            try
+            {
+                var res = await FurSightApi.Post("/api/note", new { audio = System.Convert.ToBase64String(wav), tz = FoodCheck.TzMinutes }, 60);
+                Debug.Log("[FurSight] note: " + res.ToString(Newtonsoft.Json.Formatting.None));
+                if (_status != null) _status.Dismiss();
+                bool toxic = false;
+                var lines = new System.Collections.Generic.List<string>();
+                foreach (var d in res["done"] as JArray ?? new JArray())
+                {
+                    if ((string)d["verdict"] == "toxic") toxic = true;
+                    if (lines.Count < 3) lines.Add((string)d["said"]);
+                }
+                _last = VerdictCard.Verdict(InFront(), toxic ? "Careful" : "Added", toxic ? "toxic" : "saved", string.Join("\n", lines),
+                    "<color=#9A98A6>You said: " + (string)res["heard"] + "</color>");
+                HubClient.Instance?.StartCoroutine(HubClient.Instance.Refresh());
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[FurSight] note failed: " + e.Message);
+                if (_status != null) _status.Dismiss();
+                _last = VerdictCard.Verdict(InFront(), "Couldn't save", "none", "Try again in a moment.", null);
             }
             finally { Busy = false; }
         }
