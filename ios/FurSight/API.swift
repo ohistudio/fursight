@@ -97,3 +97,10 @@ extension Dictionary where Key == String, Value == Any {
     func obj(_ k: String) -> [String: Any]? { self[k] as? [String: Any] }
     func arr(_ k: String) -> [[String: Any]] { self[k] as? [[String: Any]] ?? [] }
 }
+
+extension Error {
+    // a request SwiftUI cancelled (the screen reloading or going away) isn't something to show in red
+    var cancelled: Bool { self is CancellationError || (self as? URLError)?.code == .cancelled || (self as NSError).code == NSURLErrorCancelled }
+    // the message to show, or nil when there's nothing to tell the owner
+    var shown: String? { cancelled ? nil : localizedDescription }
+}

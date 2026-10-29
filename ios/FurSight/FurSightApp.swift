@@ -14,6 +14,7 @@ struct FurSightApp: App {
                 if session.linked { MainView() } else { LinkView() }
             }
             .environmentObject(session)
+            .preferredColorScheme(.light)   // the app's colours are made for light: in Dark Mode unset text went white on white
             .tint(.grape)
         }
     }

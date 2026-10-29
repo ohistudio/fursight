@@ -245,6 +245,7 @@ async function render() {
   $tabs.classList.remove("hidden");
   for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
   if (location.hash === "#upload") return uploadPage();
+  if (store.get("fs.camOn") === "1") return beCam(true);   // this device is the pet cam: carry on after a reload
   ({ today, care, calendar, stats, cam, devices })[tab]();
 }
 $tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.tab; store.set("fs.tab", tab); render(); });
@@ -1038,8 +1039,8 @@ function cam() {
       <label class="btn ghost" for="roomPhoto">Check a photo of a room</label><input id="roomPhoto" type="file" accept="image/*" class="hidden">
       <div id="roomOut"></div></div>
     ${cams.length ? "" : `<div class="card center stack pop"><h3>No pet cam yet</h3><p class="muted">Any old laptop or phone with a camera can watch ${esc(me.pets[0].name)}'s space. Open FurSight on it and use it as a pet cam.</p></div>`}
-    <button class="btn sky" id="be">Use this device as a pet cam</button></div>`;
-  document.getElementById("be").onclick = beCam;
+    <button class="btn sky" id="be">${store.get("fs.camName") ? `Start the ${esc(store.get("fs.camName"))} cam again` : "Use this device as a pet cam"}</button></div>`;
+  document.getElementById("be").onclick = () => beCam(!!store.get("fs.camName"));
   for (const b of document.querySelectorAll("[data-room]")) b.onclick = () => roomCheck({ cam: true, channel: b.dataset.room });
   document.getElementById("roomPhoto").onchange = async (e) => e.target.files[0] && roomCheck({ image: await shrink(e.target.files[0]) });
   // frames pushed over a socket per camera (no round trip per picture); polling if a socket won't open
@@ -1096,9 +1097,12 @@ function cam() {
 }
 
 // this browser becomes a pet cam: camera on, register with the household, send to the relay while watched
-async function beCam() {
+// A device that was a pet cam goes back to being one after a reload or a restart (fs.camOn), with the same name
+// and channel, so viewers reconnect and no new camera is added.
+async function beCam(resume = false) {
   stopCam();
-  const name = prompt("Name this camera", `${me.pets[0].name}'s pen`); if (!name) return render();
+  const name = (resume && store.get("fs.camName")) || prompt("Name this camera", store.get("fs.camName") || `${me.pets[0].name}'s pen`); if (!name) return render();
+  store.set("fs.camName", name); store.set("fs.camOn", "1");
   let channel = store.get("fs.camChannel"), key = store.get("fs.camKey");
   const rnd = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"[b % 56]).join("");
   if (!channel || !key) { channel = rnd(16); key = rnd(24); store.set("fs.camChannel", channel); store.set("fs.camKey", key); }
@@ -1144,14 +1148,14 @@ async function beCam() {
     const s = Math.min(f.w, f.h), cs = s / view.z;
     const sx = (f.w - s) / 2 + view.x * s - cs / 2, sy = (f.h - s) / 2 + view.y * s - cs / 2;
     g.drawImage(f.img, sx, sy, cs, cs, 0, 0, 480, 480);   // the video track is this canvas, so it's drawn 15 times a second
-    // pictures only for watchers not on video, at most 6 a second, and skipped when the uplink is behind
-    if (!jpeg || Date.now() - lastJpeg < 160 || ws.bufferedAmount > 24 * 1024) return;
+    // pictures only for watchers not on video, at most 10 a second, and skipped when the uplink is behind
+    if (!jpeg || Date.now() - lastJpeg < 95 || ws.bufferedAmount > 24 * 1024) return;
     lastJpeg = Date.now();
     c.toBlob((b) => b && ws.readyState === 1 && ws.send(b), "image/jpeg", 0.65);
   };
   const watch = watchActivity(v, c, g, () => view, (txt) => { const el = document.getElementById("act"); if (el) el.textContent = txt; });
   camStop = () => { alive = false; reading = false; timer.stop(); clearInterval(watch); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
-  document.getElementById("stop").onclick = () => { stopCam(); render(); };
+  document.getElementById("stop").onclick = () => { store.set("fs.camOn", null); stopCam(); render(); };
 }
 
 // Room check: Muse Spark lists what matters, SAM outlines each; numbered rings on the picture, a list below

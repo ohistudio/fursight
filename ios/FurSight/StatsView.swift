@@ -125,6 +125,6 @@ struct StatsView: View {
         return f.date(from: key).map { $0.formatted(.dateTime.weekday(.abbreviated)) } ?? key
     }
     func load() async {
-        do { data = try await API.server("api/stats"); error = nil } catch { self.error = error.localizedDescription }
+        do { data = try await API.server("api/stats"); error = nil } catch { if let m = error.shown { self.error = m } }
     }
 }

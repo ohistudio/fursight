@@ -92,6 +92,7 @@
   <div class="page" id="p-cam">
     <div class="row" style="justify-content:space-between"><div class="big"><span class="live" id="live"></span><span id="camName">Pet cam</span></div><div class="sub" id="camState"></div></div>
     <div id="cam"><img id="camImg" alt=""><video id="camVid" muted playsinline autoplay hidden></video><div id="camMsg">Waking the camera</div></div>
+    <div class="sub" id="camMode" style="margin-top:6px"></div>
   </div>
   <!-- daily care -->
   <div class="page" id="p-care">
@@ -427,7 +428,7 @@ $("n").addEventListener("change", noteFromField);
 
 // ---------------------------------------------------------------- pet cam: the household's camera, a few pictures a second
 
-let camAlive = false, camSock = null, camRtc = null;
+let camAlive = false, camSock = null, camRtc = null, camVideo = store.get("fs.camVideo") === "1";
 // Frames arrive pushed over a socket (one connection, no round trip per picture); if the socket won't open,
 // fall back to asking for the latest picture back to back.
 function camLoop() {
@@ -442,14 +443,16 @@ function camLoop() {
     const live = Date.now() - last < 3000;
     $("live").classList.toggle("on", live);
     $("camState").textContent = live ? (camRtc && camRtc.live ? "video " : "") + fps + " fps" : last ? "paused" : "waking";
+    $("camMode").textContent = camVideo ? "Video: press down for pictures" : "Pictures: press down to try video";
   }, 1000);
   let opened = false;
   camSock = new WebSocket(HUB.replace("https", "wss") + `/c/${cam.channel}/watch`);
   camSock.binaryType = "blob";
-  // real video over WebRTC once it connects; the pictures keep coming until then, and if it drops
+  // pictures by default: live video froze on the glasses, so it's something to try (press down), not the default.
+  // With video on, the pictures keep coming until it connects, and come back if it drops.
   const vid = $("camVid"), sock = camSock;
   const onFrame = () => { if (!camRtc || !camRtc.live || camSock !== sock) return; last = Date.now(); frames++; $("camMsg").textContent = ""; vid.requestVideoFrameCallback(onFrame); };
-  camRtc = FSRtc.watch({ ws: camSock, relay: HUB, channel: cam.channel, video: vid, onLive: (on) => {
+  if (camVideo) camRtc = FSRtc.watch({ ws: camSock, relay: HUB, channel: cam.channel, video: vid, onLive: (on) => {
     vid.hidden = !on; $("camImg").hidden = on;
     if (on && vid.requestVideoFrameCallback) vid.requestVideoFrameCallback(onFrame);
   } });
@@ -493,6 +496,7 @@ window.addEventListener("keydown", (e) => {
   else if (PAGES[page] === "care" && k === "ArrowUp") { careFocus = Math.max(0, careFocus - 1); renderCare(); }
   else if (PAGES[page] === "care" && (k === "Enter" || k === " ")) tickCare();
   else if (PAGES[page] === "today" && (k === "Enter" || k === " ") && !peekOn) { enablePeek().then((ok) => say(ok ? "Head tilt peek is on. Look down to see the pet cam." : "Couldn't turn on head tilt.")); load(); }
+  else if (PAGES[page] === "cam" && (k === "ArrowDown" || k === "ArrowUp")) { camVideo = !camVideo; store.set("fs.camVideo", camVideo ? "1" : null); camStop(); camLoop(); }
   else if (PAGES[page] === "diary" && k === "ArrowDown") { scroll = Math.min(scroll + 1, Math.max(0, entries.length - 4)); renderDiary(); }
   else if (PAGES[page] === "diary" && k === "ArrowUp") { scroll = Math.max(0, scroll - 1); renderDiary(); }
   else if ((k === "Enter" || k === " ") && PAGES[page] === "ask") { $("q").focus(); $("q").click(); }

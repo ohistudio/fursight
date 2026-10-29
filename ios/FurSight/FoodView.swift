@@ -17,6 +17,7 @@ struct FoodView: View {
     @State private var fed: [String: String] = [:]      // food -> what saving "We fed him this" said
     @State private var feeding: String?
     @State private var picking = false
+    @State private var pet: [String: Any]?             // fetched once, not before every check (each request costs seconds from far away)
 
     var body: some View {
         GeometryReader { geo in
@@ -54,7 +55,11 @@ struct FoodView: View {
             .contentShape(Rectangle())
             .onTapGesture { if still == nil { snap() } }   // tap the live picture to check it
         }
-        .onAppear { camera.start() }
+        .onAppear {
+            camera.start()
+            // the pet ahead of the first check
+            if pet == nil { Task { if let p = try? await API.hub("/me").arr("pets").first { pet = p; if !p.str("name").isEmpty { petName = p.str("name") } } } }
+        }
         .onDisappear { camera.stop() }
         .fullScreenCover(isPresented: $picking) { CameraPicker { img in picking = false; if let img { check(img) } }.ignoresSafeArea() }
     }
@@ -113,6 +118,7 @@ struct FoodView: View {
                 }
             }
             Text(i.str("reason")).font(.nunito(15, black: false)).foregroundStyle(Color.ink)
+            if !i.str("label").isEmpty { Label("Label: " + i.str("label"), systemImage: "text.viewfinder").font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if v == "caution", !i.str("portion").isEmpty, i.str("portion") != "none" { Text("How much: " + i.str("portion")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if v == "toxic", !i.str("instead").isEmpty { Text("Instead: " + i.str("instead")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if let had = i["fed"] as? [String: Any], !had.str("said").isEmpty {
@@ -164,13 +170,13 @@ struct FoodView: View {
 
     func check(_ img: UIImage) {
         still = img; items = []; fed = [:]; checking = true; error = nil; selected = 0
-        let small = img.resized(1024)
-        guard let jpeg = small.jpegData(compressionQuality: 0.8) else { return }
+        let small = img.resized(768)   // plenty to read a label; a smaller upload answers sooner
+        guard let jpeg = small.jpegData(compressionQuality: 0.72) else { return }
         let url = "data:image/jpeg;base64," + jpeg.base64EncodedString()
         Task {
             do {
-                let me = try await API.hub("/me")
-                let pet = me.arr("pets").first ?? [:]
+                if self.pet == nil { self.pet = (try await API.hub("/me")).arr("pets").first ?? [:] }
+                let pet = self.pet ?? [:]
                 if !pet.str("name").isEmpty { petName = pet.str("name") }
                 let r = try await API.server("api/food", ["image": url, "pet": ["name": pet.str("name"), "species": pet.str("species"), "breed": pet.str("breed"), "notes": pet.str("notes")], "tz": TimeZone.current.secondsFromGMT() / 60])
                 let found = r.arr("items")
@@ -183,7 +189,7 @@ struct FoodView: View {
                 for i in found {
                     _ = try? await API.hub("/diary", method: "POST", body: ["kind": "food", "title": i.str("food").capitalized, "note": i.str("reason"), "verdict": i.str("verdict"), "image": url])
                 }
-            } catch { self.error = error.localizedDescription }
+            } catch { if let m = error.shown { self.error = m } }
             checking = false
         }
     }
@@ -196,7 +202,7 @@ struct FoodView: View {
             let r = try await API.server("api/fed", ["food": food, "verdict": i.str("verdict"), "wait_days": i["wait_days"] as? Int ?? 3, "tz": TimeZone.current.secondsFromGMT() / 60])
             fed[food] = r.str("said")
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-        } catch { self.error = error.localizedDescription }
+        } catch { if let m = error.shown { self.error = m } }
     }
 }
 

@@ -93,7 +93,7 @@ struct AskView: View {
                     if ["safe", "caution", "toxic", "vet"].contains(a.str("verdict")) { entry["verdict"] = a.str("verdict") }
                     _ = try? await API.hub("/diary", method: "POST", body: entry)
                 }
-            } catch { self.error = error.localizedDescription }
+            } catch { if let m = error.shown { self.error = m } }
             thinking = false
         }
     }

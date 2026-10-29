@@ -71,7 +71,7 @@ struct LogView: View {
         do {
             let r = try await API.server("api/note", ["text": note, "tz": TimeZone.current.secondsFromGMT() / 60])
             noted = r.arr("done"); note = ""; done()
-        } catch { self.error = error.localizedDescription }
+        } catch { if let m = error.shown { self.error = m } }
     }
 
     private func save() async {
@@ -81,6 +81,6 @@ struct LogView: View {
             done()
             if let never = r["never"] as? String { warning = "Careful: that's on \(pet)'s never list (\(never)). If he ate some, ask FurSight or call a vet."; return }
             dismiss()
-        } catch { self.error = error.localizedDescription }
+        } catch { if let m = error.shown { self.error = m } }
     }
 }

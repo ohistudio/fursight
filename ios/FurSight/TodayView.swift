@@ -199,7 +199,7 @@ struct TodayView: View {
     }
 
     func load() async {
-        do { data = try await API.server("api/today"); error = nil } catch { self.error = error.localizedDescription }
+        do { data = try await API.server("api/today"); error = nil } catch { if let m = error.shown { self.error = m } }
         loading = false
     }
 }

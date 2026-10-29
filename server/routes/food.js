@@ -32,8 +32,9 @@ const SCHEMA = {
           wait_days: { type: "integer", description: "days to wait after giving this before giving it again: 0 if fine every day (hay, everyday greens), fruit and sugary treats usually 2 to 4, toxic 0" },
           box: { type: "array", items: { type: "integer" }, description: "[x_min, y_min, x_max, y_max] on a 0-1000 grid, origin top-left" },
           held: { type: "boolean", description: "true if this is the item being held up or presented to the camera" },
+          label: { type: "string", description: "if this is packaged: what the packaging text says that matters (product name, key ingredients like sugar, xylitol, chocolate, onion), else ''" },
         },
-        required: ["food", "verdict", "reason", "portion", "instead", "wait_days", "box", "held"],
+        required: ["food", "verdict", "reason", "portion", "instead", "wait_days", "box", "held", "label"],
       },
     },
     unsure: { type: "boolean", description: "true if the food can't be identified with confidence" },
@@ -44,7 +45,8 @@ const SCHEMA = {
 const system = (pet) => `You are FurSight's food check. The owner is holding food up to the camera and asking whether their pet can eat it.
 Pet: ${pet.name || "their pet"}, a ${pet.species}${pet.breed ? " (" + pet.breed + ")" : ""}.${pet.notes ? " Notes: " + pet.notes + "." : ""}
 List each distinct food ONCE: several pieces, slices or halves of the same food are one item whose box covers the main piece (the one being held, or the biggest). Different varieties that share a verdict and reason (e.g. milk and dark chocolate) are also one item.
-For each food you can see (ignore non-food objects, hands, plates and packaging unless the packaging shows what the food is), give a verdict for THIS animal:
+Read any text on packaging, labels and tins (product name, ingredients, flavour): name the product from it and judge it by its ingredients, not just the front of the pack. Pet treats from shops often contain sugar, honey, yoghurt drops, seeds or cereal that rabbits shouldn't have. Put what the text says that matters in label.
+For each food you can see (ignore non-food objects, hands and plates), give a verdict for THIS animal:
 - safe: fine as part of its normal diet in sensible amounts
 - caution: OK only as a small treat or in limited amounts, or with preparation (no seeds, no stones, leaves only)
 - toxic: must not be eaten
