@@ -94,6 +94,17 @@
   .flame { font-size: 30px; font-weight: 900; color: var(--sun-lip); }
   .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
   .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
+  .how { margin-top: 8px; }
+  .how summary { cursor: pointer; font-weight: 900; font-size: 13px; color: var(--grape-lip); list-style: none; }
+  .how summary::-webkit-details-marker { display: none; }
+  .how summary::after { content: " ›"; }
+  .how[open] summary::after { content: " ⌄"; }
+  .how ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  .how li { display: flex; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink); }
+  .how li i { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--line); color: var(--muted); font-style: normal; font-weight: 900; font-size: 11px; display: grid; place-items: center; }
+  .how li.check i { background: var(--coral); color: #fff; } .how li.ok i, .how li:last-child:not(.check) i { background: var(--fern); color: #fff; }
+  .how li.ask i { background: var(--grape); color: #fff; } .how li.warn i { background: var(--sun); color: #fff; }
+  .how small { color: var(--muted); font-size: 12px; }
   .recap img { width: 100%; border-radius: 16px; display: block; margin-bottom: 12px; }
   .center { text-align: center; }
   .hero { padding: 34px 4px 10px; }
@@ -316,9 +327,20 @@ async function today() {
     return `${head}<div class="card entry pop" style="margin-bottom:10px">
       ${e.has_image ? `<img loading="lazy" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
-      ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}
+      ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}
       <div class="when">${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""}</div></div></div>`;
   }).join("");
+}
+
+// What the Ask agent did before it answered: each look, each check that stopped an answer, and any question it
+// asked back. Shown folded under the answer.
+function howDecided(e) {
+  const steps = e.extra && Array.isArray(e.extra.steps) ? e.extra.steps : [];
+  if (!steps.length) return "";
+  const icon = (s) => s.kind === "check" ? "✕" : s.kind === "warn" ? "!" : s.tool === "answer" ? "✓" : s.tool === "ask" ? "?" : "•";
+  return `<details class="how"><summary>How it decided</summary><ol>
+    ${e.extra.asked ? `<li class="ask"><i>?</i><span>It asked: ${esc(e.extra.asked)}<br><b>You said:</b> ${esc(e.extra.reply || "")}</span></li>` : ""}
+    ${steps.map((s) => `<li class="${s.kind || ""}"><i>${icon(s)}</i><span>${esc(s.label)}${s.detail ? `<br><small>${esc(s.detail)}</small>` : ""}</span></li>`).join("")}</ol></details>`;
 }
 
 // ---------------------------------------------------------------- daily care: tick the care plan's daily list

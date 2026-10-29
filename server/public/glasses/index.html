@@ -301,22 +301,44 @@ function say(text) {
 
 // ---------------------------------------------------------------- ask: dictated (or written) question, answered from the pet cam and diary
 
+// When FurSight asks something back ("is he eating?"), the next thing said is the reply to it.
+let pending = null;
+// one short line of what the agent did: "pet cam · diary · safety list · a check stopped 1 answer"
+function how(steps) {
+  const short = { cam: "pet cam", diary: "diary", care: "care plan", food: "safety list", photo: "photo" };
+  const used = [...new Set((steps || []).filter((s) => short[s.tool] && !/off$/.test(s.label)).map((s) => short[s.tool]))];
+  const checks = (steps || []).filter((s) => s.kind === "check").length;
+  return [used.length ? "Looked at " + used.join(", ") : "", checks ? `${checks} answer${checks > 1 ? "s" : ""} stopped by a check` : ""].filter(Boolean).join(" · ");
+}
+
 async function ask(question) {
   question = String(question || "").trim();
   if (!question) return null;
   if (PAGES[page] !== "ask") go(PAGES.indexOf("ask"));
+  const followup = pending; pending = null;
   $("answer").innerHTML = `<div class="card row">${bean("thinking", 64)}<div class="sub">Looking${me && me.cams.length ? " through the pet cam" : ""}…</div></div>`;
   try {
-    const r = await fetch(API + "/api/ask", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ question, cam: true }) });
+    const r = await fetch(API + "/api/ask", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token },
+      body: JSON.stringify(followup ? { question: followup.question, followup: { asked: followup.asked, reply: question }, cam: true, from: "glasses" } : { question, cam: true, from: "glasses" }) });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || "no answer");
+    if (j.needs) {
+      // it asked instead of guessing: show the question, and send the next thing said as the reply
+      pending = { question: j.question, asked: j.needs.ask };
+      $("answer").innerHTML = `<div class="card" style="border-color:#B99BFF"><div class="row">${bean("thinking", 64)}<div class="big">Quick question</div></div>
+        <div style="margin-top:8px;font-size:19px">${esc(j.needs.ask)}</div>
+        <div class="when" style="margin-top:6px">${esc(how(j.steps))}${how(j.steps) ? " · " : ""}Pinch to reply</div></div>`;
+      say(j.needs.ask);
+      return j.needs.ask;
+    }
     const cls = VERDICT[j.verdict] ? VERDICT[j.verdict][0] : "other";
     $("answer").innerHTML = `<div class="card ${cls === "toxic" || cls === "vet" ? "alert" : ""}">
       <div class="row">${bean(VERDICT[j.verdict] ? j.verdict : "idle", 64)}<div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>
       <div style="margin-top:8px;font-size:19px">${esc(j.answer)}</div>
-      <div class="when" style="margin-top:6px">${j.looked ? "Looked through the " + esc(j.looked) + " · " : ""}You asked: ${esc(j.question)}</div></div>`;
+      <div class="when" style="margin-top:6px">${esc(how(j.steps) || "You asked: " + j.question)}</div></div>`;
     say(j.answer);
-    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title: j.question, note: j.answer, verdict: VERDICT[j.verdict] ? j.verdict : undefined }) }).then(() => load()).catch(() => {});
+    const title = followup ? followup.question : j.question;
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title, note: j.answer, verdict: VERDICT[j.verdict] ? j.verdict : undefined, extra: { steps: (j.steps || []).map((s) => ({ tool: s.tool, label: s.label, detail: s.detail, kind: s.kind })), asked: followup ? followup.asked : undefined, reply: followup ? question : undefined } }) }).then(() => load()).catch(() => {});
     return j.answer;
   } catch (e) {
     $("answer").innerHTML = `<div class="card"><div class="sub">Couldn't answer just now. Try again.</div></div>`;
