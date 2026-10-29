@@ -65,22 +65,28 @@ const DWELL = 6000;
 
 async function build() {
   const [me, { entries }] = await Promise.all([hub("/me"), hub("/diary?limit=200")]);
-  const p = me.pets[0], name = p.name, nick = String(p.nicknames || "").split(",").map((s) => s.trim()).filter(Boolean)[0];
+  const p = me.pets[0], name = p.name;
+  // his nicknames, a different one on different slides
+  const nicks = String(p.nicknames || "").split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+  const nick = (i) => (nicks.length ? nicks[i % nicks.length] : name);
   const since = Date.now() - 7 * 864e5, week = entries.filter((e) => e.at >= since);
+  // the week's cut-outs of him (flop moments, what Ask saw), newest first; slides take one each, round again
+  const stickers = week.filter((e) => e.has_image && e.kind !== "recap" && (e.png || (e.extra && e.extra.sticker))).map((e) => img(`/diary/${e.id}/image`));
+  const sticker = (i, size = 220) => (stickers.length ? `<img class="sticker pop" src="${stickers[i % stickers.length]}" alt="" style="width:auto;max-width:${size}px;max-height:${size}px;align-self:center">` : "");
   const a = FSActivity.summary(entries), days = FSActivity.days(entries, 7), tray = FSTray.summary(entries);
   const dayName = (k) => FSCal.day(k).toLocaleDateString(undefined, { weekday: "long" });
   const from = new Date(since).toLocaleDateString(undefined, { day: "numeric", month: "short" }), to = new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" });
   const S = [];
 
-  S.push({ bg: COLOURS[0], html: `<div class="k rise">${from} to ${to}</div><div class="rise" style="align-self:center">${bean("safe", 200)}</div><h1 class="rise">${esc(name)}'s week,<br>wrapped</h1><p class="rise">Here's what FurSight noticed.</p>`, cls: "center" });
+  S.push({ bg: COLOURS[0], html: `<div class="k rise">${from} to ${to}</div><div class="rise" style="align-self:center">${stickers.length ? sticker(0, 260) : bean("safe", 200)}</div><h1 class="rise">${esc(name)}'s week,<br>wrapped</h1><p class="rise">Here's what FurSight noticed.</p>`, cls: "center" });
 
   if (a.has && a.week.loaf > 0) {
     const perDay = a.week.loaf / 7;
-    S.push({ bg: COLOURS[1], html: `<div class="k rise">Professional loafer</div><h1 class="rise">${esc(nick || name)} loafed for</h1><div class="big rise" data-count="${Math.round(a.week.loaf)}" data-fmt="hm">0</div><p class="rise">That's about ${FSActivity.time(perDay)} a day, tucked up like a bread roll.</p><p class="rise" style="opacity:.75;font-size:14px">Out of the ${FSActivity.time(a.week.seen)} the cams saw him. The rest stays his secret.</p>` });
+    S.push({ bg: COLOURS[1], html: `<div class="k rise">Professional loafer</div><h1 class="rise">${esc(nick(0))} loafed for</h1><div class="big rise" data-count="${Math.round(a.week.loaf)}" data-fmt="hm">0</div><p class="rise">That's about ${FSActivity.time(perDay)} a day, tucked up like a bread roll.</p><p class="rise" style="opacity:.75;font-size:14px">Out of the ${FSActivity.time(a.week.seen)} the cams saw him. The rest stays his secret.</p>` });
   }
   if (a.has && a.week.flops > 0) {
     const best = days.reduce((m, d) => (d.flops > m.flops ? d : m), days[0]);
-    S.push({ bg: COLOURS[4], html: `<div class="k rise">Flop count</div><div class="big rise" data-count="${a.week.flops}">0</div><h1 class="rise">flops this week</h1>${a.week.flopsYou ? `<p class="rise" style="opacity:.75;font-size:14px">${a.week.flopsYou} spotted by you</p>` : ""}<p class="rise">${best.flops ? `His floppiest day was ${dayName(best.date)}, with ${best.flops}. A flop means he feels completely safe.` : "A flop means he feels completely safe."}</p>` });
+    S.push({ bg: COLOURS[4], html: `${sticker(1, 170)}<div class="k rise">Flop count</div><div class="big rise" data-count="${a.week.flops}">0</div><h1 class="rise">flops this week</h1>${a.week.flopsYou ? `<p class="rise" style="opacity:.75;font-size:14px">${a.week.flopsYou} spotted by you</p>` : ""}<p class="rise">${best.flops ? `His floppiest day was ${dayName(best.date)}, with ${best.flops}. A flop means he feels completely safe.` : "A flop means he feels completely safe."}</p>` });
   }
   const moment = week.find((e) => e.kind === "moment" && e.has_image);
   if (moment) S.push({ bg: COLOURS[5], html: `<div class="k rise">Moment of the week</div><img class="sticker pop" src="${img(`/diary/${moment.id}/image`)}" alt=""><h1 class="rise" style="text-align:center">${esc(moment.title)}</h1>`, cls: "center" });
@@ -90,7 +96,7 @@ async function build() {
   if (ws.length > 1) {
     const change = ws[ws.length - 1].weight_g - ws[0].weight_g, visits = tray.week.reduce((s, d) => s + d.visits, 0);
     const steady = Math.abs(change) <= 20;
-    S.push({ bg: COLOURS[6], html: `<div class="k rise">Weigh-ins</div><h1 class="rise">${steady ? "Steady as ever at" : change < 0 ? "Down a little, to" : "Up a little, to"}</h1><div class="big rise">${(ws[ws.length - 1].weight_g / 1000).toFixed(2)}<span style="font-size:.4em"> kg</span></div><p class="rise">Weighed on every one of his ${visits} litter tray visits. ${steady ? "Exactly what we like to see." : "Worth keeping an eye on."}</p>` });
+    S.push({ bg: COLOURS[6], html: `${sticker(2, 150)}<div class="k rise">Weigh-ins</div><h1 class="rise">${steady ? "Steady as ever at" : change < 0 ? "Down a little, to" : "Up a little, to"}</h1><div class="big rise">${(ws[ws.length - 1].weight_g / 1000).toFixed(2)}<span style="font-size:.4em"> kg</span></div><p class="rise">Weighed on every one of his ${visits} litter tray visits. ${steady ? "Exactly what we like to see." : "Worth keeping an eye on."}</p>` });
   }
 
   const checks = week.filter((e) => e.kind === "food");
@@ -105,6 +111,10 @@ async function build() {
     const g = {}; for (const e of groomed) g[e.title] = (g[e.title] || 0) + 1;
     S.push({ bg: COLOURS[2], html: `<div class="k rise">Good care</div><h1 class="rise">You looked after him</h1><div class="list rise">${cared ? `<div><b>${cared}</b>daily care jobs ticked</div>` : ""}${Object.entries(g).map(([t, n]) => `<div><b>${n}</b>${esc(t.toLowerCase())}</div>`).join("")}</div>` });
   }
+
+  // this week's card, if one was made
+  const card = week.find((e) => e.kind === "recap" && e.has_image);
+  if (card) S.push({ bg: COLOURS[5], html: `<div class="k rise">This week's card</div><img class="pop" src="${img(`/diary/${card.id}/image`)}" alt="" style="width:min(80vw,380px);align-self:center;border-radius:22px;box-shadow:0 18px 40px rgba(0,0,0,.3)"><p class="rise" style="text-align:center;align-self:center;font-size:15px">Screenshot to share</p>` });
 
   const asks = week.filter((e) => e.kind === "ask").length;
   S.push({ bg: COLOURS[0], html: `<div class="summary rise">

@@ -167,6 +167,12 @@ export class Household {
       this.notify(id, entry, device, !!image);
       return json({ id, at, ...entry, has_image: !!image });
     }
+    // remove every simulated entry (extra.sim): undoes "Fill a week of simulated data" and the simulators
+    if (p === "/diary" && m === "DELETE" && url.searchParams.get("sim") === "1") {
+      const n = this.one("SELECT COUNT(*) AS n FROM diary WHERE json_extract(data, '$.extra.sim') = 1").n;
+      this.sql.exec("DELETE FROM diary WHERE json_extract(data, '$.extra.sim') = 1");
+      return json({ ok: true, removed: n });
+    }
     // remove an entry (the owner's call, from the web app's diary): gone for every device, picture included
     if ((mm = p.match(/^\/diary\/([A-Za-z0-9]{1,24})$/)) && m === "DELETE") {
       this.sql.exec("DELETE FROM diary WHERE id = ?", mm[1]);

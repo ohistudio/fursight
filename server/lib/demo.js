@@ -5,6 +5,10 @@
 //   const { token, entries } = await makeDemo({ pic })   pic: a JPEG data URL of the pet, or null
 //
 // Used by /api/demo ("Try it with a demo rabbit" in the web app) and scripts/demo.js.
+//
+//   await makeDemo({ into: token, sticker })   a week of simulated stats in an EXISTING household instead: weight
+//   and tray, room temperature, activity and flops, and moments with a sticker. Nothing else there is touched,
+//   and every entry is marked simulated (extra.sim), so DELETE /hub/diary?sim=1 takes exactly these back out.
 const FSActivity = require("../public/activity.js");
 const HUB = process.env.HUB_URL ? process.env.HUB_URL + "/hub" : "https://fursight-cam.wibble-crossplay.workers.dev/hub";
 
@@ -26,7 +30,7 @@ const local = (d) => new Date(d.getTime() + TZ * 60e3);   // read with getUTC*
 const key = (d) => { const l = local(d); return `${l.getUTCFullYear()}-${pad(l.getUTCMonth() + 1)}-${pad(l.getUTCDate())}`; };
 const at = (daysAgo, hour) => midnight - daysAgo * D + hour * H;
 const DAYS = 13;
-const NAME = "Xiaosi";
+let NAME = "Xiaosi", NICKS = [];
 
 const CARE = {
   daily: ["Provide unlimited timothy hay and fresh water", "Offer a small handful of leafy greens", "Give 2 to 4 hours of supervised exercise time", "Spot clean litter box and bedding area", "Check droppings, appetite and behaviour", "Rabbit proof cords and small objects on floor"],
@@ -48,14 +52,23 @@ async function photo(from) {
   } catch (e) { console.warn("No photo copied:", e.message); return null; }
 }
 
-async function makeDemo({ pic = null, tz = 0 } = {}) {
+async function makeDemo({ pic = null, sticker = null, tz = 0, into = null } = {}) {
   TZ = Number.isFinite(Number(tz)) ? Number(tz) : 0;
   now = new Date();
   midnight = Math.floor((now.getTime() + TZ * 60e3) / D) * D - TZ * 60e3;
   seed = 7;
-  const { token } = await hub("/households", { name: "Demo" }, "POST", null);
-  await hub("/pets/xiaosi", { name: NAME, species: "rabbit", breed: "Netherland Dwarf", sex: "male", colour: "white", age: "3", nicknames: "Little Loaf, Mr Si, Bun Bun",
+  let token = into;
+  if (into) {
+    const me = await hub("/me", null, "GET", into);
+    if (!me.pets.length) throw Object.assign(new Error("add your pet first"), { status: 400, expose: true });
+    NAME = me.pets[0].name;
+    NICKS = String(me.pets[0].nicknames || "").split(/[,;\n]/).map((x) => x.trim()).filter(Boolean);
+  } else {
+    NAME = "Xiaosi"; NICKS = ["Little Loaf", "Mr Si", "Bun Bun"];
+    ({ token } = await hub("/households", { name: "Demo" }, "POST", null));
+    await hub("/pets/xiaosi", { name: NAME, species: "rabbit", breed: "Netherland Dwarf", sex: "male", colour: "white", age: "3", nicknames: "Little Loaf, Mr Si, Bun Bun",
     notes: "Had GI stasis in the spring. Loves coriander. (Demo household: mock data.)", care: CARE, ...(pic ? { photo: pic } : {}) }, "PUT", token);
+  }
   // a dropped connection mid-way shouldn't sink the whole demo: each write gets a couple more tries
   const post = async (e, tries = 3) => {
     try { return await hub("/diary", { pet: NAME, ...e, extra: { ...(e.extra || {}), sim: true } }, "POST", token); }
@@ -71,14 +84,17 @@ async function makeDemo({ pic = null, tz = 0 } = {}) {
     if (inflight.size >= 12) await Promise.race(inflight);
   };
 
+  const routines = {};
+  if (!into) {
   // ---- calendar and routines (first, so they're the oldest)
   const bday = new Date(now.getTime() + D);
   for (const [title, date, repeat] of [[`${NAME}'s birthday`, `2023-${key(bday).slice(5)}`, "yearly"], ["Vet check-up", key(new Date(now.getTime() + 9 * D)), "yearly"],
     ["Vaccinations (RHDV2, myxo)", key(new Date(now.getTime() + 23 * D)), "yearly"], ["Nail trim", key(new Date(now.getTime() + 4 * D)), "6weeks"], ["Weigh-in", key(new Date(now.getTime() - 2 * D)), "weekly"]])
     await go({ kind: "event", title, at: at(DAYS, 9), extra: { date, repeat } });
-  const routines = {};
   for (const [title, every, tip] of [["Brush his coat", 7, "A soft brush, a few minutes. More in a moult."], ["Trim his nails", 42, "Just the tips, away from the pink quick."], ["Check his bum is clean", 7, "A damp cloth if needed, never a bath."], ["Deep clean the pen", 7, "Fresh litter, wash the bowls and tray."], ["Check his teeth", 30, "Front teeth even and not too long."]])
     { n++; routines[title] = (await post({ kind: "routine", title, at: at(45, 10), extra: { every, tip } })).id; }   // its id is needed below
+
+  }
 
   // ---- earlier days, as daily summaries: tray, room, activity
   const weights = [];
@@ -111,12 +127,15 @@ async function makeDemo({ pic = null, tz = 0 } = {}) {
   }
 
   // ---- moments, checks and care across the fortnight
-  const momentDays = [[5, 15, "Little Loaf is having a big flop"], [3, 14, "Mr Si is stretched out like a croissant"], hr > 9 ? [0, Math.min(hr - 0.2, 13.3), "Bun Bun is having a big flop"] : [1, 16, "Bun Bun is having a big flop"]];
-  for (const [d, h, title] of momentDays) await go({ kind: "moment", title, at: at(d, h), ...(pic ? { image: pic } : {}), extra: { pose: "flop", sticker: false } });
+  // his nicknames in the moments, as the pet cam would write them (the demo rabbit's, or yours)
+  const nk = (i) => NICKS.length ? NICKS[i % NICKS.length] : NAME;
+  const momentDays = [[5, 15, `${nk(0)} is having a big flop`], [3, 14, `${nk(1)} is stretched out like a croissant`], hr > 9 ? [0, Math.min(hr - 0.2, 13.3), `${nk(2)} is having a big flop`] : [1, 16, "Bun Bun is having a big flop"]];
+  for (const [d, h, title] of momentDays) await go({ kind: "moment", title, at: at(d, h), ...(sticker || pic ? { image: sticker || pic } : {}), extra: { pose: "flop", sticker: !!sticker } });
+  await go({ kind: "droppings", title: "Droppings check", note: "38 found. Round, even, a good size. A healthy tray.", verdict: "safe", at: at(1, 9), extra: { count: 38, verdict: "normal" } });
+  if (into) { await Promise.all(inflight); return { token, entries: n }; }   // just the stats; the rest is a demo household's
   await go({ kind: "warning", title: "Chewing a cable", note: `The pet cam saw ${NAME} chewing the lamp cable behind the sofa.`, verdict: "caution", at: at(2, 19) });
   await go({ kind: "alert", title: "Litter tray", note: "Only 5 visits and 74 g yesterday, much less than usual. Watch he's eating hay. No droppings for 12 hours is a vet call.", verdict: "caution", at: at(5, 8) });
   await go({ kind: "alert", title: "The room is warm", note: "It's 26.4°C by his tray: warm for a rabbit.", verdict: "caution", at: at(3, 15.5), extra: { climate: true } });
-  await go({ kind: "droppings", title: "Droppings check", note: "38 found. Round, even, a good size. A healthy tray.", verdict: "safe", at: at(1, 9), extra: { count: 38, verdict: "normal" } });
   await go({ kind: "room", title: "Room check: 4 things to sort", note: "Lamp cable, Peace lily, Rug fringe, Wooden chair leg", at: at(2, 20), extra: { hazards: [
     { label: "Lamp cable", kind: "cable", risk: "high", fix: "Run it through a cable protector or behind the sofa, out of reach." },
     { label: "Peace lily", kind: "toxic", risk: "high", fix: "Toxic to rabbits. Move it to a shelf or another room." },

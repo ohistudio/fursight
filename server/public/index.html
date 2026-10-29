@@ -198,6 +198,7 @@
 <script src="/sticker.js"></script>
 <script src="/climate.js"></script>
 <script src="/rtc.js"></script>
+<script src="/factcard.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -451,9 +452,12 @@ function carePlan(c) {
 
 async function makeRecap(btn) {
   btn.disabled = true; btn.textContent = "Making this week's card…";
-  btn.insertAdjacentHTML("afterend", `<div class="card center stack pop" id="drawing"><div class="beanbox">${bean("thinking", 96)}</div><h3>Drawing ${esc(me.pets[0].name)}'s week</h3><p class="muted">Muse Spark reads the diary, then Muse Image draws the card. About a minute.</p></div>`);
+  btn.insertAdjacentHTML("afterend", `<div class="card center stack pop" id="drawing"><div class="beanbox">${bean("thinking", 96)}</div><h3>Drawing ${esc(me.pets[0].name)}'s week</h3><p class="muted">Muse Spark reads his week; the card gets his sticker and his numbers. About 10 seconds.</p></div>`);
   try {
-    const r = await api("/api/recap", {});
+    // Muse Spark writes the week's headline and highlights; the card is drawn here from his sticker and numbers
+    const [r, { entries }] = await Promise.all([api("/api/recap", { draft: true }), hub("/diary?limit=200")]);
+    const card = await FSFactCard.make({ pet: me.pets[0], entries, recap: r, img });
+    await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "recap", title: r.title, note: r.note, image: card, pet: me.pets[0].name, extra: { highlights: r.highlights, watch: r.watch, streak: r.streak, card: "facts" } }) });
     toast(r.title); render();
   } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Make this week's card"; document.getElementById("drawing")?.remove(); }
 }
@@ -1049,7 +1053,10 @@ function devices() {
       <button class="btn sky" id="claim" disabled>Link</button></div>
     <div class="card stack pop"><h2>Simulated devices</h2><p class="muted">Try FurSight without the hardware. Each one is marked simulated wherever it shows up.</p>
       <button class="btn ghost" id="simCam">Simulated pet cam (plays a recording)</button>
-      <button class="btn ghost" id="simTray">Simulated FurSight Tray (scale and room temperature)</button></div>
+      <button class="btn ghost" id="simTray">Simulated FurSight Tray (scale and room temperature)</button>
+      <button class="btn grape" id="simFill">Fill a week of simulated data</button>
+      <p class="muted" style="font-size:13px">Weight and litter tray, room temperature, resting and flops, and moments with a sticker, so Stats and Wrapped have something to show. All marked simulated.</p>
+      <button class="btn ghost small" id="simClear" style="justify-self:start">Remove all simulated data</button></div>
     <div class="card stack pop"><h3>This device</h3><div><label for="dname">Name</label><input id="dname" maxlength="40" value="${esc((me.devices.find((d) => d.id === me.device) || {}).name || "")}"></div>
       <button class="btn ghost" id="drename">Rename</button></div>
     <h3 style="margin:18px 4px 0">Linked</h3>
@@ -1084,6 +1091,15 @@ function devices() {
   };
   // a simulated device links itself: this phone asks for a code, enters it, and hands the new key to the page
   document.getElementById("simCam").onclick = () => window.open("/#democam", "_blank");
+  document.getElementById("simFill").onclick = async (e) => {
+    e.target.disabled = true; e.target.textContent = "Filling a week (about 15 s)…";
+    try { const r = await api("/api/demo", { into: true, tz: -new Date().getTimezoneOffset() }); toast(`Added ${r.entries} simulated entries`); tab = "stats"; store.set("fs.tab", tab); render(); }
+    catch (err) { toast(err.message); e.target.disabled = false; e.target.textContent = "Fill a week of simulated data"; }
+  };
+  document.getElementById("simClear").onclick = async () => {
+    if (!confirm(`Remove everything simulated from ${me.pets[0].name}'s diary? Real entries stay.`)) return;
+    try { const r = await hub("/diary?sim=1", { method: "DELETE" }); toast(`Removed ${r.removed} simulated entries`); render(); } catch (err) { toast(err.message); }
+  };
   document.getElementById("simTray").onclick = async (e) => {
     const w = window.open("about:blank", "_blank");   // opened now, while it's a click, so it isn't blocked
     e.target.disabled = true;
