@@ -256,7 +256,7 @@ function render() {
   $("date").innerHTML = esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) +
     (me.cams[0] && !peekOn ? `<span style="float:right;text-transform:none;letter-spacing:0">pinch: head-tilt peek</span>` : "");
   $("latest").innerHTML = (last ? `<div class="card"><div class="k">${last.kind === "recap" ? "This week" : "Latest"}</div><div class="row" style="margin-top:6px"><div class="badge ${v(last)[0]}">${v(last)[1]}</div><div style="min-width:0"><div class="big">${esc(last.title || v(last)[2])}</div><div class="note">${esc(last.note)}</div></div></div></div>` : "");
-  const cam = me.cams[0];
+  const cam = curCam();
   $("camName").textContent = cam ? cam.name : "Pet cam";
   renderDiary();
   renderCare();
@@ -341,7 +341,7 @@ async function enablePeek() {
   return true;
 }
 function peek() {
-  const cam = me && me.cams[0];
+  const cam = curCam();
   if (!cam) return;
   peekUntil = Date.now() + 6000;
   $("peek").style.display = "block";
@@ -482,11 +482,13 @@ $("n").addEventListener("change", noteFromField);
 // ---------------------------------------------------------------- pet cam: the household's camera, a few pictures a second
 
 let camAlive = false, camSock = null, camRtc = null, camVideo = store.get("fs.camVideo") === "1";
+// the camera you're watching: Up and Down on the Pet cam page switch between the household's cams (remembered)
+const curCam = () => { const cs = (me && me.cams) || []; if (!cs.length) return null; return cs.find((c) => c.channel === store.get("fs.glassesCam")) || cs[0]; };
 // Frames arrive pushed over a socket (one connection, no round trip per picture); if the socket won't open,
 // fall back to asking for the latest picture back to back.
 function camLoop() {
   if (camAlive) return; camAlive = true;
-  const cam = me && me.cams[0];
+  const cam = curCam();
   if (!cam) { $("camMsg").textContent = "No pet cam yet. Set one up in the FurSight app."; camAlive = false; return; }
   let last = 0, url = null, frames = 0, fps = 0;
   const showBlob = (b) => { const u = URL.createObjectURL(b); $("camImg").src = u; if (url) URL.revokeObjectURL(url); url = u; last = Date.now(); frames++; $("camMsg").textContent = ""; };
@@ -496,7 +498,8 @@ function camLoop() {
     const live = Date.now() - last < 3000;
     $("live").classList.toggle("on", live);
     $("camState").textContent = live ? (camRtc && camRtc.live ? "video " : "") + fps + " fps" : last ? "paused" : "waking";
-    $("camMode").textContent = camVideo ? "Video: press down for pictures" : "Pictures: press down to try video";
+    const n = me.cams.length, i = me.cams.findIndex((c) => c.channel === cam.channel) + 1;
+    $("camMode").textContent = `${n > 1 ? `Cam ${i} of ${n}: up/down to switch · ` : ""}${camVideo ? "video: select for pictures" : "select to try video"}`;
   }, 1000);
   let opened = false;
   camSock = new WebSocket(HUB.replace("https", "wss") + `/c/${cam.channel}/watch`);
@@ -550,7 +553,11 @@ window.addEventListener("keydown", (e) => {
   else if (PAGES[page] === "care" && k === "ArrowUp") { careFocus = Math.max(0, careFocus - 1); renderCare(); }
   else if (PAGES[page] === "care" && (k === "Enter" || k === " ")) tickCare();
   else if (PAGES[page] === "today" && (k === "Enter" || k === " ") && !peekOn) { enablePeek().then((ok) => say(ok ? "Head tilt peek is on. Look down to see the pet cam." : "Couldn't turn on head tilt.")); load(); }
-  else if (PAGES[page] === "cam" && (k === "ArrowDown" || k === "ArrowUp")) { camVideo = !camVideo; store.set("fs.camVideo", camVideo ? "1" : null); camStop(); camLoop(); }
+  else if (PAGES[page] === "cam" && (k === "ArrowDown" || k === "ArrowUp") && me && me.cams.length > 1) {
+    const cs = me.cams, i = cs.findIndex((c) => c.channel === curCam().channel), next = cs[(i + (k === "ArrowDown" ? 1 : cs.length - 1)) % cs.length];
+    store.set("fs.glassesCam", next.channel); $("camName").textContent = next.name; camStop(); camLoop();
+  }
+  else if (PAGES[page] === "cam" && (k === "Enter" || k === " ")) { camVideo = !camVideo; store.set("fs.camVideo", camVideo ? "1" : null); camStop(); camLoop(); }
   else if (PAGES[page] === "diary" && k === "ArrowDown") { scroll = Math.min(scroll + 1, Math.max(0, entries.length - 4)); renderDiary(); }
   else if (PAGES[page] === "diary" && k === "ArrowUp") { scroll = Math.max(0, scroll - 1); renderDiary(); }
   else if (PAGES[page] === "ask" && ["ArrowUp", "ArrowDown", "Enter", " "].includes(k)) askKey(k);
@@ -585,7 +592,7 @@ async function registerTools() {
       } },
     { name: "show_pet_cam", description: "Show the live pet cam from home on the glasses.",
       inputSchema: { type: "object", properties: {} },
-      async execute() { go(PAGES.indexOf("cam")); return text(me && me.cams.length ? `Showing ${me.cams[0].name}.` : "There's no pet cam set up yet. Add one in the FurSight app."); } },
+      async execute() { go(PAGES.indexOf("cam")); return text(me && me.cams.length ? `Showing ${curCam().name}.` : "There's no pet cam set up yet. Add one in the FurSight app."); } },
     { name: "log_pet_note", description: "Add a note to the pet's FurSight diary in the user's words, for example a food they gave (checked for safety and scheduled on the calendar), grooming done, a vet visit, or something they noticed.",
       inputSchema: { type: "object", properties: { note: { type: "string", description: "The note, in the user's words." } }, required: ["note"] },
       async execute(input) {

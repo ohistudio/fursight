@@ -91,6 +91,26 @@ namespace FurSight
             }
         }
 
+        // the household's cameras, and which one the pet cam window shows (remembered on the headset)
+        public static JArray Cams => Instance != null && Instance.Me != null ? Instance.Me["cams"] as JArray : null;
+        static JToken CamAt(int i) => Cams[(i % Cams.Count + Cams.Count) % Cams.Count];
+        public static int CamIndex()
+        {
+            if (Cams == null || Cams.Count == 0) return 0;
+            string saved = PlayerPrefs.GetString("fs.cam", "");
+            for (int i = 0; i < Cams.Count; i++) if ((string)Cams[i]["channel"] == saved) return i;
+            return 0;
+        }
+        // the next (or previous) camera; returns false if there's only one
+        public static bool NextCam(int step = 1)
+        {
+            if (Cams == null || Cams.Count < 2) return false;
+            var c = CamAt(CamIndex() + step);
+            PlayerPrefs.SetString("fs.cam", (string)c["channel"]); PlayerPrefs.Save();
+            FurSightApi.UseCam((string)c["channel"], (string)c["name"]);
+            return true;
+        }
+
         public void Unlink() { PlayerPrefs.DeleteKey("fs.hubToken"); PlayerPrefs.Save(); Me = null; StartCoroutine(Link()); }
 
         // the household: who the pet is, and which cameras there are
@@ -112,7 +132,7 @@ namespace FurSight
                 profile.notes = (sex == "male" ? "Male (he/him). " : sex == "female" ? "Female (she/her). " : "") + (notes ?? "");
             }
             var cams = Me["cams"] as JArray;
-            if (cams != null && cams.Count > 0) FurSightApi.UseCam((string)cams[0]["channel"], (string)cams[0]["name"]);
+            if (cams != null && cams.Count > 0) { var c = CamAt(CamIndex()); FurSightApi.UseCam((string)c["channel"], (string)c["name"]); }
             Debug.Log($"[FurSight] household {Me["household"]}: {profile?.petName}, {cams?.Count ?? 0} camera(s)");
         }
 

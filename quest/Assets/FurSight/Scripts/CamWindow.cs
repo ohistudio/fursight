@@ -14,6 +14,8 @@ namespace FurSight
     // repo), pushed over a WebSocket as they arrive (asking for each one costs a round trip: ~2 fps instead of ~6),
     // with polling as the fallback. On a white 3D tile with the camera's name, a live dot and a close key.
     // The relay only sends while someone watches, so opening this wakes the camera at home.
+    // With more than one camera, a sky key beside the close key (or V in the editor, or the right thumbstick
+    // left/right) switches to the next one.
     public class CamWindow : MonoBehaviour
     {
         const float W = 0.36f, Pic = 0.32f, Thick = 0.012f;
@@ -21,7 +23,7 @@ namespace FurSight
 
         Material _picMat;
         Texture2D _tex;
-        TextMeshPro _status;
+        TextMeshPro _status, _title;
         Renderer _dot;
         float _lastFrame;
         string _viewer;
@@ -66,8 +68,8 @@ namespace FurSight
 
             float top = h / 2f;
             _dot = Shapes.MakeSlab("Live", tile, Shapes.CircleRing(0.006f), 0.003f, Theme.CardLip, Theme.CardLip, new Vector3(-W / 2f + 0.026f, top - 0.025f, -Thick)).GetComponent<Renderer>();
-            var title = Label(tile, FurSightApi.CamName, Theme.Black, 18f, Theme.Ink, new Vector3(-W / 2f + 0.04f, top - 0.025f, -Thick - 0.001f), 0.2f);
-            _status = Label(tile, "connecting", Theme.Bold, 13f, Theme.Muted, new Vector3(W / 2f - 0.14f, top - 0.025f, -Thick - 0.001f), 0.09f);
+            _title = Label(tile, FurSightApi.CamName, Theme.Black, 18f, Theme.Ink, new Vector3(-W / 2f + 0.04f, top - 0.025f, -Thick - 0.001f), 0.17f);
+            _status = Label(tile, "connecting", Theme.Bold, 13f, Theme.Muted, new Vector3(W / 2f - 0.17f, top - 0.025f, -Thick - 0.001f), 0.09f);
             _status.alignment = TextAlignmentOptions.MidlineRight;
 
             var x = new GameObject("Close").transform;
@@ -78,10 +80,37 @@ namespace FurSight
             Shapes.MakeSlab("X2", x, Shapes.RoundedRectRing(0.011f, 0.0026f, 0.0013f), 0.0015f, Theme.Muted, Theme.Muted, Vector3.back * 0.004f, -45f);
             CardButton.Add(x.gameObject, 0.018f, Close);
 
+            // next camera: only when there's more than one
+            if (HubClient.Cams != null && HubClient.Cams.Count > 1)
+            {
+                var n = new GameObject("Next cam").transform;
+                n.SetParent(tile, false);
+                n.localPosition = new Vector3(W / 2f - 0.052f, top - 0.025f, -Thick);
+                Shapes.MakeSlab("Key", n, Shapes.CircleRing(0.011f), 0.004f, Theme.Sky, Theme.SkyLip, Vector3.zero);
+                var arrow = Label(n, "›", Theme.Black, 20f, Theme.Ink, new Vector3(-0.006f, 0.001f, -0.0045f), 0.012f);
+                arrow.alignment = TextAlignmentOptions.Center;
+                CardButton.Add(n.gameObject, 0.018f, () => Switch(1));
+            }
+
             StartCoroutine(Juice.Pop(transform, 0f, 0.3f));
             Sfx.Tick(transform.position);
             if (!string.IsNullOrEmpty(FurSightApi.CamChannel)) { _ = Socket(); StartCoroutine(FallbackIfNoSocket()); }
             else _status.text = "no camera linked";
+        }
+
+        // show the next camera: drop the old connection, start on the new one
+        void Switch(int step)
+        {
+            if (!HubClient.NextCam(step)) return;
+            _cts?.Cancel();
+            StopAllCoroutines();
+            while (_incoming.TryDequeue(out _)) { }
+            _socketOpen = false; _lastFrame = 0f;
+            _picMat.SetColor("_BaseColor", new Color(0.12f, 0.12f, 0.14f));
+            _title.text = FurSightApi.CamName;
+            Sfx.Tick(transform.position);
+            _ = Socket(); StartCoroutine(FallbackIfNoSocket());
+            Status();
         }
 
         static TextMeshPro Label(Transform parent, string s, TMP_FontAsset font, float size, Color col, Vector3 leftMid, float width)
@@ -141,6 +170,10 @@ namespace FurSight
 
         void Update()
         {
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.vKey.wasPressedThisFrame) Switch(1);
+            if (OVRInput.GetDown(OVRInput.Button.SecondaryThumbstickRight)) Switch(1);
+            if (OVRInput.GetDown(OVRInput.Button.SecondaryThumbstickLeft)) Switch(-1);
             if (_incoming.TryDequeue(out var jpg))
             {
                 if (_tex == null) _tex = new Texture2D(2, 2, TextureFormat.RGB24, false);
@@ -153,7 +186,9 @@ namespace FurSight
         {
             if (_status == null) return;
             bool live = _lastFrame > 0f && Time.time - _lastFrame < 3f;
-            _status.text = live ? _fps + " fps" : _lastFrame > 0f ? "paused" : "waking the camera";
+            var cams = HubClient.Cams;
+            string which = cams != null && cams.Count > 1 ? $"{HubClient.CamIndex() + 1}/{cams.Count} · " : "";
+            _status.text = which + (live ? _fps + " fps" : _lastFrame > 0f ? "paused" : "waking");
             _dot.sharedMaterial = Shapes.Flat(live ? Theme.Coral : Theme.CardLip);
         }
 
