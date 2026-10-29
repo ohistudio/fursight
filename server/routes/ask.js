@@ -27,6 +27,7 @@ const FSTray = require("../public/tray.js");
 const FSRoutine = require("../public/routines.js");
 const FSActivity = require("../public/activity.js");
 const FSClimate = require("../public/climate.js");
+const FSLevels = require("../public/levels.js");
 const fed = require("../lib/fed");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
@@ -182,6 +183,17 @@ module.exports = handler(async (body, req) => {
         step: { tool: "activity", label: `Checked his day: ${a.today.flops} flop${a.today.flops === 1 ? "" : "s"}, ${FSActivity.time(a.today.loaf + a.today.stretched + a.today.flop)} resting, ${FSActivity.time(a.today.active)} on the move, ${FSActivity.time(a.today.unseen)} not seen` } };
     },
   };
+  if (ctx) tools.check_hay_and_bowls = {
+    description: `How much of ${p.name}'s hay is gone today (against this morning's, or the last top-up) and how full his food bowl and water are, from the pet cam's checks every couple of hours. Eating less hay than usual is an early sign of gut stasis. Use it for "has he eaten", "is he eating his hay", water and food.`,
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    async run() {
+      const lv = FSLevels.summary(await recent(home.token, 200).catch(() => []));
+      if (!lv.has) return { output: { error: "No hay and bowl checks today: a pet cam needs his hay, food bowl and water in view." }, step: { tool: "levels", label: "No hay and bowl checks today" } };
+      seen.set("levels", { kind: "levels" });
+      return { output: { id: "levels", hay: lv.hay, food_bowl: lv.food, water: lv.water, checks_today: lv.readings, last_check: new Date(lv.at).toISOString().slice(11, 16), notes: lv.reasons, simulated: lv.simulated },
+        step: { tool: "levels", label: `Checked his hay and bowls: ${lv.hay ? `${lv.hay.gone}% of the hay gone` : "hay not in view"}${lv.water ? `, water ${lv.water.level}%` : ""}` } };
+    },
+  };
   if (ctx) tools.read_calendar = {
     description: `${p.name}'s calendar: reminders the owner set (vet visits, vaccinations, birthday) for the next 60 days, and grooming and checks (coat, nails, bottom, teeth) with when each is due.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
@@ -264,7 +276,7 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;
-      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime)/.test(e.kind));
+      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime|levels)/.test(e.kind));
       const out = list.slice(0, 25).map((e, i) => {
         const id = "d" + (seen.size + i + 1);
         seen.set(id, { kind: e.kind, what: e.title });

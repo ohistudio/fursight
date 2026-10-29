@@ -12,7 +12,7 @@ async function get(path, token) {
 async function context(token) {
   const [me, diary] = await Promise.all([get("/me", token), get("/diary?limit=30", token)]);
   const start = new Date(); start.setHours(0, 0, 0, 0);
-  const today = diary.entries.filter((e) => e.at >= start.getTime() - 6 * 3600e3 && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime)/.test(e.kind)).slice(0, 15);   // today, plus late last night
+  const today = diary.entries.filter((e) => e.at >= start.getTime() - 6 * 3600e3 && !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime|levels)/.test(e.kind)).slice(0, 15);   // today, plus late last night
   return { pet: me.pets[0] || null, cams: me.cams || [], today, home: me.home || null };
 }
 

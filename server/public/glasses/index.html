@@ -142,6 +142,7 @@
 <script src="/rtc.js"></script>
 <script src="/sticker.js"></script>
 <script src="/live.js"></script>
+<script src="/levels.js"></script>
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
 // between Today, Care (tick the daily list), Ask, Pet cam and Diary; up/down picks a care item, pinch ticks it; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
@@ -153,6 +154,7 @@ if (q.get("fit")) $("frame").style.setProperty("--fit", q.get("fit"));
 if (q.get("at")) { const [x, y] = q.get("at").split(",").map(Number); $("frame").style.left = `calc(50% + ${x || 0}px)`; $("frame").style.top = `calc(50% + ${y || 0}px)`; }
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let levels = null;
 let token = store.get("fs.glassesToken"), me = null, entries = [], coming = [], tray = null, routines = [], activity = null, climate = null, page = 0, scroll = 0;
 const PAGES = ["today", "care", "note", "ask", "cam", "diary"];
 const API = location.origin.includes("localhost") ? "" : "https://fursight-seven.vercel.app";
@@ -190,7 +192,8 @@ async function load() {
   routines = FSRoutine.list(all);
   activity = FSActivity.summary(all);
   climate = FSClimate.summary(all);
-  entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime)/.test(e.kind)).slice(0, 40);
+  levels = FSLevels.summary(all);
+  entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime|levels)/.test(e.kind)).slice(0, 40);
   render();
 }
 
@@ -243,6 +246,11 @@ function render() {
     if ($("todayBean").dataset.mood !== liveKey) { $("todayBean").dataset.mood = liveKey; $("todayBean").innerHTML = FSLive.html({ sticker: `${HUB}/hub/diary/${stk.id}/image?t=${encodeURIComponent(token)}`, state: st, name: pet.name, size: 96, caption: false }); }
     $("seen").textContent = `${pet.name} ${FSLive.WORD[st.state] || ""}${st.sim ? " (simulated)" : ""}` + ($("seen").textContent ? " · " + $("seen").textContent : "");
   } else if ($("todayBean").dataset.mood !== mood) { $("todayBean").dataset.mood = mood; $("todayBean").innerHTML = bean(mood, 60); }
+  // hay and bowls, from the pet cam's checks
+  if (levels && levels.has) {
+    const bits = [levels.hay ? `hay ${levels.hay.left}% left` : "", levels.water && levels.water.level < 20 ? "water low" : levels.water ? "water OK" : ""].filter(Boolean).join(", ");
+    if (bits) $("seen").textContent += ` · ${bits}`;
+  }
   const recap = entries.find((e) => e.kind === "recap" && Date.now() - e.at < 8 * 864e5);
   const last = recap || entries[0];
   $("date").innerHTML = esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) +
@@ -366,7 +374,7 @@ function say(text) {
 let pending = null;
 // one short line of what the agent did: "pet cam · diary · safety list · a check stopped 1 answer"
 function how(steps) {
-  const short = { activity: "his day", tray: "litter tray", cam: "pet cam", find: "pet cam", zoom: "pet cam", diary: "diary", care: "care plan", food: "safety list", photo: "photo", weather: "weather" };
+  const short = { activity: "his day", tray: "litter tray", cam: "pet cam", find: "pet cam", zoom: "pet cam", diary: "diary", care: "care plan", food: "safety list", photo: "photo", weather: "weather", levels: "hay and bowls" };
   const used = [...new Set((steps || []).filter((s) => short[s.tool] && !/off$/.test(s.label)).map((s) => short[s.tool]))];
   const checks = (steps || []).filter((s) => s.kind === "check").length;
   return [used.length ? "Looked at " + used.join(", ") : "", checks ? `${checks} answer${checks > 1 ? "s" : ""} stopped by a check` : ""].filter(Boolean).join(" · ");

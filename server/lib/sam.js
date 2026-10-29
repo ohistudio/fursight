@@ -32,6 +32,29 @@ async function mask(dataUrl, prompt) {
   return { image: { w, h }, x: best.bounds.left, y: best.bounds.top, w: best.mask.width, h: best.mask.height, bits: Buffer.from(parser.decodeMaskToRaster(best.mask)).toString("base64") };
 }
 
+// how much of the picture something covers: the share (0-1) of pixels in all its masks, counting only inside
+// zone { x0, y0, x1, y1 } (0-1) when given. For the hay: the pile's area through the day, against the morning's.
+async function area(dataUrl, prompt, zone = null) {
+  if (!process.env.MODEL_API_KEY) throw Object.assign(new Error("server has no MODEL_API_KEY"), { status: 503 });
+  if (!client) { const { default: OpenAI } = await import("openai"); client = new OpenAI({ baseURL: "https://api.meta.ai/v1", apiKey: process.env.MODEL_API_KEY, maxRetries: 2, timeout: 30000 }); }
+  if (!parser) parser = await import("@meta-sam/parser");
+  const { w, h } = size(dataUrl);
+  const stream = await client.responses.create({ model: "sam-3.1", stream: true,
+    input: [{ role: "user", content: [{ type: "input_text", text: prompt }, { type: "input_image", image_url: dataUrl }] }] });
+  const res = await parser.parseImageStream(stream).finalResult;
+  const z = zone ? { x0: zone.x0 * w, y0: zone.y0 * h, x1: zone.x1 * w, y1: zone.y1 * h } : { x0: 0, y0: 0, x1: w, y1: h };
+  let on = 0;
+  for (const m of parser.recordsOfKind(res.records, "mask")) {
+    const r = parser.decodeMaskToRaster(m.mask), mw = m.mask.width, left = m.bounds.left, top = m.bounds.top;
+    for (let i = 0; i < r.length; i++) {
+      if (!r[i]) continue;
+      const x = left + (i % mw), y = top + Math.floor(i / mw);
+      if (x >= z.x0 && x < z.x1 && y >= z.y0 && y < z.y1) on++;
+    }
+  }
+  return on / (w * h);
+}
+
 // a JPEG's width and height, from its start-of-frame marker
 function size(dataUrl) {
   const b = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
@@ -44,4 +67,4 @@ function size(dataUrl) {
   return { w: 480, h: 480 };
 }
 
-module.exports = { find, mask };
+module.exports = { find, mask, area };

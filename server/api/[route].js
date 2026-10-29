@@ -7,6 +7,7 @@ const routes = {
   fed: require("../routes/fed"),
   food: require("../routes/food"),
   ideas: require("../routes/ideas"),
+  levels: require("../routes/levels"),
   log: require("../routes/log"),
   note: require("../routes/note"),
   notify: require("../routes/notify"),

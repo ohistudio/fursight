@@ -114,6 +114,10 @@ async function makeDemo({ pic = null, stickers = [], tz = 0, into = null } = {})
 
   // ---- today, in detail
   const hr = (now.getTime() - midnight) / H;
+  // hay and bowls, checked every two hours from 7:30 (hay topped up then; pellets eaten by mid-morning)
+  [[7.5, 0.062, 96, 85, 92], [9.5, 0.054, 82, 30, 84], [11.5, 0.046, 70, 10, 76], [13.5, 0.039, 60, 5, 66], [15.5, 0.033, 50, 5, 58], [17.5, 0.026, 40, 0, 50], [19.5, 0.02, 30, 60, 44]]
+    .filter(([h]) => h < hr).forEach(([h, area, level, food, water]) => go({ kind: "levels", title: "Hay and bowls", at: at(0, h),
+      note: `Hay ${level}%, food bowl ${food}%, water ${water}%`, extra: { hay: { found: true, level, area, note: "hay rack" }, food: { found: true, level: food, note: "food bowl" }, water: { found: true, level: water, note: "water bowl" } } }));
   // the cam ran from 7 this morning, in half-hour logs (so "not seen" splits into out of view and no cam on)
   for (let h = 7.5; h < hr; h += 0.5) await go({ kind: "camtime", title: "", at: at(0, h), extra: { mins: 30 } });
   for (let h = 0.5; h < hr - 0.3; h += rnd(1.2, 2.4))
