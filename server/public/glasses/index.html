@@ -110,7 +110,7 @@
   <!-- ask -->
   <div class="page" id="p-ask">
     <div class="k">Ask about <span id="askPet">your pet</span></div>
-    <input id="q" type="text" placeholder="Pinch, then say or write your question" autocomplete="off">
+    <input id="q" type="text" placeholder="Pinch to ask: say or write it" autocomplete="off">
     <div class="sub" id="askHint" style="margin-top:8px">FurSight looks through the pet cam and today's diary.</div>
     <div id="answer"></div>
   </div>
@@ -130,6 +130,7 @@
 <script src="/activity.js"></script>
 <script src="/climate.js"></script>
 <script src="/rtc.js"></script>
+<script src="/sticker.js"></script>
 <script>
 // FurSight on Ray-Ban Display: your pet's day at a glance. Link once with a code, then swipe (left/right)
 // between Today, Care (tick the daily list), Ask, Pet cam and Diary; up/down picks a care item, pinch ticks it; up/down scrolls the diary; pinch (Enter) refreshes, or on Ask opens
@@ -376,11 +377,19 @@ async function ask(question) {
     const cls = VERDICT[j.verdict] ? VERDICT[j.verdict][0] : "other";
     $("answer").innerHTML = `<div class="card ${cls === "toxic" || cls === "vet" ? "alert" : ""}">
       <div class="row">${bean(VERDICT[j.verdict] ? j.verdict : "idle", 64)}<div class="big">${esc(j.about ? j.about[0].toUpperCase() + j.about.slice(1) : "FurSight")}</div></div>
+      ${j.snapshot ? `<img id="snap" alt="" style="float:right;width:150px;height:150px;object-fit:cover;border-radius:16px;margin:8px 0 4px 12px" src="${j.snapshot.image}">` : ""}
       <div style="margin-top:8px;font-size:19px">${esc(j.answer)}</div>
-      <div class="when" style="margin-top:6px">${esc(how(j.steps) || "You asked: " + j.question)}</div></div>`;
+      <div class="when" style="margin-top:6px;clear:both">${esc(how(j.steps) || "You asked: " + j.question)}</div></div>`;
     say(j.answer);
     const title = followup ? followup.question : j.question;
-    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title, note: j.answer, verdict: VERDICT[j.verdict] ? j.verdict : undefined, extra: { steps: (j.steps || []).map((s) => ({ tool: s.tool, label: s.label, detail: s.detail, kind: s.kind })), asked: followup ? followup.asked : undefined, reply: followup ? question : undefined } }) }).then(() => load()).catch(() => {});
+    // what it saw through the pet cam: cut him out as a sticker if SAM finds him, else keep the snapshot
+    let image;
+    if (j.snapshot) {
+      const sticker = await makeSticker(j.snapshot.image, async (path, body) => (await fetch(API + path, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(body) })).json()).catch(() => null);
+      image = sticker || j.snapshot.image;
+      if (sticker && $("snap")) Object.assign($("snap").style, { objectFit: "contain", borderRadius: "0" }), $("snap").src = sticker;
+    }
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title, note: j.answer, ...(image ? { image } : {}), verdict: VERDICT[j.verdict] ? j.verdict : undefined, extra: { steps: (j.steps || []).map((s) => ({ tool: s.tool, label: s.label, detail: s.detail, kind: s.kind })), asked: followup ? followup.asked : undefined, reply: followup ? question : undefined } }) }).then(() => load()).catch(() => {});
     return j.answer;
   } catch (e) {
     $("answer").innerHTML = `<div class="card"><div class="sub">Couldn't answer just now. Try again.</div></div>`;

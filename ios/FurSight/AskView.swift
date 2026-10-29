@@ -1,13 +1,18 @@
 import SwiftUI
+import Vision
 
 // Ask anything about him. The agent looks (pet cams, litter tray, diary, safety list...) before it answers,
 // and shows how it decided. If it can't tell, it asks you back, and your next message is the reply.
+// When it looked through the pet cam, the answer shows what it saw: him cut out as a sticker if the phone can
+// lift him out of the picture, else the snapshot. The diary entry keeps the picture.
 struct AskView: View {
     @State private var question = ""
     @State private var thinking = false
     @State private var answer: [String: Any]?
     @State private var pending: (question: String, asked: String)?
     @State private var error: String?
+    @State private var snapshot: UIImage?
+    @State private var sticker: UIImage?
     @FocusState private var focused: Bool
 
     private let ideas = ["Is he OK today?", "Can he have strawberries?", "How has he been this week?", "Remind me to trim his nails on Friday"]
@@ -55,6 +60,22 @@ struct AskView: View {
                 Text(word.uppercased()).font(.nunito(13)).foregroundStyle(c).kerning(0.8)
             }
             Text(needs?.str("ask") ?? a.str("answer")).font(.nunito(19, black: false))
+            if let pic = sticker ?? snapshot {
+                let room = a.obj("snapshot")?.str("room") ?? ""
+                VStack(alignment: .leading, spacing: 4) {
+                    if let sticker {
+                        // a die-cut sticker: a white edge and a soft shadow round his outline
+                        Image(uiImage: sticker).resizable().scaledToFit().frame(maxHeight: 220)
+                            .shadow(color: .white, radius: 0, x: 3, y: 0).shadow(color: .white, radius: 0, x: -3, y: 0)
+                            .shadow(color: .white, radius: 0, x: 0, y: 3).shadow(color: .white, radius: 0, x: 0, y: -3)
+                            .shadow(color: .black.opacity(0.25), radius: 6, y: 4)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Image(uiImage: pic).resizable().scaledToFill().frame(height: 200).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                    if !room.isEmpty { Label("Seen on the \(room) cam just now", systemImage: "video.fill").font(.nunito(12)).foregroundStyle(Color.muted) }
+                }
+            }
             Text("You asked: " + a.str("question")).font(.nunito(12)).foregroundStyle(Color.muted)
             let steps = a.arr("steps")
             if !steps.isEmpty {
@@ -78,7 +99,7 @@ struct AskView: View {
     func send() {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, !thinking else { return }
-        question = ""; focused = false; thinking = true; error = nil
+        question = ""; focused = false; thinking = true; error = nil; snapshot = nil; sticker = nil
         var body: [String: Any] = ["question": q, "from": "phone", "cam": true]
         if let p = pending { body = ["question": p.question, "followup": ["asked": p.asked, "reply": q], "from": "phone", "cam": true]; pending = nil }
         Task {
@@ -86,15 +107,47 @@ struct AskView: View {
                 let a = try await API.server("api/ask", body)
                 answer = a
                 if let n = a.obj("needs") { pending = (a.str("question"), n.str("ask")) }
+                // what it saw through the pet cam, then him lifted out of it (on the phone, no extra request)
+                var picture: String?
+                if let snap = a.obj("snapshot"), let img = UIImage(dataURL: snap.str("image")) {
+                    snapshot = img
+                    picture = snap.str("image")
+                    thinking = false
+                    if let cut = await Task.detached(priority: .userInitiated, operation: { liftSubject(img) }).value {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { sticker = cut }
+                        if let png = cut.pngData() { picture = "data:image/png;base64," + png.base64EncodedString() }
+                    }
+                }
                 // keep the diary in step with the other devices
                 if a.obj("needs") == nil {
                     let steps = a.arr("steps").map { ["tool": $0.str("tool"), "label": $0.str("label"), "detail": $0.str("detail"), "kind": $0.str("kind")] }
                     var entry: [String: Any] = ["kind": "ask", "title": a.str("question"), "note": a.str("answer"), "extra": ["steps": steps]]
+                    if let picture { entry["image"] = picture }
                     if ["safe", "caution", "toxic", "vet"].contains(a.str("verdict")) { entry["verdict"] = a.str("verdict") }
                     _ = try? await API.hub("/diary", method: "POST", body: entry)
                 }
             } catch { if let m = error.shown { self.error = m } }
             thinking = false
         }
+    }
+}
+
+// him, lifted out of the picture (Vision's subject lift: the biggest thing in the foreground), or nil
+private func liftSubject(_ image: UIImage) -> UIImage? {
+    guard let cg = image.cgImage else { return nil }
+    let request = VNGenerateForegroundInstanceMaskRequest()
+    let handler = VNImageRequestHandler(cgImage: cg)
+    guard (try? handler.perform([request])) != nil, let result = request.results?.first, !result.allInstances.isEmpty else { return nil }
+    guard let buffer = try? result.generateMaskedImage(ofInstances: result.allInstances, from: handler, croppedToInstancesExtent: true) else { return nil }
+    let ci = CIImage(cvPixelBuffer: buffer)
+    guard let out = CIContext().createCGImage(ci, from: ci.extent) else { return nil }
+    return UIImage(cgImage: out)
+}
+
+extension UIImage {
+    // "data:image/jpeg;base64,..." -> image
+    convenience init?(dataURL: String) {
+        guard let comma = dataURL.firstIndex(of: ","), let data = Data(base64Encoded: String(dataURL[dataURL.index(after: comma)...])) else { return nil }
+        self.init(data: data)
     }
 }
