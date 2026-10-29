@@ -20,6 +20,7 @@ const { pet: readPet, describe } = require("../lib/pet");
 const { context, camFrame, camView, recent, addDiary } = require("../lib/hub");
 const FSCal = require("../public/calendar.js");
 const FSTray = require("../public/tray.js");
+const FSRoutine = require("../public/routines.js");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
 const words = (s) => String(s || "").trim().split(/\s+/).filter(Boolean).length;
@@ -148,13 +149,31 @@ module.exports = handler(async (body, req) => {
     },
   };
   if (ctx) tools.read_calendar = {
-    description: `${p.name}'s calendar: reminders the owner set (vet visits, vaccinations, nail trims, weigh-ins) for the next 60 days.`,
+    description: `${p.name}'s calendar: reminders the owner set (vet visits, vaccinations, birthday) for the next 60 days, and grooming and checks (coat, nails, bottom, teeth) with when each is due.`,
     parameters: { type: "object", properties: {}, additionalProperties: false },
     async run() {
-      const up = FSCal.upcoming(await recent(home.token, 200).catch(() => []), 60).slice(0, 15);
+      const all = await recent(home.token, 200).catch(() => []), up = FSCal.upcoming(all, 60).slice(0, 15), rs = FSRoutine.list(all);
       seen.set("calendar", { kind: "calendar" });
-      return { output: { id: "calendar", today: FSCal.key(new Date()), upcoming: up.map((u) => ({ date: u.date, title: u.title, repeat: u.repeat })) },
+      return { output: { id: "calendar", today: FSCal.key(new Date()), upcoming: up.map((u) => ({ date: u.date, title: u.title, repeat: u.repeat })),
+        grooming_and_checks: rs.map((r) => ({ title: r.title, due: r.due, status: FSRoutine.when(r), every: FSRoutine.every(r.every), last_done: r.last ? new Date(r.last).toISOString().slice(0, 10) : null })) },
         step: { tool: "calendar", label: up.length ? `Read the calendar: next is ${up[0].title}, ${FSCal.day(up[0].date).toDateString().slice(0, 10)}` : "Read the calendar: nothing coming up" } };
+    },
+  };
+  if (ctx) tools.mark_done = {
+    description: `Tick off a grooming or check routine the owner says they've just done ("I brushed him", "trimmed his nails"). Only when they say they did it.`,
+    parameters: { type: "object", properties: { routine: { type: "string", description: "which one, in the owner's words" } }, required: ["routine"], additionalProperties: false },
+    async run({ routine }) {
+      const rs = FSRoutine.list(await recent(home.token, 200).catch(() => []));
+      // the routine sharing the most word stems with what they said ("trimmed his claws" -> Trim his nails)
+      const same = { bum: "bott", butt: "bott", claw: "nail", fur: "coat", groom: "brus", hutch: "pen", cage: "pen" };
+      const stems = (t) => String(t || "").toLowerCase().split(/\W+/).filter((w) => w.length > 2 && !["his", "her", "the", "and", "just"].includes(w)).map((w) => same[w.slice(0, 4)] || same[w] || w.slice(0, 4));
+      const said = stems(routine);
+      const r = rs.map((x) => ({ x, n: stems(x.title).filter((w) => said.includes(w)).length })).filter((m) => m.n).sort((a, b) => b.n - a.n)[0]?.x;
+      if (!r) return { output: { error: `No routine like that. There are: ${rs.map((x) => x.title).join(", ") || "none yet"}.` } };
+      await addDiary(home.token, { kind: "routine-done", title: r.title, pet: p.name, extra: { of: r.id } });
+      seen.set("done", { kind: "calendar" });
+      const next = new Date(Date.now() + r.every * 864e5);
+      return { output: { id: "done", ticked: r.title, next_due: FSRoutine.key(next) }, step: { tool: "calendar", label: `Ticked off: ${r.title}. Next ${next.toDateString().slice(0, 10)}` } };
     },
   };
   if (ctx) tools.add_reminder = {
@@ -174,7 +193,7 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { days: { type: "integer", description: "how many days back, 1 to 7" } }, required: ["days"], additionalProperties: false },
     async run({ days }) {
       const d = Math.max(1, Math.min(7, Number(days) || 1)), since = Date.now() - d * 864e5;
-      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)/.test(e.kind));
+      const list = (ctx.today.length && d === 1 ? ctx.today : await recent(home.token, 60).catch(() => ctx.today)).filter((e) => e.at >= since && e.kind !== "recap" && !/^(event|tray)|^routine(-cancel)?$/.test(e.kind));
       const out = list.slice(0, 25).map((e, i) => {
         const id = "d" + (seen.size + i + 1);
         seen.set(id, { kind: e.kind, what: e.title });
@@ -220,7 +239,7 @@ module.exports = handler(async (body, req) => {
       properties: {
         answer: { type: "string", description: "spoken style, at most 45 words, no lists, no markdown" },
         verdict: { type: "string", enum: ["safe", "caution", "toxic", "vet", "none"], description: "only for safety or health questions; vet = see a vet today" },
-        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"tray\", \"calendar\", \"reminder\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
+        evidence: { type: "array", items: { type: "string" }, description: "ids of what the answer rests on: \"owner\" (what they told you), \"photo\", \"weather\", \"tray\", \"calendar\", \"reminder\", \"done\", cam ids like \"cam1\" or close-ups like \"cam1z\", \"care\", diary ids like \"d2\", food ids like \"food:grapes\"" },
         about: { type: "string", description: "short name of the thing in the photo the answer is about, or empty" },
         box: { type: "array", items: { type: "integer" }, description: "[x_min,y_min,x_max,y_max] 0-1000 of that thing in the photo, or []" },
       },

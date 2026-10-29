@@ -95,6 +95,11 @@
   .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
   .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
   .row > svg.bean { flex: none; }
+  .routine { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .routine small { display: block; font-size: 12px; line-height: 1.3; margin-top: 2px; }
+  .routine .btn.small { width: auto; min-height: 40px; padding: 6px 14px; font-size: 14px; }
+  .routine .x { border: 0; background: none; color: var(--muted); font: 900 20px Nunito, sans-serif; cursor: pointer; padding: 4px; }
+  .addr summary { cursor: pointer; font-weight: 900; color: var(--grape-lip); }
   .tray { display: grid; gap: 10px; }
   .tstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tstats b { display: block; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; } .tstats span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
@@ -112,6 +117,7 @@
   .btn.monthnav { width: 44px; flex: none; padding-left: 0; padding-right: 0; }
   .chip.pick { cursor: pointer; border: 0; font: inherit; }
   select { font: 800 16px Nunito, sans-serif; padding: 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+  .birthday { background: linear-gradient(180deg, #F3EDFF, var(--card)); border-color: #D9C8FF; }
   .camgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
   .camgrid .cam img { cursor: zoom-in; }
   .how { margin-top: 8px; }
@@ -151,6 +157,7 @@
 <script src="/bean.js"></script>
 <script src="/calendar.js"></script>
 <script src="/tray.js"></script>
+<script src="/routines.js"></script>
 <script>
 // FurSight web app: the household's home. Add a pet (a photo, then Muse Spark writes the profile and care plan),
 // read the diary every device writes to, link devices with a code, and run or watch the pet cam.
@@ -332,17 +339,19 @@ async function makeRecap(btn) {
 async function today() {
   $app.innerHTML = `<div class="stack">${header()}<button class="btn grape" id="recap">Make this week's card</button><div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
-  const entries = (await hub("/diary?limit=80")).entries.filter((e) => !/^(event|tray)/.test(e.kind));
+  const all = (await hub("/diary?limit=120")).entries, entries = all.filter((e) => !/^(event|tray)|^routine(-cancel)?$/.test(e.kind)).slice(0, 80);
   const $l = document.getElementById("list");
   if (!entries.length) {
     $l.innerHTML = `<div class="card center stack pop" style="margin-top:6px"><div class="beanbox">${bean("idle", 96)}</div><h3>Nothing here yet</h3><p class="muted">Food checks, questions and photos from your Quest or glasses land here, and so will what the pet cam notices.</p></div>`;
     return;
   }
   let last = "";
+  const bday = FSCal.upcoming(all, 1).find((u) => /birthday/i.test(u.title));
+  if (bday) $l.insertAdjacentHTML("beforebegin", `<div class="card center stack pop birthday"><div class="beanbox">${bean("safe", 110)}</div><h2>Happy birthday, ${esc(me.pets[0].name)}!</h2><p class="muted">A good day for a favourite herb and some extra floor time.</p></div>`);
   $l.innerHTML = entries.map((e) => {
     const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
     const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
-    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note" }[e.kind] || cap(e.kind);
+    const word = { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
     if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px">${e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
@@ -381,10 +390,11 @@ const careItems = (p) => ((p.care && p.care.daily) || []).slice(0, 8);
 
 async function care() {
   const p = me.pets[0], items = careItems(p);
-  $app.innerHTML = `<div class="stack">${header()}<div id="tray"></div><div id="checklist"></div>${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
+  $app.innerHTML = `<div class="stack">${header()}<div id="tray"></div><div id="checklist"></div><div id="routines"></div>${p.notes ? `<div class="card"><h3>Notes</h3><p class="muted">${esc(p.notes)}</p></div>` : ""}${carePlan(p.care || {})}</div>`;
   if (!items.length) return;
   const { entries } = await hub("/diary?limit=200");
   document.getElementById("tray").innerHTML = trayCard(FSTray.summary(entries), p);
+  routinesCard(entries, p);
   const st = careState(entries, items);
   const left = items.filter((i) => !st.today.has(i)).length;
   document.getElementById("checklist").innerHTML = `<div class="card pop">
@@ -398,6 +408,28 @@ async function care() {
     try { await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "care", title: el.dataset.item, pet: p.name }) }); } catch (e) { el.classList.remove("done"); return toast(e.message); }
     care();
   };
+}
+
+// ---------------------------------------------------------------- routines: grooming and checks, due a set time after the last one
+
+function routinesCard(entries, p) {
+  const list = FSRoutine.list(entries), $r = document.getElementById("routines");
+  const tone = (r) => r.days < 0 ? "var(--coral-lip)" : r.days === 0 ? "#B87700" : "var(--muted)";
+  $r.innerHTML = `<div class="card stack pop"><h2>Grooming and checks</h2>
+    ${list.length ? list.map((r) => `<div class="routine">
+        <div style="min-width:0"><b>${esc(r.title)}</b><div class="when" style="color:${tone(r)}">${FSRoutine.when(r)} · ${FSRoutine.every(r.every)}</div>${r.tip ? `<small class="muted">${esc(r.tip)}</small>` : ""}</div>
+        <button class="btn small ${r.days <= 0 ? "" : "ghost"}" data-done="${r.id}" data-title="${esc(r.title)}">Done</button>
+        <button class="x" data-drop="${r.id}" aria-label="Remove ${esc(r.title)}">×</button></div>`).join("")
+      : `<p class="muted">Brushing, nails, a clean bottom and teeth checks keep ${esc(p.name)} healthy. FurSight reminds you when each one comes round.</p>
+         <button class="btn grape" id="starter">Add the usual rabbit routines</button>`}
+    <details class="addr"><summary>Add your own</summary><div class="row" style="margin-top:8px"><input id="rTitle" placeholder="e.g. Clean his ears" maxlength="60"><select id="rEvery">${[[1, "Daily"], [7, "Weekly"], [14, "Every 2 weeks"], [30, "Monthly"], [42, "Every 6 weeks"], [90, "Every 3 months"]].map(([d, w]) => `<option value="${d}" ${d === 7 ? "selected" : ""}>${w}</option>`).join("")}</select></div>
+      <button class="btn ghost" id="rAdd" style="margin-top:8px">Add</button></details></div>`;
+  const post = (b) => hub("/diary", { method: "POST", body: JSON.stringify({ pet: p.name, ...b }) });
+  const starter = document.getElementById("starter");
+  if (starter) starter.onclick = async () => { starter.disabled = true; for (const r of FSRoutine.SUGGEST) await post({ kind: "routine", title: r.title, extra: { every: r.every, tip: r.tip } }); care(); };
+  document.getElementById("rAdd").onclick = async () => { const t = document.getElementById("rTitle").value.trim(); if (!t) return; await post({ kind: "routine", title: t, extra: { every: Number(document.getElementById("rEvery").value) } }); care(); };
+  for (const b of $r.querySelectorAll("[data-done]")) b.onclick = async () => { b.disabled = true; await post({ kind: "routine-done", title: b.dataset.title, extra: { of: b.dataset.done } }); toast("Nice. " + b.dataset.title + ": done"); care(); };
+  for (const b of $r.querySelectorAll("[data-drop]")) b.onclick = async () => { await post({ kind: "routine-cancel", title: "", extra: { of: b.dataset.drop } }); care(); };
 }
 
 // ---------------------------------------------------------------- the litter tray: weight, visits, output against his usual
@@ -425,14 +457,15 @@ function trayCard(s, p) {
 // ---------------------------------------------------------------- calendar: the month at a glance, plus reminders
 
 let calMonth = null, calDay = null;
-const SUGGEST = [["Vet check-up", "yearly"], ["Vaccinations (RHDV2, myxo)", "yearly"], ["Nail trim", "6weeks"], ["Weigh-in", "weekly"], ["Deep clean", "weekly"]];
+const SUGGEST = [["Birthday", "yearly"], ["Vet check-up", "yearly"], ["Vaccinations (RHDV2, myxo)", "yearly"], ["Nail trim", "6weeks"], ["Weigh-in", "weekly"], ["Deep clean", "weekly"]];
 async function calendar() {
   const p = me.pets[0], items = careItems(p), today = FSCal.key(new Date());
   calDay = calDay || today;
   calMonth = calMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   $app.innerHTML = `<div class="stack">${header()}<div id="cal"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   const { entries } = await hub("/diary?limit=200");
-  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)/.test(e.kind));
+  const routines = FSRoutine.list(entries), dueOn = (k) => routines.filter((r) => r.due === k || (k === today && r.days < 0));
+  const evs = FSCal.events(entries), diary = entries.filter((e) => !/^(event|tray)|^routine(-cancel)?$/.test(e.kind));
   const byDay = new Map();
   for (const e of diary) { const k = FSCal.key(new Date(e.at)); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); }
   const careDone = (k) => items.length && items.every((i) => (byDay.get(k) || []).some((e) => e.kind === "care" && e.title === i));
@@ -442,7 +475,7 @@ async function calendar() {
   for (let i = 0; i < first; i++) cells += `<div></div>`;
   for (let d = 1; d <= n; d++) {
     const k = FSCal.key(new Date(y, m, d, 12)), list = byDay.get(k) || [];
-    const dots = [careDone(k) ? "fern" : "", list.some((e) => e.verdict === "toxic" || e.verdict === "vet") ? "coral" : list.some((e) => e.verdict === "caution") ? "sun" : list.length ? "sky" : "", evs.some((ev) => FSCal.on(ev, k)) ? "grape" : ""].filter(Boolean);
+    const dots = [careDone(k) ? "fern" : "", list.some((e) => e.verdict === "toxic" || e.verdict === "vet") ? "coral" : list.some((e) => e.verdict === "caution") ? "sun" : list.length ? "sky" : "", evs.some((ev) => FSCal.on(ev, k)) ? "grape" : "", dueOn(k).length ? "sun" : ""].filter(Boolean);
     cells += `<button class="day ${k === today ? "today" : ""} ${k === calDay ? "sel" : ""}" data-day="${k}">${d}<span>${dots.map((c) => `<i style="background:var(--${c})"></i>`).join("")}</span></button>`;
   }
   const sel = FSCal.day(calDay), dayEvs = evs.filter((ev) => FSCal.on(ev, calDay)), dayDiary = byDay.get(calDay) || [];
@@ -453,11 +486,12 @@ async function calendar() {
     <div class="card pop">
       <div class="row" style="justify-content:space-between"><button class="btn ghost small monthnav" id="prev" aria-label="Previous month">‹</button><h2 style="white-space:nowrap">${calMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</h2><button class="btn ghost small monthnav" id="next" aria-label="Next month">›</button></div>
       <div class="month">${["M", "T", "W", "T", "F", "S", "S"].map((d) => `<b>${d}</b>`).join("")}${cells}</div>
-      <div class="legend"><span><i style="background:var(--fern)"></i>care done</span><span><i style="background:var(--sky)"></i>diary</span><span><i style="background:var(--coral)"></i>a don't</span><span><i style="background:var(--grape)"></i>reminder</span></div>
+      <div class="legend"><span><i style="background:var(--fern)"></i>care done</span><span><i style="background:var(--sky)"></i>diary</span><span><i style="background:var(--coral)"></i>a don't</span><span><i style="background:var(--grape)"></i>reminder</span><span><i style="background:var(--sun)"></i>grooming due</span></div>
     </div>
     <div class="card stack pop"><h3>${sel.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</h3>
+      ${dueOn(calDay).map((r) => `<div class="row"><span class="chip" style="background:var(--sun);color:#fff;border:0;flex:none">Due</span><b style="flex:1;min-width:0">${esc(r.title)}</b><span class="when" style="flex:none">${FSRoutine.when(r)}</span></div>`).join("")}
       ${dayEvs.map((ev) => `<div class="row"><span class="chip" style="background:var(--grape);color:#fff;border:0">Reminder</span><b style="flex:1;min-width:0">${esc(ev.title)}</b><span class="when">${FSCal.REPEATS[ev.extra.repeat || "none"]}</span></div>`).join("")}
-      ${dayDiary.length ? dayDiary.slice(0, 12).map((e) => `<div class="row" style="gap:10px"><span class="when" style="width:44px;flex:none">${new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span style="flex:1;min-width:0"><b>${esc(e.title || word(e))}</b> <span class="muted">· ${esc(word(e))}</span></span></div>`).join("") : dayEvs.length ? "" : `<p class="muted">Nothing on this day.</p>`}
+      ${dayDiary.length ? dayDiary.slice(0, 12).map((e) => `<div class="row" style="gap:10px"><span class="when" style="width:44px;flex:none">${new Date(e.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span style="flex:1;min-width:0"><b>${esc(e.title || word(e))}</b> <span class="muted">· ${esc(word(e))}</span></span></div>`).join("") : dayEvs.length || dueOn(calDay).length ? "" : `<p class="muted">Nothing on this day.</p>`}
     </div>
     <div class="card stack pop"><h3>Coming up</h3>
       ${up.length ? up.map((u) => `<div class="row"><span class="chip">${nice(u.date)}</span><b style="flex:1;min-width:0">${esc(u.title)}</b><button class="btn ghost small" data-cancel="${u.id}" title="Remove this reminder${u.repeat !== "none" ? " and its repeats" : ""}">Remove</button></div>`).join("") : `<p class="muted">No reminders yet. Add one below, or ask FurSight to remind you.</p>`}
@@ -473,7 +507,7 @@ async function calendar() {
   for (const b of document.querySelectorAll("[data-day]")) b.onclick = () => { calDay = b.dataset.day; calendar(); };
   const $t = document.getElementById("evTitle"), $add = document.getElementById("evAdd");
   $t.oninput = () => ($add.disabled = !$t.value.trim());
-  for (const b of document.querySelectorAll(".pick")) b.onclick = () => { $t.value = b.dataset.t; document.getElementById("evRepeat").value = b.dataset.r; $add.disabled = false; };
+  for (const b of document.querySelectorAll(".pick")) b.onclick = () => { $t.value = b.dataset.t === "Birthday" ? `${p.name}'s birthday` : b.dataset.t; document.getElementById("evRepeat").value = b.dataset.r; $add.disabled = false; };
   $add.onclick = async () => {
     $add.disabled = true;
     const date = document.getElementById("evDate").value || calDay, repeat = document.getElementById("evRepeat").value;
