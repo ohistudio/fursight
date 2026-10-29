@@ -11,7 +11,8 @@ function linked(req) {
 }
 const MAX_IMAGE_CHARS = 6_000_000; // ~4.5 MB of JPEG as base64; the app sends ~1280px frames, far below this
 
-function handler(fn) {
+// open: no app token or linked device needed (the demo, before anyone has linked)
+function handler(fn, { open = false } = {}) {
   return async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     // the web app calls from the browser
@@ -21,7 +22,7 @@ function handler(fn) {
     if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
     const token = process.env.FURSIGHT_APP_TOKEN;
     const appOk = token && req.headers["x-fursight-app"] === token;
-    if (token && !appOk && !linked(req)) return res.status(401).json({ error: "unknown app" });
+    if (token && !open && !appOk && !linked(req)) return res.status(401).json({ error: "unknown app" });
     let body = req.body;
     if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = null; } }
     if (!body || typeof body !== "object") return res.status(400).json({ error: "JSON body required" });

@@ -245,6 +245,7 @@ async function render() {
   $tabs.classList.remove("hidden");
   for (const b of $tabs.querySelectorAll("button")) b.classList.toggle("on", b.dataset.tab === tab);
   if (location.hash === "#upload") return uploadPage();
+  if (location.hash === "#democam") return demoCam();
   if (store.get("fs.camOn") === "1") return beCam(true);   // this device is the pet cam: carry on after a reload
   ({ today, care, calendar, stats, cam, devices })[tab]();
 }
@@ -253,11 +254,14 @@ $tabs.addEventListener("click", (e) => { const b = e.target.closest("button"); i
 // "Si Si, Little Loaf" -> ["Si Si", "Little Loaf"]
 const nicknames = (p) => String(p.nicknames || "").split(/[,;\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 6);
 
+const isDemo = () => /Demo household/.test((me && me.pets[0] && me.pets[0].notes) || "");
+
 function header() {
   const p = me.pets[0];
   return `<div class="pet pop">${p.has_photo ? `<img src="${img(`/pets/${p.id}/photo`)}" alt="">` : `<div class="ph"></div>`}
     <div style="flex:1"><h1>${esc(p.name)}</h1><div class="chips">${[p.species, p.breed, p.sex].filter(Boolean).map((s) => `<span class="chip">${esc(cap(s))}</span>`).join("")}</div></div>
-    <button class="btn ghost small" onclick="editPet()" style="flex:none;width:auto;align-self:flex-start">Edit</button></div>`;
+    <button class="btn ghost small" onclick="editPet()" style="flex:none;width:auto;align-self:flex-start">Edit</button></div>
+    ${isDemo() ? `<div class="chip pop" style="justify-self:start;background:#EFE7FF;color:var(--grape-lip);border:0">Demo household: simulated data, not a real rabbit</div>` : ""}`;
 }
 
 // change anything about him after he's set up: name, photo, details, nicknames, notes (the care plan stays)
@@ -307,6 +311,8 @@ function welcome() {
   <div class="stack" style="margin-top:28px">
     <button class="btn" id="start">Add your pet</button>
     <button class="btn ghost" id="join">I already use FurSight on another phone</button>
+    <button class="btn grape" id="demo">Try it with a demo rabbit</button>
+    <p class="muted center" style="font-size:14px">No rabbit or hardware needed: two weeks of a demo rabbit's life, plus a simulated pet cam, litter tray scale and room sensor.</p>
   </div>`;
   document.getElementById("start").onclick = async (e) => {
     e.target.disabled = true;
@@ -314,8 +320,25 @@ function welcome() {
     catch (err) { toast(err.message); e.target.disabled = false; }
   };
   document.getElementById("join").onclick = () => linkThis("phone");
+  document.getElementById("demo").onclick = async (e) => {
+    e.target.disabled = true; e.target.textContent = "Setting up the demo (about 20 s)…";
+    try { const h = await api("/api/demo", { tz: -new Date().getTimezoneOffset() }); token = h.token; store.set("fs.token", token); tab = "today"; render(); }
+    catch (err) { toast(err.message); e.target.disabled = false; e.target.textContent = "Try it with a demo rabbit"; }
+  };
 }
 function deviceName() { const ua = navigator.userAgent; return /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android phone" : /Mac/.test(ua) ? "Mac" : "Browser"; }
+
+// link a simulated device to this household without typing a code; returns its device key
+async function linkSimulated(kind, name) {
+  const s = await hub("/link/start", { method: "POST", body: JSON.stringify({ kind, name }) });
+  await hub("/link/claim", { method: "POST", body: JSON.stringify({ code: s.code }) });
+  for (let i = 0; i < 12; i++) {
+    const p = await hub(`/link/poll?code=${s.code}&nonce=${s.nonce}`);
+    if (p.status === "linked") return p.token;
+    await new Promise((ok) => setTimeout(ok, 700));
+  }
+  throw new Error("Couldn't link it, try again");
+}
 
 // this browser joins a household: show a code, wait for another linked phone to enter it
 async function linkThis(kind) {
@@ -988,6 +1011,9 @@ function devices() {
     <div class="card stack pop"><h2>Link a device</h2><p class="muted">On the Quest, glasses or pet cam, FurSight shows a 4-letter code. Type it here.</p>
       <input id="code" class="codein" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="····">
       <button class="btn sky" id="claim" disabled>Link</button></div>
+    <div class="card stack pop"><h2>Simulated devices</h2><p class="muted">Try FurSight without the hardware. Each one is marked simulated wherever it shows up.</p>
+      <button class="btn ghost" id="simCam">Simulated pet cam (plays a recording)</button>
+      <button class="btn ghost" id="simTray">Simulated FurSight Tray (scale and room temperature)</button></div>
     <div class="card stack pop"><h3>This device</h3><div><label for="dname">Name</label><input id="dname" maxlength="40" value="${esc((me.devices.find((d) => d.id === me.device) || {}).name || "")}"></div>
       <button class="btn ghost" id="drename">Rename</button></div>
     <h3 style="margin:18px 4px 0">Linked</h3>
@@ -1019,6 +1045,15 @@ function devices() {
       try { await hub("/home", { method: "PUT", body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) }); toast("Home set"); render(); }
       catch (err) { toast(err.message); e.target.disabled = false; }
     }, () => { toast("Location wasn't shared"); e.target.disabled = false; }, { enableHighAccuracy: true, timeout: 15000 });
+  };
+  // a simulated device links itself: this phone asks for a code, enters it, and hands the new key to the page
+  document.getElementById("simCam").onclick = () => window.open("/#democam", "_blank");
+  document.getElementById("simTray").onclick = async (e) => {
+    const w = window.open("about:blank", "_blank");   // opened now, while it's a click, so it isn't blocked
+    e.target.disabled = true;
+    try { w.location = "/tray/#t=" + await linkSimulated("tray", "FurSight Tray (simulated)"); toast("Simulated Tray linked"); }
+    catch (err) { w && w.close(); toast(err.message); }
+    e.target.disabled = false;
   };
   document.getElementById("out").onclick = () => { if (confirm("Unlink this phone from FurSight?")) { hub("/devices/" + me.device, { method: "DELETE" }).finally(() => { token = null; store.set("fs.token", null); render(); }); } };
 }
@@ -1102,12 +1137,22 @@ function cam() {
 // this browser becomes a pet cam: camera on, register with the household, send to the relay while watched
 // A device that was a pet cam goes back to being one after a reload or a restart (fs.camOn), with the same name
 // and channel, so viewers reconnect and no new camera is added.
+// the simulated pet cam: this tab plays the demo recording through everything a real pet cam does
+async function demoCam() {
+  $app.innerHTML = `<p class="muted center" style="padding:40px">Starting the simulated pet cam…</p>`;
+  try {
+    const blob = await (await fetch("/demo/petcam.mp4")).blob();
+    beCam(false, new File([blob], "demo recording of Xiaosi.mp4", { type: "video/mp4" }), "Simulated pet cam");
+  } catch (e) { toast("Couldn't load the demo recording"); }
+}
+
 // clip: a video file to play instead of the camera (for recording a demo); it goes through everything the camera
 // would, and the page says it's a recording.
-async function beCam(resume = false, clip = null) {
+async function beCam(resume = false, clip = null, fixedName = null) {
   stopCam();
-  const name = (resume && store.get("fs.camName")) || prompt("Name this camera", store.get("fs.camName") || `${me.pets[0].name}'s pen`); if (!name) return render();
-  store.set("fs.camName", name); if (!clip) store.set("fs.camOn", "1");   // a clip can't carry on after a reload
+  const name = fixedName || (resume && store.get("fs.camName")) || prompt("Name this camera", store.get("fs.camName") || `${me.pets[0].name}'s pen`); if (!name) return render();
+  if (!fixedName) store.set("fs.camName", name);
+  if (!clip) store.set("fs.camOn", "1");   // a clip can't carry on after a reload
   let channel = store.get("fs.camChannel"), key = store.get("fs.camKey");
   const rnd = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"[b % 56]).join("");
   if (!channel || !key) { channel = rnd(16); key = rnd(24); store.set("fs.camChannel", channel); store.set("fs.camKey", key); }

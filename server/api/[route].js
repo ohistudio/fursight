@@ -2,6 +2,7 @@
 // deployment at 12 functions. POST /api/<name> works exactly as before.
 const routes = {
   ask: require("../routes/ask"),
+  demo: require("../routes/demo"),
   droppings: require("../routes/droppings"),
   fed: require("../routes/fed"),
   food: require("../routes/food"),
