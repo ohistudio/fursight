@@ -179,9 +179,14 @@ add('<g class="b2">' + panel((PX0, PY1), (PX1, PY1), 20) + panel((PX1, PY0), (PX
 
 # ---------------------------------------------------------------- cam 1: on a boom over the pen, looking down
 add('<g class="b7">')
-add(line((270, 0, 280), (270, 250, 280), "#B9AECB", 7) + line((270, 0, 280), (270, 0, 230), "#B9AECB", 7))
-add(cone((270, 250, 270), [(PX0, PY0, 0), (PX1, PY0, 0), (PX1, PY1, 0), (PX0, PY1, 0)], FERN, "b7c"))
-add(camera(270, 250, 284, FERN, FERN_LIP))
+# a clamp on the pen's back rail and a gooseneck up and over, so the cam looks straight down into the pen
+c0, c1, c2 = iso(270, PY0, PH), iso(270, PY0 - 10, 250), iso(270, 220, 236)
+cx0, cy0 = iso(270, PY0, PH)
+add(f'<rect x="{cx0 - 9:.1f}" y="{cy0 - 7:.1f}" width="18" height="16" rx="4" fill="#8E84A3"/>')
+add(f'<path d="M{c0[0]:.1f} {c0[1]:.1f} Q{c1[0]:.1f} {c1[1]:.1f} {c2[0]:.1f} {c2[1]:.1f}" stroke="#8E84A3" stroke-width="7" fill="none" stroke-linecap="round"/>')
+add(f'<path d="M{c0[0]:.1f} {c0[1]:.1f} Q{c1[0]:.1f} {c1[1]:.1f} {c2[0]:.1f} {c2[1]:.1f}" stroke="#B9AECB" stroke-width="3" stroke-dasharray="2 5" fill="none"/>')
+add(cone((270, 236, 222), [(PX0, PY0, 0), (PX1, PY0, 0), (PX1, PY1, 0), (PX0, PY1, 0)], FERN, "b7c"))
+add(camera(270, 236, 236, FERN, FERN_LIP))
 add('</g>')
 
 # ---------------------------------------------------------------- cam 2: on a shelf on the left wall, watching the room
@@ -202,6 +207,32 @@ add(f'<g transform="translate({px_:.1f} {py_:.1f})">'
     f'<path d="M-30 6 A31 13 0 0 0 30 6" fill="none" stroke="{SKY}" stroke-width="3" marker-end="url(#arrs)" marker-start="url(#arrs)" class="pan"/></g>')
 add('</g>')
 
+# ---------------------------------------------------------------- the food check: hold it up, look at it, ask
+add('<g class="b11">')
+sx_, sy_ = 196, 946   # its own little scene below the room, not on top of the pen
+# a hand from below holding the strawberry
+add(f'<path d="M{sx_ - 22:.1f} {sy_ + 70:.1f} C{sx_ - 26:.1f} {sy_ + 40:.1f} {sx_ - 20:.1f} {sy_ + 22:.1f} {sx_ - 8:.1f} {sy_ + 16:.1f} L{sx_ + 14:.1f} {sy_ + 18:.1f} C{sx_ + 24:.1f} {sy_ + 26:.1f} {sx_ + 22:.1f} {sy_ + 46:.1f} {sx_ + 18:.1f} {sy_ + 70:.1f} Z" fill="#F2C9A8" stroke="{INK}" stroke-width="2.4"/>')
+add(f'<path d="M{sx_ - 14:.1f} {sy_ - 14:.1f} C{sx_ - 24:.1f} {sy_ + 6:.1f} {sx_ - 6:.1f} {sy_ + 26:.1f} {sx_ + 2:.1f} {sy_ + 28:.1f} C{sx_ + 10:.1f} {sy_ + 26:.1f} {sx_ + 26:.1f} {sy_ + 6:.1f} {sx_ + 16:.1f} {sy_ - 14:.1f} C{sx_ + 8:.1f} {sy_ - 20:.1f} {sx_ - 6:.1f} {sy_ - 20:.1f} {sx_ - 14:.1f} {sy_ - 14:.1f} Z" fill="{CORAL}" stroke="{INK}" stroke-width="2.4"/>')
+for dx, dy in [(-7, -4), (4, -6), (9, 6), (-3, 8), (2, 16), (-10, 6)]:
+    add(f'<ellipse cx="{sx_ + dx:.1f}" cy="{sy_ + dy:.1f}" rx="1.4" ry="2" fill="#FFE27A"/>')
+add(f'<path d="M{sx_ - 12:.1f} {sy_ - 16:.1f} L{sx_ - 4:.1f} {sy_ - 22:.1f} L{sx_ + 1:.1f} {sy_ - 30:.1f} L{sx_ + 6:.1f} {sy_ - 22:.1f} L{sx_ + 15:.1f} {sy_ - 16:.1f} Z" fill="{FERN}" stroke="{INK}" stroke-width="2"/>')
+# the Ray-Ban Display, looking at it (a dashed line of sight)
+gx, gy = 62, 906
+add(f'<g transform="translate({gx:.1f} {gy:.1f})" fill="none" stroke="{INK}" stroke-width="5"><rect x="0" y="4" width="34" height="26" rx="10" fill="#2B2A3322"/><rect x="44" y="4" width="34" height="26" rx="10" fill="#2B2A3322"/><path d="M34 15 H44 M0 12 L-14 6 M78 12 L92 6"/><rect x="50" y="10" width="14" height="10" rx="2" fill="{FERN}" stroke="none"/></g>')
+add(f'<path d="M{gx + 80:.1f} {gy + 26:.1f} L{sx_ - 20:.1f} {sy_ - 4:.1f}" stroke="{INK}" stroke-width="1.6" stroke-dasharray="4 5" opacity=".6"/>')
+# the verdict, as it pops up on the lens
+vx, vy = 230, 866
+add(f'<g filter="url(#soft)" class="verdict"><rect x="{vx:.1f}" y="{vy:.1f}" width="232" height="86" rx="18" fill="#FFFFFF"/><rect x="{vx:.1f}" y="{vy + 80:.1f}" width="232" height="8" rx="4" fill="{SUN}"/></g>')
+add(f'<circle cx="{vx + 30:.1f}" cy="{vy + 32:.1f}" r="17" fill="{SUN}"/><text x="{vx + 30:.1f}" y="{vy + 39:.1f}" text-anchor="middle" font-size="20" font-weight="900" fill="{INK}">!</text>')
+add(f'<text x="{vx + 58:.1f}" y="{vy + 29:.1f}" font-size="17" font-weight="900" fill="{INK}">Strawberry</text>'
+    f'<text x="{vx + 58:.1f}" y="{vy + 49:.1f}" font-size="14" font-weight="900" fill="{SUN_LIP}">Small treat only</text>'
+    f'<text x="{vx + 16:.1f}" y="{vy + 72:.1f}" font-size="12.5" font-weight="800" fill="{MUTED}">half a berry · had some 2 days ago</text>')
+add(f'<path d="M{vx:.1f} {vy + 44:.1f} L{sx_ + 18:.1f} {sy_ - 24:.1f}" stroke="{SUN}" stroke-width="2.4" stroke-dasharray="3 4"/>')
+# its label, in place of a callout box
+add(f'<circle cx="62" cy="878" r="13" fill="{CORAL}"/><text x="62" y="883" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">6</text>'
+    f'<text x="84" y="876" font-size="15.5" font-weight="900" fill="{INK}">Food check</text><text x="84" y="893" font-size="12.5" font-weight="800" fill="{MUTED}">can he eat this?</text>')
+add('</g>')
+
 # ---------------------------------------------------------------- callouts on the room
 def callout(n, colour, text_col, title, sub, at, box, cls):
     (ax, ay), (bxx, byy) = iso(*at), box
@@ -212,11 +243,12 @@ def callout(n, colour, text_col, title, sub, at, box, cls):
             f'<circle cx="{bxx + 22:.1f}" cy="{byy + 24:.1f}" r="13" fill="{colour}"/><text x="{bxx + 22:.1f}" y="{byy + 29:.1f}" text-anchor="middle" font-size="14" font-weight="900" fill="{text_col}">{n}</text>'
             f'<text x="{bxx + 44:.1f}" y="{byy + 21:.1f}" font-size="15.5" font-weight="900" fill="{INK}">{title}</text>'
             f'<text x="{bxx + 44:.1f}" y="{byy + 39:.1f}" font-size="12.5" font-weight="800" fill="{MUTED}">{sub}</text></g>')
-add(callout(1, FERN, "#fff", "FurSight Cam: his pen", "hay, food, water, poses and flops", (270, 250, 300), (560, 150), "b7"))
+add(callout(1, FERN, "#fff", "FurSight Cam: his pen", "clips on the pen: hay, food, water, poses", (270, 236, 252), (560, 150), "b7"))
 add(callout(2, SKY, "#fff", "FurSight Cam: pan and tilt", "follows him when he roams free", (22, 340, 246), (40, 300), "b8"))
 add(callout(3, GRAPE, "#fff", "FurSight Tray", "his weight, droppings, temperature", (TX0, TY1, 20), (40, 760), "b3"))
 add(callout(4, SUN, INK, "Hay, food and water", "in view, so FurSight sees them go", (HX1, HY1, 74), (700, 250), "b4"))
 add(callout(5, CORAL, "#fff", "Room check", "rings what he could chew", (580, 412, 0), (700, 966), "b6"))
+
 
 # ================================================================ right column: inside the Tray (exploded)
 add('<g class="b9">')

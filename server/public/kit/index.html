@@ -26,10 +26,10 @@
   a { color: var(--grape-lip); }
   /* the schematic, drawn inline so it can build up piece by piece (for the trailer); press R or tap Replay */
   #kitsvg svg { display: block; width: 100%; height: auto; border-radius: 18px; }
-  .play .b0, .play .b1, .play .b2, .play .b3, .play .b4, .play .b5, .play .b6, .play .b7, .play .b8, .play .b9, .play .b10 { opacity: 0; animation: kIn .8s cubic-bezier(.2,.9,.3,1) forwards; }
+  .play .b0, .play .b1, .play .b2, .play .b3, .play .b4, .play .b5, .play .b6, .play .b7, .play .b8, .play .b9, .play .b10, .play .b11 { opacity: 0; animation: kIn .8s cubic-bezier(.2,.9,.3,1) forwards; }
   .play .b0 { animation-delay: .1s } .play .b1 { animation-delay: .5s } .play .b2 { animation-delay: 1.2s } .play .b3 { animation-delay: 1.9s }
   .play .b4 { animation-delay: 2.6s } .play .b5 { animation-delay: 3.2s } .play .b6 { animation-delay: 3.8s } .play .b7 { animation-delay: 4.5s }
-  .play .b8 { animation-delay: 5.2s } .play .b9 { animation-delay: 6.2s } .play .b10 { animation-delay: 7.2s }
+  .play .b8 { animation-delay: 5.2s } .play .b9 { animation-delay: 6.2s } .play .b10 { animation-delay: 7.2s } .play .b11 { animation-delay: 8.1s }
   @keyframes kIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
   .play .cone polygon { animation: cone 2.6s ease-in-out infinite; }
   @keyframes cone { 0%, 100% { opacity: .07; } 50% { opacity: .17; } }
@@ -42,6 +42,8 @@
   .play .sweepA { animation: swA 7s ease-in-out 6s infinite; } .play .sweepB { animation: swB 7s ease-in-out 6s infinite; }
   @keyframes swA { 0%, 100% { opacity: 1; } 40%, 70% { opacity: .12; } }
   @keyframes swB { 0%, 100% { opacity: .25; } 40%, 70% { opacity: 1; } }
+  .play .verdict { animation: pop 4s ease-in-out 9s infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pop { 0%, 100% { transform: scale(1); } 8% { transform: scale(1.06); } 16% { transform: scale(1); } }
   .play .pan { stroke-dasharray: 6 5; animation: flow .8s linear infinite; }
   @keyframes flow { to { stroke-dashoffset: -18; } }
   @media (prefers-reduced-motion: reduce) { .play * { animation: none !important; opacity: 1 !important; } }
