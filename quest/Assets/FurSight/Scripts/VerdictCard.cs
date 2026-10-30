@@ -97,7 +97,7 @@ namespace FurSight
             c.StartCoroutine(Juice.Pop(close, 0.46f, 0.22f, 2.4f));
             c.StartCoroutine(Juice.Pop(c._bean.transform, 0.24f, 0.3f, 2.4f));
             if (main) c.StartCoroutine(c.React(verdict, badge));
-            c._until = Time.time + (main ? 25f : 18f);
+            // stays until you close it or check again (walking round the room, it's still there)
             return c;
         }
 
@@ -200,7 +200,7 @@ namespace FurSight
                 Pill(col.Value, lip);
             }
             StartCoroutine(Juice.Pop(_action, 0f, 0.2f, 2f));
-            _until = Time.time + 12f;   // let them read it, then tidy away
+            // stays up after, until closed
         }
 
         // ---------------------------------------------------------------- checking

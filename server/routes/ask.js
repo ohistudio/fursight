@@ -208,9 +208,11 @@ module.exports = handler(async (body, req) => {
       const tz = fed.tzOf(body.tz), now = Date.now(), local = new Date(now + tz * 60e3), start = now - ((local.getUTCHours() * 60 + local.getUTCMinutes()) * 60e3 + local.getUTCSeconds() * 1e3);
       const today = (await recent(home.token, 200).catch(() => [])).filter((e) => e.kind === "levels" && e.extra && e.at >= start).sort((a, b) => a.at - b.at);
       const hhmm = (at) => new Date(at + tz * 60e3).toISOString().slice(11, 16);
+      const last = (k) => { const e = [...today].reverse().find((x) => x.extra[k] && x.extra[k].found); return e ? { level: e.extra[k].level, at: hhmm(e.at) } : null; };
       const first = (k) => { const e = today.find((x) => x.extra[k] && x.extra[k].found); return e ? { level: e.extra[k].level, at: hhmm(e.at) } : null; };
       const out = { id: "photo", now: { hay: m.hay.found ? m.hay.level : null, food_bowl: m.food.found ? m.food.level : null, water: m.water.found ? m.water.level : null },
-        this_morning: { hay: first("hay"), food_bowl: first("food"), water: first("water") }, notes: [m.hay.note, m.food.note, m.water.note].filter(Boolean),
+        this_morning: { hay: first("hay"), food_bowl: first("food"), water: first("water") },
+        pet_cam_latest: { hay: last("hay"), food_bowl: last("food"), water: last("water") }, notes: [m.hay.note, m.food.note, m.water.note].filter(Boolean),
         simulated_morning: today.some((e) => e.extra.sim) || undefined };
       for (const [k, label] of [["hay", "Hay"], ["food", "Pellets"], ["water", "Water"]]) {
         const x = m[k];
