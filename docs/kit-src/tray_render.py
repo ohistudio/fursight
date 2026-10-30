@@ -175,8 +175,8 @@ for name, r, d, m, off in [("camring", 0.013, 0.004, M["lensring"], (0, -0.006, 
 STICK = sys.argv[sys.argv.index("--") + 2] if "--" in sys.argv and len(sys.argv) > sys.argv.index("--") + 2 else None
 CAM_LOC = Vector((0.86, -1.12, 0.62))
 if STICK:
-    img = bpy.data.images.load(STICK); iw, ih = img.size; SW = 0.15; SH = SW * ih / iw
-    sx_, sy_ = 0.06, -0.03
+    img = bpy.data.images.load(STICK); iw, ih = img.size; SW = 0.21; SH = SW * ih / iw
+    sx_, sy_ = -0.03, 0.02
     bpy.ops.mesh.primitive_plane_add(size=1, location=(sx_, sy_, GZ + 0.004 + SH / 2))
     st = bpy.context.object; st.scale = (SW, SH, 1)
     d = CAM_LOC - Vector((sx_, sy_, 0)); st.rotation_euler = (math.radians(90), 0, math.atan2(d.x, -d.y))
@@ -188,9 +188,9 @@ if STICK:
     st.data.materials.append(sm)
 
 # ---------------------------------------------------------------- where the labels point (written next to the render)
-ANCHORS = {"camera": onpod((0, -0.006, -0.02)), "hay": Vector(((RX0 + RX1) / 2 - 0.03, BY - RD, TOPZ + 0.02)),
+ANCHORS = {"camera": onpod((0, -0.006, -0.02)), "hay": Vector((RX1 - 0.05, BY - RD, TOPZ + 0.02)),
            "grid": Vector((0.15, -0.09, GZ + 0.004)), "scale": Vector((0.0, FY - 0.02, FZ)), "droppings": Vector((-0.12, -0.05, GZ + 0.01)),
-           "vents": Vector((PW / 2, 0.0, Z0 * 0.55)), "him": Vector((0.06, -0.03, GZ + 0.12))}
+           "vents": Vector((PW / 2, 0.0, Z0 * 0.55)), "him": Vector((-0.03, 0.02, GZ + 0.12))}
 
 # ---------------------------------------------------------------- studio: a soft backdrop, three lights, a camera
 bpy.ops.mesh.primitive_plane_add(size=6, location=(0, 0, 0)); bpy.context.object.data.materials.append(M["floor"])

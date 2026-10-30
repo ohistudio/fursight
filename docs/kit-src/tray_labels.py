@@ -22,8 +22,8 @@ d = ImageDraw.Draw(im)
 
 # number, title, line, colour, the part it points at, where the label sits (top left of the pill)
 LABELS = [
-    (1, "Built-in camera", "looks down: droppings, visits", (46, 168, 245), px("camera"), (1110, 70)),
-    (2, "Hay rack", "hooks on; the camera sees what's left", (255, 178, 63), px("hay"), (560, 60)),
+    (1, "Built-in camera", "looks down: droppings, visits", (46, 168, 245), px("camera"), (1225, 175)),
+    (2, "Hay rack", "hooks on; the camera sees what's left", (255, 178, 63), px("hay"), (790, 40)),
     (3, "Grid floor", "droppings stay on top, in view", (155, 108, 240), (1010, 560), (1215, 395)),
     (4, "Droppings", "counted and sized every visit", (122, 78, 209), px("droppings"), (60, 330)),
     (5, "Hidden scale", "weighs him every time he hops in", (61, 187, 110), px("scale"), (60, 600)),
