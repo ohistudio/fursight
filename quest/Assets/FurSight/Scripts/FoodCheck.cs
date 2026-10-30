@@ -21,7 +21,26 @@ namespace FurSight
 
         void Start() => FurSightApi.Warm();
 
-        public void Run() { if (!_busy) _ = Check(); }
+        public float countdown = 3f;           // from the hand menu: time to pick the food up and hold it out
+
+        // from the hand menu: a short countdown first, so the hand that pressed it can go and hold the food up
+        public void Run() { if (!_busy) StartCoroutine(CountThenCheck()); }
+
+        System.Collections.IEnumerator CountThenCheck()
+        {
+            _busy = true;
+            var head = Camera.main.transform;
+            if (_checking != null) _checking.Dismiss();
+            _checking = VerdictCard.Checking(head.position + head.forward * checkingDistance - Vector3.up * 0.2f, "Hold the food up in front of you", "Hold it up 3", Theme.Fern);
+            for (int n = Mathf.CeilToInt(countdown); n > 0; n--)
+            {
+                if (_checking != null) _checking.SetLabel("Hold it up " + n);
+                Sfx.Tick(head.position + head.forward * 0.4f);
+                yield return new WaitForSeconds(1f);
+            }
+            _busy = false;
+            _ = Check();
+        }
 
         void Update()
         {
@@ -92,7 +111,8 @@ namespace FurSight
                 var box = it["box"]?.ToObject<int[]>();
                 if (box == null || box.Length != 4) continue;
                 string verdict = (string)it["verdict"];
-                var card = VerdictCard.Verdict(shot.WorldPoint(box), (string)it["food"], verdict, (string)it["reason"], i == held ? Extra(it, verdict) : null, i == held);
+                var at = i == held ? InHand(shot, box) ?? shot.WorldPoint(box) : shot.WorldPoint(box);
+                var card = VerdictCard.Verdict(at, (string)it["food"], verdict, (string)it["reason"], i == held ? Extra(it, verdict) : null, i == held);
                 _cards.Add(card);
                 if (i == held && verdict != "toxic" && HubClient.Linked)
                 {
@@ -101,6 +121,22 @@ namespace FurSight
                 }
                 if (i == held) HubClient.Diary("food", Capital((string)it["food"]), (string)it["reason"] + Plain(Extra(it, verdict)), verdict, shot.jpeg);
             }
+        }
+
+        // the food you're holding is in your hand: the card goes on the tracked hand nearest the ray through its box
+        static Vector3? InHand(Snapshot shot, int[] box)
+        {
+            var ray = shot.Ray(new Vector2((box[0] + box[2]) / 2000f, 1f - (box[1] + box[3]) / 2000f));
+            Vector3? best = null; float bestGap = 0.3f;
+            for (int h = 0; h < 2; h++)
+            {
+                var hand = Hands.Get(h);
+                if (!hand.tracked) continue;
+                var p = hand.palm + hand.normal * 0.05f;   // in front of the palm, where the food is
+                float gap = Vector3.Cross(ray.direction, p - ray.origin).magnitude;
+                if (gap < bestGap) { bestGap = gap; best = p; }
+            }
+            return best;
         }
 
         public static int TzMinutes => (int)System.TimeZoneInfo.Local.GetUtcOffset(System.DateTime.Now).TotalMinutes;

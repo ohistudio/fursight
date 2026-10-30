@@ -12,7 +12,7 @@ namespace FurSight
     public class HandMenu : MonoBehaviour
     {
         const float H = 0.15f, Thick = 0.012f, Coin = 0.032f, CoinDepth = 0.012f;
-        const float PalmScale = 0.5f;      // hand-sized on the palm (two rows of three)
+        const float PalmScale = 0.62f;     // on the hand: two rows of three
 
         [Tooltip("How directly the palm has to face you to open the menu (1 = straight at you)")]
         public float openFacing = 0.55f, closeFacing = 0.3f;
@@ -64,8 +64,14 @@ namespace FurSight
             if (hand.tracked) _panel.position = Vector3.Lerp(_panel.position, PalmPoint(hand), 1f - Mathf.Exp(-14f * Time.deltaTime));
         }
 
-        // on the hand: just off the palm, nudged up towards the fingers, so it sits on your hand like a card you hold
-        static Vector3 PalmPoint(Hands.Hand hand) => hand.palm + hand.normal * 0.035f + Vector3.up * 0.03f;
+        // beside the hand, to its right (towards the hand that presses), a little up and off the palm, so your
+        // left fingers aren't in the way and your right hand reaches it without crossing over
+        static Vector3 PalmPoint(Hands.Hand hand)
+        {
+            var cam = Camera.main;
+            var right = cam != null ? Vector3.ProjectOnPlane(cam.transform.right, Vector3.up).normalized : Vector3.right;
+            return hand.palm + right * 0.16f + Vector3.up * 0.05f + hand.normal * 0.02f;
+        }
 
         Vector3? LeftControllerPoint()
         {
@@ -131,7 +137,8 @@ namespace FurSight
             t.text = label; t.fontSize = 14f; t.color = Theme.Ink;
             t.alignment = TextAlignmentOptions.Center;
             t.rectTransform.sizeDelta = new Vector2(10f, 2.4f);
-            CardButton.Add(coin.gameObject, Coin + 0.006f, () => { Close(); action(); });
+            var cb = CardButton.Add(coin.gameObject, Coin + 0.018f, () => { Close(); action(); });   // generous: easy to poke
+            if (_onPalm) cb.notHand = Hands.Left;   // the hand holding the menu can't press it by accident
             StartCoroutine(Juice.Pop(b, delay, 0.3f, 2.2f));
         }
 

@@ -50,7 +50,7 @@ namespace FurSight
                 var hand = Hands.Get(h);
                 if (!hand.tracked) continue;
                 foreach (var b in _buttons.Values)
-                    if (b != null && b.Contains(hand.indexTip)) { inside = b; break; }
+                    if (b != null && b.notHand != h && b.Contains(hand.indexTip)) { inside = b; break; }
                 if (inside != null) break;
             }
             if (inside != null && inside != _poked) { Consumed = true; inside.Press(); }
@@ -86,6 +86,7 @@ namespace FurSight
     {
         public Collider Collider { get; private set; }
         public Action OnPress;
+        public int notHand = -1;   // a hand whose fingertip doesn't press it (the one holding the menu)
         Vector3 _scale;
 
         public static CardButton Add(GameObject go, float hitRadius, Action onPress)

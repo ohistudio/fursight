@@ -281,6 +281,9 @@ namespace FurSight
 
         public void KeepOpen() => _until = float.MaxValue;
 
+        // change the big line on a Checking card ("Hold it up 3")
+        public void SetLabel(string label) => _label = label;
+
         public void Dismiss()
         {
             if (_leaving) return;
