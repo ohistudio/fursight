@@ -1,7 +1,7 @@
-// The real room rippling where a card lands. A disc lying on the real surface redraws what the headset camera
-// sees there (each pixel's world point projected into the passthrough camera's picture with its lens), pushed in
-// and out by rings running outwards, with a little of the card's colour on each crest. It fades out at the edge
-// and as the ripple dies, so it hands back to the passthrough. Hidden behind real things like the rest of the UI.
+// The real thing a card is about, pinched: a disc over it, facing you, redraws what the headset camera sees
+// there (each pixel's world point projected into the passthrough camera's picture with its lens), magnified in
+// the middle as if pulled up toward you, then let go with a little spring. Fades out at its edge into the
+// passthrough. Hidden behind your hands like the rest of the UI.
 Shader "FurSight/Real Ripple"
 {
     Properties
@@ -70,24 +70,17 @@ Shader "FurSight/Real Ripple"
                 float2 d = (i.uv - 0.5) * 2.0;
                 float r = length(d);
                 if (r > 1.0) discard;
-                float life = 1.0 - _T;
-                // like a pinch: for the first fifth the surface draws in toward the middle, then it lets go and slow,
-                // wide rings run outwards, strongest at their front, gone by the edge
-                float pinch = smoothstep(0.0, 0.2, _T) * (1.0 - smoothstep(0.2, 0.32, _T));
-                float t2 = saturate((_T - 0.2) / 0.8);
-                float front = t2 * 1.1;
-                float wave = sin((r - front) * 20.0) * exp(-abs(r - front) * 5.0) * (1.0 - t2) - pinch * (1.0 - r) * 0.9;
-                // push the picture in and out along the radius: the real surface bending
+                // pulled up: quick to rise (the first fifth), a moment held, then let go with a damped spring
+                float up = _T < 0.2 ? smoothstep(0.0, 0.2, _T) : _T < 0.35 ? 1.0 : exp(-(_T - 0.35) * 6.0) * cos((_T - 0.35) * 18.0);
+                float bulge = 0.22 * up * (1.0 - r * r);
                 float3 centre = TransformObjectToWorld(float3(0, 0, 0));
                 float2 uv = Project(i.world), uvC = Project(centre);
-                float2 dir = normalize(uv - uvC + 1e-5);
-                float2 bent = uv + dir * wave * 0.014;
-                half3 room = SAMPLE_TEXTURE2D(_CamTex, sampler_CamTex, saturate(bent)).rgb;
-                // a little light on the crests, in the card's colour
-                half3 col = room + _Tint.rgb * saturate(wave) * 0.35;
+                float2 bent = uvC + (uv - uvC) * (1.0 - bulge);   // magnified in the middle
+                half3 col = SAMPLE_TEXTURE2D(_CamTex, sampler_CamTex, saturate(bent)).rgb * (1.0 + 0.12 * max(up, 0.0) * (1.0 - r));
+                float life = 1.0 - smoothstep(0.85, 1.0, _T);
                 float edge = 1.0 - smoothstep(0.7, 1.0, r);
                 float inFrame = all(bent > 0.01) && all(bent < 0.99) ? 1.0 : 0.0;
-                half4 o = half4(col, edge * saturate(life * 1.5) * inFrame * _HasCam);
+                half4 o = half4(col, edge * life * inFrame * _HasCam);
                 o *= FSHandOcclusion(i.world);
                 return o;
             }

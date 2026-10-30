@@ -157,11 +157,11 @@ namespace FurSight
             b.localPosition = new Vector3(0f, y, -Thick);
             Shapes.MakeSlab("Lip", b, Shapes.RoundedRectRing(0.25f, 0.034f, 0.017f), 0.006f, Theme.CardLip, Theme.CardLip, new Vector3(0f, -0.004f, 0.004f));
             Shapes.MakeSlab("Back", b, Shapes.RoundedRectRing(0.25f, 0.034f, 0.017f), 0.006f, Theme.Card, Theme.CardLip, new Vector3(0f, 0f, 0.002f));
-            _statusDot = Shapes.Make("Dot", b, Shapes.Circle(0.007f, 20), Theme.CardLip, new Vector3(-0.1f, 0f, -0.001f)).transform;
+            _statusDot = Shapes.Make("Dot", b, Shapes.Circle(0.007f, 20), Theme.CardLip, new Vector3(-0.1f, 0f, -0.009f)).transform;
             _statusText = new GameObject("Label").AddComponent<TextMeshPro>();
             _statusText.transform.SetParent(b, false);
             _statusText.transform.localScale = Vector3.one * 0.01f;
-            _statusText.transform.localPosition = new Vector3(0.012f, 0f, -0.0012f);
+            _statusText.transform.localPosition = new Vector3(0.012f, 0f, -0.009f);   // in front of the pill
             if (Theme.Bold != null) _statusText.font = Theme.Bold;
             _statusText.fontSize = 13f; _statusText.color = Theme.Ink;
             _statusText.alignment = TextAlignmentOptions.Left;

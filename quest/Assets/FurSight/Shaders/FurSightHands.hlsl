@@ -9,22 +9,27 @@
 
 float4 _FSHands[4];   // xyz a point on a hand, w its radius (0 = not tracked)
 
-// 1 = draw, 0 = a hand is in front
+// 1 = draw, 0 = a hand is in front. A tracked hand point lies along this pixel's line of sight, nearer than the
+// UI: then the environment depth gives the hand's real outline (so it's your fingers, not a round blob).
 half FSHandOcclusion(float3 positionWS)
 {
 #if defined(HARD_OCCLUSION) || defined(SOFT_OCCLUSION)
-    half v = META_DEPTH_GET_OCCLUSION_VALUE_WORLDPOS(positionWS, 0.0);
-    if (v > 0.999) return 1.0;
-    // the real surface in front: the depth along this pixel's ray, scaled out from the eye
-    float4 ds = mul(_EnvironmentDepthReprojectionMatrices[unity_StereoEyeIndex], float4(positionWS, 1.0));
-    float2 uv = (ds.xy / ds.w + 1.0) * 0.5;
-    float sceneLin = (1.0 / ((ds.z / ds.w) + _EnvironmentDepthZBufferParams.y)) * _EnvironmentDepthZBufferParams.x;
-    float realLin = SampleEnvironmentDepthLinear(uv);
     float3 eye = GetCameraPositionWS();
-    float3 real = eye + (positionWS - eye) * (realLin / max(sceneLin, 1e-4));
+    float3 ray = positionWS - eye;
+    float far = length(ray);
+    float3 dir = ray / max(far, 1e-4);
     half hand = 0.0;
     for (int i = 0; i < 4; i++)
-        if (_FSHands[i].w > 0.0) hand = max(hand, 1.0 - smoothstep(_FSHands[i].w * 0.75, _FSHands[i].w, distance(real, _FSHands[i].xyz)));
+    {
+        if (_FSHands[i].w <= 0.0) continue;
+        float3 h = _FSHands[i].xyz - eye;
+        float along = dot(h, dir);
+        if (along <= 0.05 || along >= far - 0.005) continue;   // behind you, or behind the UI
+        float off = length(h - dir * along);
+        hand = max(hand, 1.0 - smoothstep(_FSHands[i].w * 0.8, _FSHands[i].w * 1.2, off));
+    }
+    if (hand <= 0.0) return 1.0;
+    half v = META_DEPTH_GET_OCCLUSION_VALUE_WORLDPOS(positionWS, 0.0);
     return lerp(1.0, v, hand);
 #else
     return 1.0;
