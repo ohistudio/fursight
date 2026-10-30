@@ -483,7 +483,11 @@ async function today() {
   // an older hub ignores kinds: page back through up to 1000 entries for them
   for (let page = 0, list = all; kinds && page < 4 && list.length === 200 && !list.every((e) => kinds.includes(e.kind)); page++)
     all = all.concat(list = (await hub(`/diary?limit=200&before=${list[list.length - 1].at}&kinds=${kinds.join(",")}`)).entries);
-  const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime|levels)/.test(e.kind))).slice(0, 80);
+  // a treat's wait is over: on that morning the diary says so ("You can give him banana again from today")
+  const okNow = FSCal.key(new Date()), okAgain = kinds ? [] : FSCal.events(all).filter((ev) => ev.extra.fed && ev.extra.date <= okNow)
+    .map((ev) => ({ id: "ok-" + ev.id, kind: "okagain", at: FSCal.day(ev.extra.date).getTime() - 4 * 3600e3, verdict: "safe", food: ev.extra.fed }));
+  const entries = all.filter((e) => (kinds ? kinds.includes(e.kind) : !/^(event|tray)|^routine(-cancel)?$|^(pose|active|climate|camtime|levels)/.test(e.kind)))
+    .concat(okAgain).sort((a, b) => b.at - a.at).slice(0, 80);
   const $l = document.getElementById("list");
   if (!$l) return;   // you've moved to another tab while this loaded
   // live: his sticker doing what the pet cam last saw (only on the everything view)
@@ -525,6 +529,8 @@ async function today() {
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
     // a fact card shows live (stickers sway, numbers count up); tap it for the picture to save or share
+    if (e.kind === "okagain") return `${head}<div class="card entry pop" style="margin-bottom:10px"><div class="badge v-safe" style="display:grid;place-items:center;color:#fff;font:900 22px Nunito,sans-serif">✓</div>
+      <div style="min-width:0"><h3>${esc(cap(e.food))} is OK again</h3><div class="vword t-safe">Treat day</div><p class="muted" style="margin-top:4px">You can give ${esc(p0name())} ${esc(e.food)} again from today.</p></div></div>`;
     if (e.kind === "recap") return `${head}<div class="card recap pop" style="margin-bottom:10px" data-entry="${e.id}">${e.extra && e.extra.layout ? `<div class="livecardbox" data-png="${img(`/diary/${e.id}/image`)}">${FSFactCard.html(e.extra.layout, img)}</div>` : e.has_image ? `<img loading="eager" src="${img(`/diary/${e.id}/image`)}" alt="">` : ""}
       <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p>
       <button class="del" data-del="${e.id}">Remove</button></div>`;
