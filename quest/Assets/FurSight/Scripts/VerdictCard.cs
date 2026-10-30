@@ -281,6 +281,38 @@ namespace FurSight
 
         public void KeepOpen() => _until = float.MaxValue;
 
+        // his sticker, stuck on the card's top right corner at a jaunty angle; it pops on and bobs gently
+        static Material _stickerMat;
+        public void AddSticker(Texture2D tex, float height = 0.11f)
+        {
+            if (_card == null || tex == null) return;
+            _stickerMat ??= Resources.Load<Material>("Sticker");
+            var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(q.GetComponent<Collider>());
+            q.name = "Sticker";
+            var t = q.transform;
+            t.SetParent(_card, false);
+            float w = height * tex.width / tex.height;
+            t.localScale = new Vector3(w, height, 1f);
+            t.localPosition = new Vector3(W / 2f - w * 0.35f, _h / 2f + height * 0.3f, Front - 0.004f);
+            t.localRotation = Quaternion.Euler(0f, 0f, -8f);
+            var mat = _stickerMat != null ? new Material(_stickerMat) : Shapes.Unlit();
+            mat.SetTexture("_BaseMap", tex);
+            mat.SetColor("_BaseColor", Color.white);
+            q.GetComponent<MeshRenderer>().sharedMaterial = mat;
+            Sfx.Pin(t.position);
+            StartCoroutine(Juice.Pop(t, 0f, 0.35f, 2.6f));
+            StartCoroutine(Bob(t));
+            KeepOpen();
+        }
+
+        static IEnumerator Bob(Transform t)
+        {
+            yield return new WaitForSeconds(0.4f);
+            var p = t.localPosition;
+            while (t != null) { t.localPosition = p + Vector3.up * Mathf.Sin(Time.time * 2.2f) * 0.003f; t.localRotation = Quaternion.Euler(0f, 0f, -8f + Mathf.Sin(Time.time * 1.6f) * 2.5f); yield return null; }
+        }
+
         // keep the card on something that moves (the hand holding the food) until it's lost for a moment; then it
         // stays where it was
         System.Func<Vector3?> _follow;

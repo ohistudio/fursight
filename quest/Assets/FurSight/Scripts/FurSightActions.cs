@@ -49,6 +49,16 @@ namespace FurSight
             room.Run();
         }
 
+        async Task StickerOn(VerdictCard card, string photo)
+        {
+            try
+            {
+                var tex = await Sticker.Make(photo);
+                if (tex != null && card != null) card.AddSticker(tex);
+            }
+            catch (System.Exception e) { Debug.LogWarning("[FurSight] sticker: " + e.Message); }
+        }
+
         // ---------------------------------------------------------------- ask
 
         public bool Listening => _mic.Recording;
@@ -108,6 +118,10 @@ namespace FurSight
                 _last = VerdictCard.Verdict(at, title, kind, answer, string.IsNullOrEmpty(asked) ? null : "<color=#9A98A6>" + asked.TrimStart('\n') + "</color>");
                 var marks = box != null && box.Length == 4 ? new System.Collections.Generic.List<HubClient.Mark> { new HubClient.Mark { b = box, v = kind, t = title } } : null;
                 HubClient.Diary("ask", string.IsNullOrEmpty(q) ? title : q, answer, kind == "answer" ? null : kind, _askShot.jpeg, marks);
+                // it found him on a pet cam: his sticker, from that picture, on the answer
+                var snap = res["snapshot"] as JObject;
+                if (snap != null && snap["found"]?.Type == JTokenType.Boolean && (bool)snap["found"] && !string.IsNullOrEmpty((string)snap["image"]))
+                    _ = StickerOn(_last, (string)snap["image"]);
             }
             catch (System.Exception e)
             {
