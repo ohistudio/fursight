@@ -65,7 +65,7 @@ namespace FurSight
             pic.transform.SetParent(tile, false);
             pic.transform.localPosition = new Vector3(0f, -0.02f, -Thick - 0.0005f);
             pic.transform.localScale = new Vector3(Pic, Pic, 1f);
-            _picMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            _picMat = Shapes.Unlit();
             _picMat.SetColor("_BaseColor", new Color(0.12f, 0.12f, 0.14f));
             pic.GetComponent<Renderer>().material = _picMat;
 

@@ -4,15 +4,15 @@ using UnityEngine.InputSystem;
 
 namespace FurSight
 {
-    // The palm menu: turn your left palm towards you and six chunky 3D buttons pop up just above it,
+    // The palm menu: turn your left palm towards you and six chunky 3D buttons pop up on it (two rows of three),
     // Check food, Check room, Ask, Note, Photo, Pet cam. Press with your right hand: poke a button, or point and pinch.
     // Turn the hand away and it tucks itself away. Controllers: X or Y opens it at the left controller.
     // Editor: hold L for a pretend left palm, or M to toggle; click or hold O to poke.
     // Shortcuts: A = check food, B = ask (controller); Space, R, Q, N, F, C in the editor.
     public class HandMenu : MonoBehaviour
     {
-        const float W = 0.645f, H = 0.15f, Thick = 0.012f, Coin = 0.032f, CoinDepth = 0.012f;
-        const float PalmScale = 0.75f;     // smaller on the hand than when it floats
+        const float H = 0.15f, Thick = 0.012f, Coin = 0.032f, CoinDepth = 0.012f;
+        const float PalmScale = 0.5f;      // hand-sized on the palm (two rows of three)
 
         [Tooltip("How directly the palm has to face you to open the menu (1 = straight at you)")]
         public float openFacing = 0.55f, closeFacing = 0.3f;
@@ -64,8 +64,8 @@ namespace FurSight
             if (hand.tracked) _panel.position = Vector3.Lerp(_panel.position, PalmPoint(hand), 1f - Mathf.Exp(-14f * Time.deltaTime));
         }
 
-        // just above the palm, a little towards you, so the other hand has room to press
-        static Vector3 PalmPoint(Hands.Hand hand) => hand.palm + hand.normal * 0.06f + Vector3.up * 0.1f;
+        // on the hand: just off the palm, nudged up towards the fingers, so it sits on your hand like a card you hold
+        static Vector3 PalmPoint(Hands.Hand hand) => hand.palm + hand.normal * 0.035f + Vector3.up * 0.03f;
 
         Vector3? LeftControllerPoint()
         {
@@ -90,26 +90,31 @@ namespace FurSight
             _panel.position = at;
             _panel.localScale = Vector3.one * (onPalm ? PalmScale : 1f);
             Face(_panel);
+            // floating: one row of six. On the palm: two rows of three, so it fits on the hand
+            float gap = 0.104f, rowGap = 0.13f;
+            int cols = onPalm ? 3 : 6, rows = onPalm ? 2 : 1;
+            float w = gap * cols + 0.02f, h = onPalm ? H + rowGap : H;
             var tile = new GameObject("Tile").transform;
             tile.SetParent(_panel, false);
-            Shapes.MakeSlab("Lip", tile, Shapes.RoundedRectRing(W, H, 0.03f), Thick, Theme.CardLip, Theme.CardLip, new Vector3(0f, -0.007f, 0.003f));
-            Shapes.MakeSlab("Face", tile, Shapes.RoundedRectRing(W, H, 0.03f), Thick, Theme.Card, Theme.CardLip, Vector3.zero);
+            Shapes.MakeSlab("Lip", tile, Shapes.RoundedRectRing(w, h, 0.03f), Thick, Theme.CardLip, Theme.CardLip, new Vector3(0f, -0.007f, 0.003f));
+            Shapes.MakeSlab("Face", tile, Shapes.RoundedRectRing(w, h, 0.03f), Thick, Theme.Card, Theme.CardLip, Vector3.zero);
             StartCoroutine(Juice.Pop(_panel, 0f, 0.28f));
 
-            float gap = 0.104f, x0 = -gap * 2.5f;
-            Button(tile, x0, "Check food", Theme.Fern, Theme.FernLip, AppleIcon, () => FurSightActions.Instance?.CheckFood(), 0.06f);
-            Button(tile, x0 + gap, "Check room", Theme.Coral, Theme.CoralLip, HouseIcon, () => FurSightActions.Instance?.CheckRoom(), 0.09f);
-            Button(tile, x0 + gap * 2, "Ask", Theme.Grape, Theme.GrapeLip, MicIcon, () => FurSightActions.Instance?.Ask(), 0.12f);
-            Button(tile, x0 + gap * 3, "Note", Theme.Ink, Theme.Hex("#141319"), PencilIcon, () => FurSightActions.Instance?.Note(), 0.15f);
-            Button(tile, x0 + gap * 4, "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
-            Button(tile, x0 + gap * 5, "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.21f);
+            int n = 0;
+            Vector2 At() { int c = n % cols, r = n / cols; n++; return new Vector2(-gap * (cols - 1) / 2f + c * gap, (rows - 1) * rowGap / 2f - r * rowGap); }
+            Button(tile, At(), "Check food", Theme.Fern, Theme.FernLip, AppleIcon, () => FurSightActions.Instance?.CheckFood(), 0.06f);
+            Button(tile, At(), "Check room", Theme.Coral, Theme.CoralLip, HouseIcon, () => FurSightActions.Instance?.CheckRoom(), 0.09f);
+            Button(tile, At(), "Ask", Theme.Grape, Theme.GrapeLip, MicIcon, () => FurSightActions.Instance?.Ask(), 0.12f);
+            Button(tile, At(), "Note", Theme.Ink, Theme.Hex("#141319"), PencilIcon, () => FurSightActions.Instance?.Note(), 0.15f);
+            Button(tile, At(), "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
+            Button(tile, At(), "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.21f);
         }
 
-        void Button(Transform tile, float x, string label, Color col, Color lip, System.Action<Transform, Color> icon, System.Action action, float delay)
+        void Button(Transform tile, Vector2 at, string label, Color col, Color lip, System.Action<Transform, Color> icon, System.Action action, float delay)
         {
             var b = new GameObject(label).transform;
             b.SetParent(tile, false);
-            b.localPosition = new Vector3(x, 0.014f, -Thick);
+            b.localPosition = new Vector3(at.x, at.y + 0.014f, -Thick);
             var coin = new GameObject("Coin").transform;
             coin.SetParent(b, false);
             Shapes.MakeSlab("Lip", coin, Shapes.CircleRing(Coin), CoinDepth * 0.6f, lip, lip, new Vector3(0f, -0.005f, 0f));

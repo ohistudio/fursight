@@ -10,10 +10,19 @@ namespace FurSight
         static readonly Dictionary<Color, Material> _mats = new Dictionary<Color, Material>();
         static readonly Dictionary<string, Mesh> _meshes = new Dictionary<string, Mesh>();
 
+        // A fresh URP Unlit material. Copied from Resources/Flat.mat, not Shader.Find: a shader nothing in the build
+        // references gets stripped, and every card comes out pink on the headset.
+        static Material _unlit;
+        public static Material Unlit()
+        {
+            _unlit ??= Resources.Load<Material>("Flat");
+            return _unlit != null ? new Material(_unlit) : new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        }
+
         public static Material Flat(Color c)
         {
             if (_mats.TryGetValue(c, out var m) && m != null) return m;
-            m = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { name = "Flat " + ColorUtility.ToHtmlStringRGB(c) };
+            m = Unlit(); m.name = "Flat " + ColorUtility.ToHtmlStringRGB(c);
             m.SetColor("_BaseColor", c);
             m.SetFloat("_Cull", 0f);   // two-sided: slab walls and caps show whichever way they're wound
             return _mats[c] = m;

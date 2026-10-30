@@ -231,7 +231,7 @@ namespace FurSight
                 Destroy(q.GetComponent<Collider>());
                 q.name = "Editor Photo";
                 _backdrop = q.transform;
-                _backdropMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                _backdropMat = Shapes.Unlit();
                 q.GetComponent<Renderer>().material = _backdropMat;
             }
             _backdrop.gameObject.SetActive(true);
