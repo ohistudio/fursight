@@ -468,10 +468,11 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+  $app.innerHTML = `<div class="stack">${header()}<label class="btn" for="foodPhoto">Can ${esc(me.pets[0].name)} eat this?</label><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
+  document.getElementById("foodPhoto").onchange = async (e) => e.target.files[0] && foodCheck(await shrink(e.target.files[0]));
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
   document.getElementById("upload").onclick = () => uploadPage();
   for (const b of document.querySelectorAll("[data-show]")) b.onclick = () => { diaryShow = b.dataset.show; today(); };
@@ -1414,32 +1415,74 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
 // a ring round each thing in its colour, and a numbered dot (room) or a label (food, an answer). Swaps the img's
 // src for the drawn picture, so the enlarged view shows it too.
 const MARK = { high: "#FF4D5E", toxic: "#FF4D5E", vet: "#FF4D5E", medium: "#FFB627", caution: "#FFB627", low: "#2FA8F5", safe: "#3DBE6B", answer: "#9B6CF0" };
-function markUp(im) {
+// draw marks on a picture (a data URL, or a diary image the hub serves with CORS) -> a JPEG data URL
+function drawMarks(src, marks) {
+  return new Promise((ok) => {
+    const i = new Image(); i.crossOrigin = "anonymous";
+    i.onload = () => {
+      const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
+      const lw = Math.max(3, i.width / 200); g.lineWidth = lw; g.textBaseline = "middle";
+      for (const m of marks) {
+        if (!Array.isArray(m.b) || m.b.length !== 4) continue;
+        const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5", cx = (x0 + x1) / 2;
+        g.strokeStyle = "#fff"; g.lineWidth = lw * 2.2; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
+        g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
+        const ty = Math.max(lw * 6, y0 - lw * 1.5);
+        if (m.n) {
+          g.fillStyle = col; g.beginPath(); g.arc(cx, ty, lw * 5, 0, Math.PI * 2); g.fill();
+          g.font = `900 ${Math.round(lw * 6.5)}px Nunito, sans-serif`; g.textAlign = "center"; g.fillStyle = "#fff"; g.fillText(String(m.n), cx, ty + lw * 0.3);
+        } else if (m.t) {
+          g.font = `900 ${Math.round(lw * 5.5)}px Nunito, sans-serif`; g.textAlign = "left";
+          const tw = g.measureText(m.t).width, pw = tw + lw * 6, ph = lw * 9, px = Math.min(Math.max(0, cx - pw / 2), i.width - pw), py = Math.max(0, ty - ph / 2);
+          g.fillStyle = col; g.beginPath(); g.roundRect(px, py, pw, ph, ph / 2); g.fill();
+          g.fillStyle = "#fff"; g.fillText(m.t, px + lw * 3, py + ph / 2 + lw * 0.3);
+        }
+      }
+      try { ok(c.toDataURL("image/jpeg", 0.88)); } catch (e) { ok(src); }
+    };
+    i.onerror = () => ok(src);
+    i.src = src;
+  });
+}
+async function markUp(im) {
   let marks; try { marks = JSON.parse(im.dataset.marks); } catch (e) { return; }
   delete im.dataset.marks;
-  const i = new Image(); i.crossOrigin = "anonymous";
-  i.onload = () => {
-    const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
-    const lw = Math.max(3, i.width / 200); g.lineWidth = lw; g.textBaseline = "middle";
-    for (const m of marks) {
-      if (!Array.isArray(m.b) || m.b.length !== 4) continue;
-      const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5", cx = (x0 + x1) / 2;
-      g.strokeStyle = "#fff"; g.lineWidth = lw * 2.2; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
-      g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
-      const ty = Math.max(lw * 6, y0 - lw * 1.5);
-      if (m.n) {
-        g.fillStyle = col; g.beginPath(); g.arc(cx, ty, lw * 5, 0, Math.PI * 2); g.fill();
-        g.font = `900 ${Math.round(lw * 6.5)}px Nunito, sans-serif`; g.textAlign = "center"; g.fillStyle = "#fff"; g.fillText(String(m.n), cx, ty + lw * 0.3);
-      } else if (m.t) {
-        g.font = `900 ${Math.round(lw * 5.5)}px Nunito, sans-serif`; g.textAlign = "left";
-        const tw = g.measureText(m.t).width, pw = tw + lw * 6, ph = lw * 9, px = Math.min(Math.max(0, cx - pw / 2), i.width - pw), py = Math.max(0, ty - ph / 2);
-        g.fillStyle = col; g.beginPath(); g.roundRect(px, py, pw, ph, ph / 2); g.fill();
-        g.fillStyle = "#fff"; g.fillText(m.t, px + lw * 3, py + ph / 2 + lw * 0.3);
-      }
-    }
-    try { im.src = c.toDataURL("image/jpeg", 0.88); } catch (e) {}
-  };
-  i.src = im.src;
+  im.src = await drawMarks(im.src, marks);
+}
+
+// Food check from the phone, the same as the glasses and Quest: one photo to /api/food (Muse Spark, then the
+// species safety list has the last word), the foods boxed on the picture, the verdict, how much, when he last had
+// it, and "We fed him this" to put the next OK day on the calendar. Saved to the diary with its marks.
+const VWORD = { safe: "Safe", caution: "Small treat only", toxic: "Don't" };
+async function foodCheck(photo) {
+  const $o = document.getElementById("foodOut"), p = me.pets[0], name = p.name;
+  if (!$o) return;
+  $o.innerHTML = `<div class="card center stack pop">${bean("thinking", 80)}<p class="muted">Checking with Muse Spark…</p></div>`;
+  try {
+    const r = await api("/api/food", { image: photo, pet: { name, species: p.species, breed: p.breed, notes: p.notes }, tz: -new Date().getTimezoneOffset() });
+    const items = (r.items || []).filter((it) => Array.isArray(it.box) && it.box.length === 4);
+    if (!items.length) { $o.innerHTML = `<div class="card stack pop"><h3>No food seen</h3><p class="muted">Hold it up close, in good light, and try again.</p></div>`; return; }
+    const held = items[r.held] || items[0];
+    const marks = items.map((it) => ({ b: it.box, v: it.verdict, t: cap(it.food) + ": " + (VWORD[it.verdict] || it.verdict) }));
+    const pic = await drawMarks(photo, marks), v = held.verdict;
+    const fed = held.fed && held.fed.said ? `<p style="margin:0;color:${held.fed.wait_left > 0 ? "var(--sun-lip)" : "var(--muted)"}">${esc(held.fed.said)}</p>` : "";
+    const more = v === "caution" && held.portion && held.portion !== "none" ? `<p style="margin:0"><b>How much:</b> ${esc(held.portion)}</p>` : v === "toxic" && held.instead ? `<p style="margin:0"><b>Instead:</b> ${esc(held.instead)}</p>` : "";
+    const others = items.filter((it) => it !== held).map((it) => `<div class="hz"><i class="v-${it.verdict}"></i><div><b>${esc(cap(it.food))}</b> <span class="t-${it.verdict}">${VWORD[it.verdict] || ""}</span><br><span class="muted">${esc(it.reason || "")}</span></div></div>`).join("");
+    $o.innerHTML = `<div class="card stack pop"><img src="${pic}" alt="${esc(cap(held.food))}, ${VWORD[v] || v}" style="width:100%;border-radius:14px;cursor:zoom-in" id="foodPic">
+      <div class="row" style="gap:12px;align-items:center"><div class="badge v-${v}" style="flex:none;display:grid;place-items:center;color:#fff;font:900 22px Nunito,sans-serif">${{ safe: "✓", caution: "!", toxic: "✕" }[v] || "?"}</div><div style="min-width:0"><h2 style="margin:0">${esc(cap(held.food))}</h2><div class="vword t-${v}">${VWORD[v] || v}</div></div></div>
+      <p class="muted" style="margin:0">${esc(held.reason || "")}</p>${more}${fed}${others}
+      ${v !== "toxic" ? `<button class="btn" id="fedIt">We fed ${esc(name)} this</button>` : ""}</div>`;
+    document.getElementById("foodPic").onclick = () => enlarge(pic, false);
+    const $f = document.getElementById("fedIt");
+    if ($f) $f.onclick = async () => {
+      $f.disabled = true; $f.textContent = "Marking…";
+      try {
+        const f = await api("/api/fed", { food: held.food, verdict: v, wait_days: Number.isInteger(held.wait_days) ? held.wait_days : 3, tz: -new Date().getTimezoneOffset() });
+        $f.textContent = f.next ? "OK again " + new Date(f.next + "T12:00").toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) : "Marked";
+      } catch (e) { $f.disabled = false; $f.textContent = `We fed ${name} this`; toast(e.message); }
+    };
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "food", title: cap(held.food), note: held.reason || "", verdict: v, image: photo, pet: name, extra: { marks } }) }).catch(() => {});
+  } catch (e) { $o.innerHTML = `<div class="card stack pop"><h3>Couldn't check</h3><p class="muted">${esc(e.message)}</p></div>`; }
 }
 
 // Room check: Muse Spark lists what matters, SAM outlines each; numbered rings on the picture, a list below
