@@ -281,6 +281,13 @@ namespace FurSight
 
         public void KeepOpen() => _until = float.MaxValue;
 
+        // every card up right now, for "Close all" on the hand menu
+        static readonly System.Collections.Generic.List<VerdictCard> _all = new System.Collections.Generic.List<VerdictCard>();
+        void OnEnable() => _all.Add(this);
+        void OnDisable() => _all.Remove(this);
+        public static int Count => _all.Count;
+        public static void CloseAll() { foreach (var c in _all.ToArray()) if (c != null) c.Dismiss(); }
+
         // his sticker, stuck on the card's top right corner at a jaunty angle; it pops on and bobs gently
         static Material _stickerMat;
         public void AddSticker(Texture2D tex, float height = 0.11f)

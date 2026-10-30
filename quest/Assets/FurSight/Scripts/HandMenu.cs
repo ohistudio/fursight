@@ -114,6 +114,7 @@ namespace FurSight
             Button(tile, At(), "Note", Theme.Ink, Theme.Hex("#141319"), PencilIcon, () => FurSightActions.Instance?.Note(), 0.15f);
             Button(tile, At(), "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
             Button(tile, At(), "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.21f);
+            if (VerdictCard.Count > 0) CloseAllPill(tile, -h / 2f - 0.045f, 0.25f);
         }
 
         void Button(Transform tile, Vector2 at, string label, Color col, Color lip, System.Action<Transform, Color> icon, System.Action action, float delay)
@@ -139,6 +140,32 @@ namespace FurSight
             t.rectTransform.sizeDelta = new Vector2(10f, 2.4f);
             var cb = CardButton.Add(coin.gameObject, Coin + 0.01f, () => { Close(); action(); });
             if (_onPalm) cb.notHand = Hands.Left;   // the hand holding the menu can't press it by accident
+            StartCoroutine(Juice.Pop(b, delay, 0.3f, 2.2f));
+        }
+
+        // under the menu while any card is up: clears every card, gauge and sticker in one press
+        void CloseAllPill(Transform tile, float y, float delay)
+        {
+            const float pw = 0.2f, ph = 0.05f;
+            var b = new GameObject("Close all").transform;
+            b.SetParent(tile, false);
+            b.localPosition = new Vector3(0f, y, 0f);
+            var face = new GameObject("Pill").transform;
+            face.SetParent(b, false);
+            Shapes.MakeSlab("Lip", face, Shapes.RoundedRectRing(pw, ph, ph / 2f), Thick, Theme.Hex("#141319"), Theme.Hex("#141319"), new Vector3(0f, -0.005f, 0.003f));
+            Shapes.MakeSlab("Face", face, Shapes.RoundedRectRing(pw, ph, ph / 2f), Thick, Theme.Ink, Theme.Hex("#141319"), Vector3.zero);
+            Shapes.MakeSlab("X1", face, Shapes.RoundedRectRing(0.016f, 0.004f, 0.002f), 0.002f, Color.white, Color.white, new Vector3(-pw / 2f + 0.03f, 0f, -Thick - 0.001f), 45f);
+            Shapes.MakeSlab("X2", face, Shapes.RoundedRectRing(0.016f, 0.004f, 0.002f), 0.002f, Color.white, Color.white, new Vector3(-pw / 2f + 0.03f, 0f, -Thick - 0.001f), -45f);
+            var t = new GameObject("Label").AddComponent<TextMeshPro>();
+            t.transform.SetParent(face, false);
+            t.transform.localScale = Vector3.one * 0.01f;
+            t.transform.localPosition = new Vector3(0.012f, 0f, -Thick - 0.0012f);
+            if (Theme.Black != null) t.font = Theme.Black;
+            t.text = "Close all"; t.fontSize = 15f; t.color = Color.white;
+            t.alignment = TextAlignmentOptions.Center;
+            t.rectTransform.sizeDelta = new Vector2(14f, 4f);
+            var cb = CardButton.Add(face.gameObject, 0.035f, () => { Close(); VerdictCard.CloseAll(); Sfx.Close(b.position); });
+            if (_onPalm) cb.notHand = Hands.Left;
             StartCoroutine(Juice.Pop(b, delay, 0.3f, 2.2f));
         }
 

@@ -49,10 +49,48 @@ namespace FurSight
 
         static void Pressed(CardButton b) { _quietUntil = Time.time + Cooldown; b.Press(); }
 
+        // The fingertip shows it can press: within 12 cm of a button a ring appears on your index tip and closes in
+        // as you reach it, the nearest button grows a little, and inside it the ring fills green as it presses.
+        Transform _tip, _ring, _fill;
+        CardButton _near;
+        void Fingertip(Hands.Hand hand, int h)
+        {
+            CardButton nearest = null; float best = 0.12f;
+            if (hand.tracked)
+                foreach (var b in _buttons.Values)
+                {
+                    if (b == null || b.notHand == h || !b.Collider.enabled || !b.gameObject.activeInHierarchy) continue;
+                    float d = Vector3.Distance(b.Collider.bounds.center, hand.indexTip);
+                    if (d < best) { best = d; nearest = b; }
+                }
+            if (nearest != _near) { if (_near != null) _near.Hover(false); if (nearest != null) nearest.Hover(true); _near = nearest; }
+            if (nearest == null) { if (_tip != null) _tip.gameObject.SetActive(false); return; }
+            if (_tip == null)
+            {
+                _tip = new GameObject("Fingertip").transform;
+                _ring = Shapes.Make("Ring", _tip, Shapes.Arc(0.012f, 0.0025f, 0f, 360f), Theme.Grape, Vector3.zero).transform;
+                _fill = Shapes.Make("Fill", _tip, Shapes.Circle(0.006f, 20), Theme.Fern, Vector3.back * 0.0005f).transform;
+                // drawn over everything: the rest of the UI hides behind your hand, but this sits on your fingertip
+                var top = Resources.Load<Material>("FlatTop");
+                if (top != null)
+                    foreach (var (t, col) in new[] { (_ring, Theme.Grape), (_fill, Theme.Fern) })
+                    { var m = new Material(top); m.SetColor("_BaseColor", col); t.GetComponent<MeshRenderer>().sharedMaterial = m; }
+            }
+            _tip.gameObject.SetActive(true);
+            var cam = Camera.main.transform;
+            _tip.position = hand.indexTip;
+            _tip.rotation = Quaternion.LookRotation(hand.indexTip - cam.position, cam.up);
+            float k = Mathf.InverseLerp(0.12f, 0.02f, best);                 // 0 far, 1 touching
+            _ring.localScale = Vector3.one * Mathf.Lerp(1.6f, 0.75f, k);
+            bool inside = nearest.Contains(hand.indexTip);
+            _fill.localScale = Vector3.one * (inside ? Mathf.Clamp01((Time.time - _inSince) / Dwell) : 0f);
+        }
+
         // a fingertip pushed into a button and held there a moment presses it once; it has to come out before it
         // can press again. Brushing past doesn't count.
         void Poke()
         {
+            Fingertip(Hands.Get(Hands.Right), Hands.Right);
             CardButton inside = null;
             for (int h = 0; h < 2; h++)
             {
