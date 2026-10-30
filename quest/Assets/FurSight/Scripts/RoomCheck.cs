@@ -20,7 +20,26 @@ namespace FurSight
         VerdictCard _checking;
         readonly List<VerdictCard> _cards = new List<VerdictCard>();
 
-        public void Run() { if (!_busy) _ = Check(); }
+        public float countdown = 3f;   // time to drop your hands out of the picture after pressing
+
+        public void Run() { if (!_busy) StartCoroutine(CountThenCheck()); }
+
+        IEnumerator CountThenCheck()
+        {
+            _busy = true;
+            Clear();
+            var head = Camera.main.transform;
+            _checking = VerdictCard.Checking(head.position + head.forward * checkingDistance - Vector3.up * 0.2f,
+                "Hands down, look round the room", "Look around 3", Theme.Coral);
+            for (int n = Mathf.CeilToInt(countdown); n > 0; n--)
+            {
+                if (_checking != null) _checking.SetLabel("Look around " + n);
+                Sfx.Count(head.position + head.forward * 0.4f);
+                yield return new WaitForSeconds(1f);
+            }
+            _busy = false;
+            _ = Check();
+        }
 
         async Task Check()
         {
@@ -86,7 +105,8 @@ namespace FurSight
                 card.transform.localScale = Vector3.one * 0.72f * scale;
                 card.KeepOpen();
                 _cards.Add(card);
-                if (risk == "high") Sfx.Nope(point); else if (risk == "medium") Sfx.Treat(point); else Sfx.Tick(point);
+                Sfx.Pin(point);
+                if (risk == "high") Sfx.Nope(point); else if (risk == "medium") Sfx.Treat(point);
                 StartCoroutine(Juice.Buzz(risk == "high" ? 0.5f : 0.2f, 0.05f));
                 yield return new WaitForSeconds(cardGap);
             }

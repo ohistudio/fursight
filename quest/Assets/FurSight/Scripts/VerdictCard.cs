@@ -281,6 +281,12 @@ namespace FurSight
 
         public void KeepOpen() => _until = float.MaxValue;
 
+        // keep the card on something that moves (the hand holding the food) until it's lost for a moment; then it
+        // stays where it was
+        System.Func<Vector3?> _follow;
+        float _lostFor;
+        public void Follow(System.Func<Vector3?> target) { _follow = target; _lostFor = 0f; }
+
         // change the big line on a Checking card ("Hold it up 3")
         public void SetLabel(string label) => _label = label;
 
@@ -302,6 +308,12 @@ namespace FurSight
 
         void LateUpdate()
         {
+            if (_follow != null && !_leaving)
+            {
+                var p = _follow();
+                if (p.HasValue) { _lostFor = 0f; transform.position = Vector3.Lerp(transform.position, p.Value, 1f - Mathf.Exp(-18f * Time.deltaTime)); }
+                else if ((_lostFor += Time.deltaTime) > 0.4f) _follow = null;
+            }
             Face();
             if (_spinner != null)
             {

@@ -21,6 +21,7 @@ namespace FurSight
         CardButton _hover;
         readonly bool[] _wasPinch = new bool[2];
         CardButton _poked;   // the button the fingertip is in (pressed once on the way in)
+        bool _pokeDone;
 
         void Update()
         {
@@ -36,12 +37,20 @@ namespace FurSight
                 if (press) pressed = true;
                 break;
             }
-            if (hovered != _hover) { if (_hover != null) _hover.Hover(false); if (hovered != null) hovered.Hover(true); _hover = hovered; }
-            if (hovered != null && pressed) { Consumed = true; hovered.Press(); _hover = null; }
+            if (hovered != _hover) { if (_hover != null) _hover.Hover(false); if (hovered != null) { hovered.Hover(true); Sfx.Hover(hovered.transform.position); } _hover = hovered; }
+            if (hovered != null && pressed && hovered.Ready) { Consumed = true; Pressed(hovered); _hover = null; }
             Poke();
         }
 
-        // a fingertip pushed into a button presses it once; it has to come out before it can press again
+        // after any press, nothing else for a moment: a hand moving on doesn't press the next button too
+        const float Cooldown = 0.5f, Dwell = 0.08f;
+        static float _quietUntil;
+        float _inSince;
+
+        static void Pressed(CardButton b) { _quietUntil = Time.time + Cooldown; b.Press(); }
+
+        // a fingertip pushed into a button and held there a moment presses it once; it has to come out before it
+        // can press again. Brushing past doesn't count.
         void Poke()
         {
             CardButton inside = null;
@@ -53,8 +62,12 @@ namespace FurSight
                     if (b != null && b.notHand != h && b.Contains(hand.indexTip)) { inside = b; break; }
                 if (inside != null) break;
             }
-            if (inside != null && inside != _poked) { Consumed = true; inside.Press(); }
+            if (inside != _poked) { _inSince = Time.time; _pokeDone = false; }
             _poked = inside;
+            if (inside != null && !_pokeDone && inside.Ready && Time.time >= _quietUntil && Time.time - _inSince >= Dwell)
+            {
+                _pokeDone = true; Consumed = true; Pressed(inside);
+            }
         }
 
         // every pointer this frame: its ray, and whether it was just pressed
@@ -97,6 +110,7 @@ namespace FurSight
             b.Collider = col;
             b.OnPress = onPress;
             b._scale = go.transform.localScale;
+            b._readyAt = Time.time + 0.5f;   // not while it's still popping in (the hand that opened it is right there)
             CardInput.Register(b);
             return b;
         }
@@ -106,7 +120,9 @@ namespace FurSight
         // is a point (a fingertip) inside the button's press zone?
         public bool Contains(Vector3 p) => Collider != null && Collider.enabled && Collider.gameObject.activeInHierarchy &&
             Vector3.Distance(Collider.bounds.center, p) < ((SphereCollider)Collider).radius * Mathf.Max(transform.lossyScale.x, 1e-4f);
-        public void Press() { Sfx.Tick(transform.position); OnPress?.Invoke(); }
+        float _readyAt;
+        public bool Ready => Time.time >= _readyAt;
+        public void Press() { Sfx.Press(transform.position); OnPress?.Invoke(); }
         void OnDestroy() => CardInput.Unregister(this);
     }
 }

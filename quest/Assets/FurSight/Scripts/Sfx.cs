@@ -7,7 +7,7 @@ namespace FurSight
     public static class Sfx
     {
         const int Rate = 44100;
-        static AudioClip _snap, _safe, _treat, _nope, _tick;
+        static AudioClip _snap, _safe, _treat, _nope, _tick, _open, _close, _hover, _press, _count, _pin;
 
         public static void Snap(Vector3 at) => Play(_snap ??= Tone("snap", new[] { (1400f, 900f, 0.05f) }, 0.35f), at);
         public static void Tick(Vector3 at) => Play(_tick ??= Tone("tick", new[] { (880f, 880f, 0.04f) }, 0.15f), at);
@@ -17,6 +17,18 @@ namespace FurSight
         public static void Treat(Vector3 at) => Play(_treat ??= Tone("treat", new[] { (520f, 700f, 0.09f), (700f, 620f, 0.16f) }, 0.3f), at);
         // a low double "nuh-uh"
         public static void Nope(Vector3 at) => Play(_nope ??= Tone("nope", new[] { (300f, 240f, 0.12f), (0f, 0f, 0.05f), (260f, 190f, 0.18f) }, 0.4f), at);
+
+        // the hand menu: a quick rising pop open, a falling one closed
+        public static void Open(Vector3 at) => Play(_open ??= Tone("open", new[] { (520f, 780f, 0.07f), (780f, 1040f, 0.09f) }, 0.22f), at);
+        public static void Close(Vector3 at) => Play(_close ??= Tone("close", new[] { (900f, 600f, 0.08f) }, 0.14f), at);
+        // pointing at a button: barely there
+        public static void Hover(Vector3 at) => Play(_hover ??= Tone("hover", new[] { (1500f, 1600f, 0.025f) }, 0.07f), at);
+        // a button pressed: a firm little "tock"
+        public static void Press(Vector3 at) => Play(_press ??= Tone("press", new[] { (1200f, 700f, 0.045f), (0f, 0f, 0.015f), (900f, 900f, 0.05f) }, 0.3f), at);
+        // countdown: 3, 2, 1
+        public static void Count(Vector3 at) => Play(_count ??= Tone("count", new[] { (740f, 740f, 0.07f) }, 0.22f), at);
+        // a card landing on something real
+        public static void Pin(Vector3 at) => Play(_pin ??= Tone("pin", new[] { (980f, 1300f, 0.05f), (1300f, 1250f, 0.08f) }, 0.2f), at);
 
         static void Play(AudioClip clip, Vector3 at)
         {

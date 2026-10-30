@@ -35,7 +35,7 @@ namespace FurSight
             for (int n = Mathf.CeilToInt(countdown); n > 0; n--)
             {
                 if (_checking != null) _checking.SetLabel("Hold it up " + n);
-                Sfx.Tick(head.position + head.forward * 0.4f);
+                Sfx.Count(head.position + head.forward * 0.4f);
                 yield return new WaitForSeconds(1f);
             }
             _busy = false;
@@ -111,9 +111,11 @@ namespace FurSight
                 var box = it["box"]?.ToObject<int[]>();
                 if (box == null || box.Length != 4) continue;
                 string verdict = (string)it["verdict"];
-                var at = i == held ? InHand(shot, box) ?? shot.WorldPoint(box) : shot.WorldPoint(box);
+                int hand = i == held ? InHand(shot, box) : -1;
+                var at = hand >= 0 ? HandPoint(Hands.Get(hand)) : shot.WorldPoint(box);
                 var card = VerdictCard.Verdict(at, (string)it["food"], verdict, (string)it["reason"], i == held ? Extra(it, verdict) : null, i == held);
                 _cards.Add(card);
+                if (hand >= 0) card.Follow(() => { var hd = Hands.Get(hand); return hd.tracked ? HandPoint(hd) : (Vector3?)null; });
                 if (i == held && verdict != "toxic" && HubClient.Linked)
                 {
                     var item = it;
@@ -123,18 +125,20 @@ namespace FurSight
             }
         }
 
-        // the food you're holding is in your hand: the card goes on the tracked hand nearest the ray through its box
-        static Vector3? InHand(Snapshot shot, int[] box)
+        // in front of the palm, where the food is
+        static Vector3 HandPoint(Hands.Hand hd) => hd.palm + hd.normal * 0.05f;
+
+        // the food you're holding is in your hand: the tracked hand nearest the ray through its box (-1: none near)
+        static int InHand(Snapshot shot, int[] box)
         {
             var ray = shot.Ray(new Vector2((box[0] + box[2]) / 2000f, 1f - (box[1] + box[3]) / 2000f));
-            Vector3? best = null; float bestGap = 0.3f;
+            int best = -1; float bestGap = 0.3f;
             for (int h = 0; h < 2; h++)
             {
                 var hand = Hands.Get(h);
                 if (!hand.tracked) continue;
-                var p = hand.palm + hand.normal * 0.05f;   // in front of the palm, where the food is
-                float gap = Vector3.Cross(ray.direction, p - ray.origin).magnitude;
-                if (gap < bestGap) { bestGap = gap; best = p; }
+                float gap = Vector3.Cross(ray.direction, HandPoint(hand) - ray.origin).magnitude;
+                if (gap < bestGap) { bestGap = gap; best = h; }
             }
             return best;
         }

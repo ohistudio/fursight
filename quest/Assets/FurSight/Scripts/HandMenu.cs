@@ -91,7 +91,7 @@ namespace FurSight
         {
             if (_open) return;
             _open = true; _onPalm = onPalm; _awayFor = 0f;
-            Sfx.Tick(at);
+            Sfx.Open(at);
             _panel = new GameObject("Hand Menu").transform;
             _panel.position = at;
             _panel.localScale = Vector3.one * (onPalm ? PalmScale : 1f);
@@ -137,7 +137,7 @@ namespace FurSight
             t.text = label; t.fontSize = 14f; t.color = Theme.Ink;
             t.alignment = TextAlignmentOptions.Center;
             t.rectTransform.sizeDelta = new Vector2(10f, 2.4f);
-            var cb = CardButton.Add(coin.gameObject, Coin + 0.018f, () => { Close(); action(); });   // generous: easy to poke
+            var cb = CardButton.Add(coin.gameObject, Coin + 0.01f, () => { Close(); action(); });
             if (_onPalm) cb.notHand = Hands.Left;   // the hand holding the menu can't press it by accident
             StartCoroutine(Juice.Pop(b, delay, 0.3f, 2.2f));
         }
@@ -146,6 +146,7 @@ namespace FurSight
         {
             if (!_open) return;
             _open = false;
+            if (_panel != null) Sfx.Close(_panel.position);
             if (_panel != null) StartCoroutine(Juice.ShrinkAway(_panel));
             _panel = null;
         }
