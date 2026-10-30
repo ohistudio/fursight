@@ -172,6 +172,15 @@ namespace FurSight
             return shot;
         }
 
+        // metres along a ray to the real room right now, or -1 (no live depth, nothing within 4 m, or the editor)
+        public float DepthAlong(Ray ray)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (_depth != null && _depth.Raycast(ray, out var hit, 4f)) return Vector3.Distance(ray.origin, hit.point);
+#endif
+            return -1f;
+        }
+
         Rect _crop = new Rect(0f, 0f, 1f, 1f);
 
         // the picture (or the cropped part of it): scaled so the long side is sendSize, then JPEG

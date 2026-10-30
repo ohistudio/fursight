@@ -29,7 +29,7 @@ namespace FurSight
 
         // ---------------------------------------------------------------- verdict
 
-        public static VerdictCard Verdict(Vector3 point, string food, string verdict, string reason, string extra, bool main = true)
+        public static VerdictCard Verdict(Vector3 point, string food, string verdict, string reason, string extra, bool main = true, string word = null)
         {
             var (col, lip) = Theme.For(verdict);
             var c = New("Verdict " + food, point);
@@ -53,7 +53,7 @@ namespace FurSight
             const float pad = 0.016f, header = 0.056f, gap = 0.01f;
             float textX = -W / 2f + 0.074f, textW = W - 0.074f - 0.044f;   // leaves room for the close button
             var title = Text(c._card, Capital(food), Theme.Black, 26f, Theme.Ink, new Vector2(textX, 0f), textW, 0.03f, 13f);
-            var word = Text(c._card, Theme.Word(verdict), Theme.Black, 21f, col, new Vector2(textX, 0f), textW, 0.024f, 15f);
+            var wordText = Text(c._card, word ?? Theme.Word(verdict), Theme.Black, 21f, col, new Vector2(textX, 0f), textW, 0.024f, 15f);
             string bodyText = string.IsNullOrEmpty(extra) ? reason : reason + "\n" + extra;
             float bodyW = W - 2f * pad;
             var body = Text(c._card, bodyText, Theme.Bold, 15f, Theme.Muted, new Vector2(-W / 2f + pad, 0f), bodyW, 0.01f, 15f);
@@ -79,7 +79,7 @@ namespace FurSight
             Icon(badge, verdict);
 
             Place(title, top - pad - 0.014f);
-            Place(word, top - pad - 0.041f);
+            Place(wordText, top - pad - 0.041f);
             Place(body, top - pad - header - gap - bodyH / 2f);
             var close = c.CloseButton(top);
             // the Bean sits on the card's top edge, above the badge, and reacts with the verdict
@@ -92,7 +92,7 @@ namespace FurSight
             c.StartCoroutine(Juice.Pop(c._card, 0.16f, 0.34f));
             c.StartCoroutine(Juice.Pop(badge, 0.28f, 0.3f, 2.6f));
             c.StartCoroutine(Juice.Pop(title.transform, 0.32f, 0.22f));
-            c.StartCoroutine(Juice.Pop(word.transform, 0.37f, 0.22f));
+            c.StartCoroutine(Juice.Pop(wordText.transform, 0.37f, 0.22f));
             c.StartCoroutine(Juice.Pop(body.transform, 0.42f, 0.22f));
             c.StartCoroutine(Juice.Pop(close, 0.46f, 0.22f, 2.4f));
             c.StartCoroutine(Juice.Pop(c._bean.transform, 0.24f, 0.3f, 2.4f));

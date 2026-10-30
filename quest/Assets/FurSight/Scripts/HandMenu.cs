@@ -4,14 +4,14 @@ using UnityEngine.InputSystem;
 
 namespace FurSight
 {
-    // The palm menu: turn your left palm towards you and five chunky 3D buttons pop up just above it,
-    // Check food, Ask, Note, Photo, Pet cam. Press with your right hand: poke a button, or point and pinch.
+    // The palm menu: turn your left palm towards you and six chunky 3D buttons pop up just above it,
+    // Check food, Check room, Ask, Note, Photo, Pet cam. Press with your right hand: poke a button, or point and pinch.
     // Turn the hand away and it tucks itself away. Controllers: X or Y opens it at the left controller.
     // Editor: hold L for a pretend left palm, or M to toggle; click or hold O to poke.
-    // Shortcuts: A = check food, B = ask (controller); Space, Q, N, F, C in the editor.
+    // Shortcuts: A = check food, B = ask (controller); Space, R, Q, N, F, C in the editor.
     public class HandMenu : MonoBehaviour
     {
-        const float W = 0.54f, H = 0.15f, Thick = 0.012f, Coin = 0.032f, CoinDepth = 0.012f;
+        const float W = 0.645f, H = 0.15f, Thick = 0.012f, Coin = 0.032f, CoinDepth = 0.012f;
         const float PalmScale = 0.75f;     // smaller on the hand than when it floats
 
         [Tooltip("How directly the palm has to face you to open the menu (1 = straight at you)")]
@@ -35,6 +35,7 @@ namespace FurSight
             {
                 if (OVRInput.GetDown(OVRInput.Button.Two, OVRInput.Controller.RTouch) || (kb != null && kb.qKey.wasPressedThisFrame)) act.Ask();
                 if (kb != null && kb.nKey.wasPressedThisFrame) act.Note();
+                if (kb != null && kb.rKey.wasPressedThisFrame) act.CheckRoom();
                 if (kb != null && kb.fKey.wasPressedThisFrame) act.TakePhoto();
                 if (kb != null && kb.cKey.wasPressedThisFrame) CamWindow.Toggle();
             }
@@ -95,12 +96,13 @@ namespace FurSight
             Shapes.MakeSlab("Face", tile, Shapes.RoundedRectRing(W, H, 0.03f), Thick, Theme.Card, Theme.CardLip, Vector3.zero);
             StartCoroutine(Juice.Pop(_panel, 0f, 0.28f));
 
-            float gap = 0.104f, x0 = -gap * 2f;
+            float gap = 0.104f, x0 = -gap * 2.5f;
             Button(tile, x0, "Check food", Theme.Fern, Theme.FernLip, AppleIcon, () => FurSightActions.Instance?.CheckFood(), 0.06f);
-            Button(tile, x0 + gap, "Ask", Theme.Grape, Theme.GrapeLip, MicIcon, () => FurSightActions.Instance?.Ask(), 0.1f);
-            Button(tile, x0 + gap * 2, "Note", Theme.Ink, Theme.Hex("#141319"), PencilIcon, () => FurSightActions.Instance?.Note(), 0.14f);
-            Button(tile, x0 + gap * 3, "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
-            Button(tile, x0 + gap * 4, "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.22f);
+            Button(tile, x0 + gap, "Check room", Theme.Coral, Theme.CoralLip, HouseIcon, () => FurSightActions.Instance?.CheckRoom(), 0.09f);
+            Button(tile, x0 + gap * 2, "Ask", Theme.Grape, Theme.GrapeLip, MicIcon, () => FurSightActions.Instance?.Ask(), 0.12f);
+            Button(tile, x0 + gap * 3, "Note", Theme.Ink, Theme.Hex("#141319"), PencilIcon, () => FurSightActions.Instance?.Note(), 0.15f);
+            Button(tile, x0 + gap * 4, "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
+            Button(tile, x0 + gap * 5, "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.21f);
         }
 
         void Button(Transform tile, float x, string label, Color col, Color lip, System.Action<Transform, Color> icon, System.Action action, float delay)
@@ -153,6 +155,14 @@ namespace FurSight
             Shapes.MakeSlab("Apple", p, Shapes.CircleRing(0.0115f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, -0.003f, 0f));
             Shapes.MakeSlab("Stem", p, Shapes.RoundedRectRing(0.0026f, 0.007f, 0.0013f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, 0.0105f, 0f));
             Shapes.MakeSlab("Leaf", p, Shapes.RoundedRectRing(0.0095f, 0.0045f, 0.0022f), 0.002f, Color.white, Theme.CardLip, new Vector3(0.0055f, 0.012f, 0f), 30f);
+        }
+
+        // a little house with a door: check the room
+        static void HouseIcon(Transform p, Color col)
+        {
+            Shapes.MakeSlab("Roof", p, Shapes.RoundedRectRing(0.019f, 0.019f, 0.003f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, 0.0035f, 0f), 45f);
+            Shapes.MakeSlab("Walls", p, Shapes.RoundedRectRing(0.022f, 0.015f, 0.003f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, -0.0065f, 0f));
+            Shapes.MakeSlab("Door", p, Shapes.RoundedRectRing(0.0055f, 0.008f, 0.0018f), 0.0015f, col, col, new Vector3(0f, -0.009f, -0.002f));
         }
 
         static void MicIcon(Transform p, Color col)

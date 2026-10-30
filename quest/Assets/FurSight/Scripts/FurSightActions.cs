@@ -7,6 +7,7 @@ namespace FurSight
 {
     // The things you can do from the hand menu:
     //   Check food: one frame to /api/food (FoodCheck does it)
+    //   Check room: one frame to /api/room, a card pinned on each thing he could chew (RoomCheck does it)
     //   Ask: a frame for context + your spoken question (MicRecorder) to /api/ask, answer pinned to what it's about
     //   Note: say what you did ("fed him a strawberry, brushed his coat"); /api/note checks the food and puts the
     //         day it's OK again on the calendar, ticks his care, marks grooming done
@@ -40,6 +41,12 @@ namespace FurSight
         {
             var food = GetComponent<FoodCheck>();
             if (food != null) food.Run();
+        }
+
+        public void CheckRoom()
+        {
+            var room = GetComponent<RoomCheck>() ?? gameObject.AddComponent<RoomCheck>();
+            room.Run();
         }
 
         // ---------------------------------------------------------------- ask
