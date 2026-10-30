@@ -518,13 +518,14 @@ async function today() {
       <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p>
       <button class="del" data-del="${e.id}">Remove</button></div>`;
     return `${head}<div class="card entry pop" style="margin-bottom:10px" data-entry="${e.id}">
-      ${e.has_image ? `<img loading="lazy" class="${e.png || (e.extra && e.extra.sticker) ? "sticker" : ""}" src="${img(`/diary/${e.id}/image`)}" alt="">` : `<div class="badge v-${v}">${icon}</div>`}
+      ${e.has_image ? `<img loading="lazy" class="${e.png || (e.extra && e.extra.sticker) ? "sticker" : ""}" src="${img(`/diary/${e.id}/image`)}"${e.extra && Array.isArray(e.extra.marks) ? ` data-marks="${esc(JSON.stringify(e.extra.marks))}"` : ""} alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
       ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}${recordDetails(e)}
       <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""} · <button class="del" data-del="${e.id}">Remove</button></div></div></div>`;
   }).join("");
   remindButtons($l);
   // tap a picture to see it big
+  for (const im of $l.querySelectorAll(".entry img[data-marks]")) markUp(im);
   for (const im of $l.querySelectorAll(".entry img, .recap > img")) im.onclick = () => enlarge(im.src, im.classList.contains("sticker"));
   for (const b of $l.querySelectorAll(".livecardbox")) b.onclick = () => enlarge(b.dataset.png);
   // remove an entry: asks first, then it's gone from every device
@@ -1407,6 +1408,38 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
   };
   camStop = () => { alive = false; reading = false; stopDiary(); if (clipFrames) clipFrames.forEach((b) => b.close()); timer.stop(); rtc && rtc.stop(); ws && ws.close(); stream.getTracks().forEach((t) => t.stop()); wake && wake.release(); };
   document.getElementById("stop").onclick = () => { store.set("fs.camOn", null); stopCam(); render(); };
+}
+
+// What a check found, drawn on its diary photo (from the Quest, which sends the boxes rather than drawing them):
+// a ring round each thing in its colour, and a numbered dot (room) or a label (food, an answer). Swaps the img's
+// src for the drawn picture, so the enlarged view shows it too.
+const MARK = { high: "#FF4D5E", toxic: "#FF4D5E", vet: "#FF4D5E", medium: "#FFB627", caution: "#FFB627", low: "#2FA8F5", safe: "#3DBE6B", answer: "#9B6CF0" };
+function markUp(im) {
+  let marks; try { marks = JSON.parse(im.dataset.marks); } catch (e) { return; }
+  delete im.dataset.marks;
+  const i = new Image(); i.crossOrigin = "anonymous";
+  i.onload = () => {
+    const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
+    const lw = Math.max(3, i.width / 200); g.lineWidth = lw; g.textBaseline = "middle";
+    for (const m of marks) {
+      if (!Array.isArray(m.b) || m.b.length !== 4) continue;
+      const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5", cx = (x0 + x1) / 2;
+      g.strokeStyle = "#fff"; g.lineWidth = lw * 2.2; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
+      g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
+      const ty = Math.max(lw * 6, y0 - lw * 1.5);
+      if (m.n) {
+        g.fillStyle = col; g.beginPath(); g.arc(cx, ty, lw * 5, 0, Math.PI * 2); g.fill();
+        g.font = `900 ${Math.round(lw * 6.5)}px Nunito, sans-serif`; g.textAlign = "center"; g.fillStyle = "#fff"; g.fillText(String(m.n), cx, ty + lw * 0.3);
+      } else if (m.t) {
+        g.font = `900 ${Math.round(lw * 5.5)}px Nunito, sans-serif`; g.textAlign = "left";
+        const tw = g.measureText(m.t).width, pw = tw + lw * 6, ph = lw * 9, px = Math.min(Math.max(0, cx - pw / 2), i.width - pw), py = Math.max(0, ty - ph / 2);
+        g.fillStyle = col; g.beginPath(); g.roundRect(px, py, pw, ph, ph / 2); g.fill();
+        g.fillStyle = "#fff"; g.fillText(m.t, px + lw * 3, py + ph / 2 + lw * 0.3);
+      }
+    }
+    try { im.src = c.toDataURL("image/jpeg", 0.88); } catch (e) {}
+  };
+  i.src = im.src;
 }
 
 // Room check: Muse Spark lists what matters, SAM outlines each; numbered rings on the picture, a list below

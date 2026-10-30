@@ -86,12 +86,16 @@ namespace FurSight
             }
             var placed = new List<Vector3>();
             var used = new List<Vector2>();
+            var marks = new List<HubClient.Mark>();
+            var names = new List<string>();
             int shown = 0;
             foreach (var h in hazards)
             {
                 var box = Box(h["boxes"] as JArray, used);
                 if (box == null) continue;   // nothing left that isn't already pinned (two names for one plant)
                 shown++;
+                marks.Add(new HubClient.Mark { b = box, v = (string)h["risk"], t = (string)h["label"], n = shown });
+                names.Add($"{shown} {h["label"]}");
                 var point = Place(shot, box);
                 string risk = (string)h["risk"];
                 string verdict = risk == "high" ? "toxic" : risk == "medium" ? "caution" : "low";
@@ -110,7 +114,7 @@ namespace FurSight
                 StartCoroutine(Juice.Buzz(risk == "high" ? 0.5f : 0.2f, 0.05f));
                 yield return new WaitForSeconds(cardGap);
             }
-            HubClient.Diary("room", "Room check", $"{shown} things to sort for {PetProfile.Current.petName}", "caution", shot.jpeg);
+            HubClient.Diary("room", $"Room check: {shown} things to sort", string.Join(", ", names), "caution", shot.jpeg, marks);
             _busy = false;
         }
 

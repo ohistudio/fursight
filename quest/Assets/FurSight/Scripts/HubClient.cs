@@ -138,16 +138,22 @@ namespace FurSight
 
         // ---------------------------------------------------------------- the diary
 
-        // fire and forget: a check, an answer or a photo, with the picture
-        public static void Diary(string kind, string title, string note, string verdict, byte[] jpeg)
+        // fire and forget: a check, an answer or a photo, with the picture. marks: what was found in it, drawn over
+        // the picture in the app's diary (Mark), so the photo shows what FurSight saw and where
+        public static void Diary(string kind, string title, string note, string verdict, byte[] jpeg, System.Collections.Generic.List<Mark> marks = null)
         {
             if (!Linked || Instance == null) return;
-            Instance.StartCoroutine(Instance.Post(kind, title, note, verdict, jpeg));
+            Instance.StartCoroutine(Instance.Post(kind, title, note, verdict, jpeg, marks));
         }
 
-        IEnumerator Post(string kind, string title, string note, string verdict, byte[] jpeg)
+        // b: [x1,y1,x2,y2] on the 0-1000 grid (origin top left), v: its colour (safe, caution, toxic, high, medium,
+        // low...), t: a short label, n: a number for a numbered list (0 = none)
+        public class Mark { public int[] b; public string v; public string t; public int n; }
+
+        IEnumerator Post(string kind, string title, string note, string verdict, byte[] jpeg, System.Collections.Generic.List<Mark> marks)
         {
-            var r = Send("POST", "/hub/diary", new { kind, title, note, verdict, pet = PetProfile.Current?.petName, image = jpeg != null ? "data:image/jpeg;base64," + System.Convert.ToBase64String(jpeg) : null }, true);
+            var r = Send("POST", "/hub/diary", new { kind, title, note, verdict, pet = PetProfile.Current?.petName, image = jpeg != null ? "data:image/jpeg;base64," + System.Convert.ToBase64String(jpeg) : null,
+                extra = marks != null && marks.Count > 0 ? new { marks } : null }, true);
             yield return r.SendWebRequest();
             if (r.result != UnityWebRequest.Result.Success) Debug.LogWarning("[FurSight] diary: " + r.error + " " + r.downloadHandler?.text);
         }

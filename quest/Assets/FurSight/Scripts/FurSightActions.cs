@@ -106,7 +106,8 @@ namespace FurSight
                 }
                 string asked = (string.IsNullOrEmpty(q) ? "" : "You asked: " + q) + How(res["steps"]);
                 _last = VerdictCard.Verdict(at, title, kind, answer, string.IsNullOrEmpty(asked) ? null : "<color=#9A98A6>" + asked.TrimStart('\n') + "</color>");
-                HubClient.Diary("ask", string.IsNullOrEmpty(q) ? title : q, answer, kind == "answer" ? null : kind, _askShot.jpeg);
+                var marks = box != null && box.Length == 4 ? new System.Collections.Generic.List<HubClient.Mark> { new HubClient.Mark { b = box, v = kind, t = title } } : null;
+                HubClient.Diary("ask", string.IsNullOrEmpty(q) ? title : q, answer, kind == "answer" ? null : kind, _askShot.jpeg, marks);
             }
             catch (System.Exception e)
             {

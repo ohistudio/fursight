@@ -105,12 +105,16 @@ namespace FurSight
             }
             int held = res["held"]?.Type == JTokenType.Integer ? (int)res["held"] : 0;
             // the held item gets the full card; anything else in view gets a small one
+            var marks = new System.Collections.Generic.List<HubClient.Mark>();
+            JToken heldItem = null;
             for (int i = 0; i < items.Count; i++)
             {
                 var it = items[i];
                 var box = it["box"]?.ToObject<int[]>();
                 if (box == null || box.Length != 4) continue;
                 string verdict = (string)it["verdict"];
+                marks.Add(new HubClient.Mark { b = box, v = verdict, t = Capital((string)it["food"]) + ": " + Theme.Word(verdict) });
+                if (i == held) heldItem = it;
                 int hand = i == held ? InHand(shot, box) : -1;
                 var at = hand >= 0 ? HandPoint(Hands.Get(hand)) : shot.WorldPoint(box);
                 var card = VerdictCard.Verdict(at, (string)it["food"], verdict, (string)it["reason"], i == held ? Extra(it, verdict) : null, i == held);
@@ -121,7 +125,11 @@ namespace FurSight
                     var item = it;
                     card.AddAction($"We fed {PetProfile.Current.petName} this", Theme.Fern, Theme.FernLip, () => _ = Fed(card, item));
                 }
-                if (i == held) HubClient.Diary("food", Capital((string)it["food"]), (string)it["reason"] + Plain(Extra(it, verdict)), verdict, shot.jpeg);
+            }
+            if (heldItem != null)
+            {
+                string v = (string)heldItem["verdict"];
+                HubClient.Diary("food", Capital((string)heldItem["food"]), (string)heldItem["reason"] + Plain(Extra(heldItem, v)), v, shot.jpeg, marks);
             }
         }
 
