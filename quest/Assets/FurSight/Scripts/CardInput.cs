@@ -23,9 +23,24 @@ namespace FurSight
         CardButton _poked;   // the button the fingertip is in (pressed once on the way in)
         bool _pokeDone;
 
+        // where the hands are, for the UI shaders (FurSightHands.hlsl): only a real hand hides a card, never the room
+        static readonly Vector4[] _handPts = new Vector4[4];
+        static readonly int HandsId = Shader.PropertyToID("_FSHands");
+        static void SendHands()
+        {
+            for (int h = 0; h < 2; h++)
+            {
+                var hand = Hands.Get(h);
+                _handPts[h * 2] = hand.tracked ? new Vector4(hand.palm.x, hand.palm.y, hand.palm.z, 0.12f) : Vector4.zero;
+                _handPts[h * 2 + 1] = hand.tracked ? new Vector4(hand.indexTip.x, hand.indexTip.y, hand.indexTip.z, 0.05f) : Vector4.zero;
+            }
+            Shader.SetGlobalVectorArray(HandsId, _handPts);
+        }
+
         void Update()
         {
             Consumed = false;
+            SendHands();
             if (_tracking == null) { var rig = FindFirstObjectByType<OVRCameraRig>(); if (rig != null) _tracking = rig.trackingSpace; }
 
             CardButton hovered = null;

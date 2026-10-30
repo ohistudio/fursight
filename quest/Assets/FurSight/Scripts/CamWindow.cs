@@ -151,6 +151,7 @@ namespace FurSight
             t.alignment = TextAlignmentOptions.MidlineLeft;
             t.textWrappingMode = TextWrappingModes.NoWrap;
             t.overflowMode = TextOverflowModes.Ellipsis;
+            Theme.Occlude(t);
             t.rectTransform.sizeDelta = new Vector2(width * 100f, 3f);
             return t;
         }

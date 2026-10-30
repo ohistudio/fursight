@@ -25,6 +25,23 @@ namespace FurSight
         public static TMP_FontAsset Black => _black ??= Resources.Load<TMP_FontAsset>("Fonts/Nunito-900 SDF");
         public static TMP_FontAsset Bold => _bold ??= Resources.Load<TMP_FontAsset>("Fonts/Nunito-800 SDF");
 
+        // a TextMeshPro text drawn with FurSight/Occluded Text, so your hand goes over it like the card behind it
+        static readonly System.Collections.Generic.Dictionary<TMP_FontAsset, Material> _textMats = new System.Collections.Generic.Dictionary<TMP_FontAsset, Material>();
+        static Material _textMat;
+        public static void Occlude(TextMeshPro t)
+        {
+            if (t == null || t.font == null) return;
+            if (!_textMats.TryGetValue(t.font, out var m) || m == null)
+            {
+                _textMat ??= Resources.Load<Material>("OccludedText");
+                if (_textMat == null) return;
+                m = new Material(_textMat) { name = "Occluded " + t.font.name };
+                m.SetTexture("_MainTex", t.font.atlasTexture);
+                _textMats[t.font] = m;
+            }
+            t.fontSharedMaterial = m;
+        }
+
         public static Color Hex(string h) { ColorUtility.TryParseHtmlString(h, out var c); return c; }
     }
 }

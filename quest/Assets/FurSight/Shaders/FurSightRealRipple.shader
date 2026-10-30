@@ -24,7 +24,7 @@ Shader "FurSight/Real Ripple"
             #pragma fragment frag
             #pragma multi_compile _ HARD_OCCLUSION SOFT_OCCLUSION
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.meta.xr.sdk.core/Shaders/EnvironmentDepth/URP/EnvironmentOcclusionURP.hlsl"
+            #include "FurSightHands.hlsl"
 
             struct Attributes { float4 vertex : POSITION; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings
@@ -32,7 +32,6 @@ Shader "FurSight/Real Ripple"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float3 world : TEXCOORD2;
-                META_DEPTH_VERTEX_OUTPUT(1)
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -52,7 +51,6 @@ Shader "FurSight/Real Ripple"
                 o.positionCS = TransformObjectToHClip(input.vertex.xyz);
                 o.uv = input.uv;
                 o.world = TransformObjectToWorld(input.vertex.xyz);
-                META_DEPTH_INITIALIZE_VERTEX_OUTPUT(o, input.vertex);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
                 return o;
             }
@@ -73,21 +71,24 @@ Shader "FurSight/Real Ripple"
                 float r = length(d);
                 if (r > 1.0) discard;
                 float life = 1.0 - _T;
-                // rings running outwards: a travelling wave, strongest at its front, gone by the edge
-                float front = _T * 1.15;
-                float wave = sin((r - front) * 34.0) * exp(-abs(r - front) * 7.0) * life;
+                // like a pinch: for the first fifth the surface draws in toward the middle, then it lets go and slow,
+                // wide rings run outwards, strongest at their front, gone by the edge
+                float pinch = smoothstep(0.0, 0.2, _T) * (1.0 - smoothstep(0.2, 0.32, _T));
+                float t2 = saturate((_T - 0.2) / 0.8);
+                float front = t2 * 1.1;
+                float wave = sin((r - front) * 20.0) * exp(-abs(r - front) * 5.0) * (1.0 - t2) - pinch * (1.0 - r) * 0.9;
                 // push the picture in and out along the radius: the real surface bending
                 float3 centre = TransformObjectToWorld(float3(0, 0, 0));
                 float2 uv = Project(i.world), uvC = Project(centre);
                 float2 dir = normalize(uv - uvC + 1e-5);
-                float2 bent = uv + dir * wave * 0.012;
+                float2 bent = uv + dir * wave * 0.014;
                 half3 room = SAMPLE_TEXTURE2D(_CamTex, sampler_CamTex, saturate(bent)).rgb;
                 // a little light on the crests, in the card's colour
                 half3 col = room + _Tint.rgb * saturate(wave) * 0.35;
                 float edge = 1.0 - smoothstep(0.7, 1.0, r);
                 float inFrame = all(bent > 0.01) && all(bent < 0.99) ? 1.0 : 0.0;
                 half4 o = half4(col, edge * saturate(life * 1.5) * inFrame * _HasCam);
-                META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY(i, o, 0);
+                o *= FSHandOcclusion(i.world);
                 return o;
             }
             ENDHLSL

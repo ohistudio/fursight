@@ -259,6 +259,7 @@ namespace FurSight
             t.alignment = TextAlignmentOptions.MidlineLeft;
             t.textWrappingMode = TextWrappingModes.NoWrap;
             t.overflowMode = TextOverflowModes.Ellipsis;
+            Theme.Occlude(t);
             return t;
         }
 

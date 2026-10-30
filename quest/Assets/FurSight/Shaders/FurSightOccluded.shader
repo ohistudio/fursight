@@ -1,7 +1,6 @@
-// FurSight's flat UI, hidden where something real is in front of it: your hand reaching for a button, the sofa in
-// front of a room card. URP unlit (a colour, or a texture for his stickers), two-sided, with Meta's environment
-// depth occlusion from the SDK's EnvironmentOcclusionURP.hlsl. The depth manager (added with the depth raycaster)
-// turns occlusion on and keeps hands in the depth; without depth (the editor) it draws as plain unlit.
+// FurSight's flat UI, hidden where your real hand is in front of it (reaching for a button, holding food up to a
+// card), never by the rest of the room (FurSightHands.hlsl). URP unlit (a colour, or a texture for his stickers),
+// two-sided. Without depth (the editor) it draws as plain unlit.
 Shader "FurSight/Occluded Unlit"
 {
     Properties
@@ -26,14 +25,14 @@ Shader "FurSight/Occluded Unlit"
             #pragma multi_compile _ HARD_OCCLUSION SOFT_OCCLUSION
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.meta.xr.sdk.core/Shaders/EnvironmentDepth/URP/EnvironmentOcclusionURP.hlsl"
+            #include "FurSightHands.hlsl"
 
             struct Attributes { float4 vertex : POSITION; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                META_DEPTH_VERTEX_OUTPUT(1)
+                float3 world : TEXCOORD1;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -52,7 +51,7 @@ Shader "FurSight/Occluded Unlit"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.positionCS = TransformObjectToHClip(input.vertex.xyz);
-                META_DEPTH_INITIALIZE_VERTEX_OUTPUT(output, input.vertex);
+                output.world = TransformObjectToWorld(input.vertex.xyz);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 return output;
             }
@@ -62,7 +61,7 @@ Shader "FurSight/Occluded Unlit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
-                META_DEPTH_OCCLUDE_OUTPUT_PREMULTIPLY(input, color, 0);
+                color *= FSHandOcclusion(input.world);
                 return color;
             }
             ENDHLSL

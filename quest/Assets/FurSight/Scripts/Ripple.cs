@@ -75,7 +75,7 @@ namespace FurSight
 
         IEnumerator Run(Vector3 point, Vector3 normal, Color colour, float size)
         {
-            StartCoroutine(Real(point, normal, colour, size, 1.5f));
+            StartCoroutine(Real(point, normal, colour, size, 3.2f));   // slow, like a pinch let go
             var root = new GameObject("Ripple").transform;
             root.SetPositionAndRotation(point + normal * 0.004f, Quaternion.LookRotation(-normal));
             var rings = new (Transform t, Material m, float start)[3];
@@ -84,10 +84,10 @@ namespace FurSight
                 var g = Shapes.Make("Ring", root, Shapes.Arc(0.5f, 0.035f, 0f, 360f, 48), colour, Vector3.zero);
                 var m = new Material(_mat);
                 g.GetComponent<MeshRenderer>().sharedMaterial = m;
-                rings[i] = (g.transform, m, i * 0.16f);
+                rings[i] = (g.transform, m, 0.6f + i * 0.3f);   // after the pinch
                 g.transform.localScale = Vector3.zero;
             }
-            const float life = 1.1f;
+            const float life = 2.2f;
             for (float t = 0f; t < life + 0.4f; t += Time.deltaTime)
             {
                 foreach (var (tr, m, start) in rings)

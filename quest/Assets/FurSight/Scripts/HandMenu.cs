@@ -140,6 +140,7 @@ namespace FurSight
             t.text = label; t.fontSize = 14f; t.color = Theme.Ink;
             t.alignment = TextAlignmentOptions.Center;
             t.rectTransform.sizeDelta = new Vector2(10f, 2.4f);
+            Theme.Occlude(t);
             var cb = CardButton.Add(coin.gameObject, Coin + 0.01f, () => { Close(); action(); });
             if (_onPalm) cb.notHand = Hands.Left;   // the hand holding the menu can't press it by accident
             StartCoroutine(Juice.Pop(b, delay, 0.3f, 2.2f));
@@ -154,6 +155,8 @@ namespace FurSight
             var b = new GameObject("Status").transform;
             b.SetParent(tile, false);
             b.localPosition = new Vector3(0f, y, -Thick);
+            Shapes.MakeSlab("Lip", b, Shapes.RoundedRectRing(0.25f, 0.034f, 0.017f), 0.006f, Theme.CardLip, Theme.CardLip, new Vector3(0f, -0.004f, 0.004f));
+            Shapes.MakeSlab("Back", b, Shapes.RoundedRectRing(0.25f, 0.034f, 0.017f), 0.006f, Theme.Card, Theme.CardLip, new Vector3(0f, 0f, 0.002f));
             _statusDot = Shapes.Make("Dot", b, Shapes.Circle(0.007f, 20), Theme.CardLip, new Vector3(-0.1f, 0f, -0.001f)).transform;
             _statusText = new GameObject("Label").AddComponent<TextMeshPro>();
             _statusText.transform.SetParent(b, false);
@@ -163,6 +166,7 @@ namespace FurSight
             _statusText.fontSize = 13f; _statusText.color = Theme.Ink;
             _statusText.alignment = TextAlignmentOptions.Left;
             _statusText.rectTransform.sizeDelta = new Vector2(20f, 3f);
+            Theme.Occlude(_statusText);
             UpdateStatus();
         }
 
@@ -199,6 +203,7 @@ namespace FurSight
             t.text = "Close all"; t.fontSize = 15f; t.color = Color.white;
             t.alignment = TextAlignmentOptions.Center;
             t.rectTransform.sizeDelta = new Vector2(14f, 4f);
+            Theme.Occlude(t);
             var cb = CardButton.Add(face.gameObject, 0.035f, () => { Close(); VerdictCard.CloseAll(); Sfx.Close(b.position); });
             if (_onPalm) cb.notHand = Hands.Left;
             StartCoroutine(Juice.Pop(b, delay, 0.3f, 2.2f));
