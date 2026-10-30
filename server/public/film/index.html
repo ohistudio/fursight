@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FurSight Film</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+<style>
+  :root { --ink: #2B2A33; --muted: #6B6977; --grape: #9B6CF0; --grape-lip: #7A4ED1; --bg: #F6F5F9; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: Nunito, system-ui, sans-serif; }
+  #stage { position: absolute; inset: 0; display: grid; place-items: center; }
+  #frame { position: relative; width: min(100vw, 177.78vh); aspect-ratio: 16 / 9; }
+  #scene { position: absolute; inset: 0; transition: transform 2.2s cubic-bezier(.6,0,.2,1); }
+  #scene svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #scene svg g { transition: opacity .6s ease; }
+  #dim { position: absolute; inset: 0; background: #2B2A33; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+  /* the words: one line at a time, bottom centre */
+  #cap { position: absolute; left: 7%; right: 7%; bottom: 5.5%; text-align: center; pointer-events: none; }
+  #cap span { display: inline-block; background: #FFFFFF; color: var(--ink); font-weight: 900; font-size: clamp(16px, 2.6vw, 44px); line-height: 1.2;
+              padding: .32em .8em; border-radius: 999px; box-shadow: 0 .18em 0 rgba(43,42,51,.14); opacity: 0; transform: translateY(14px) scale(.98); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.9,.3,1); }
+  #cap span.on { opacity: 1; transform: none; }
+  #cap span.dark { background: var(--ink); color: #FFFFFF; }
+  /* the title and the end card */
+  #card { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s ease; }
+  #card.on { opacity: 1; }
+  #card h1 { margin: 0; font-size: clamp(36px, 7vw, 120px); font-weight: 900; color: var(--ink); letter-spacing: -.01em; }
+  #card p { margin: .3em 0 0; font-size: clamp(16px, 2.2vw, 36px); font-weight: 800; color: var(--muted); }
+  #card .dot { color: #FFB3D4; }
+  #card .plate { background: #FFFFFF; padding: .5em 1.1em .6em; border-radius: .5em; box-shadow: 0 .12em 0 rgba(43,42,51,.12); }
+  #card .plate p { color: var(--ink); }
+  /* the kit and the price, after the story */
+  #extra { position: absolute; inset: 0; padding-bottom: 12%; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
+  #extra.on { opacity: 1; }
+  .kitrow { position: absolute; inset: 3% 3% 17% 3%; display: flex; gap: 2.5%; align-items: center; justify-content: center; }
+  .kitrow img.kit { height: 100%; max-width: 66%; object-fit: contain; border-radius: 18px; }
+  .kitrow figure { margin: 0; width: 30%; }
+  .kitrow figure img { width: 100%; border-radius: 18px; box-shadow: 0 6px 0 rgba(43,42,51,.12); display: block; }
+  .kitrow figcaption { margin-top: 4%; text-align: center; font: 800 clamp(10px, 1.2vw, 20px) Nunito, sans-serif; color: var(--muted); }
+  .price { width: 88%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4%; }
+  .price h2 { grid-column: 1 / -1; margin: 0 0 1%; text-align: center; font-size: clamp(22px, 3.6vw, 60px); font-weight: 900; color: var(--ink); }
+  .tier { background: #FFFFFF; border-radius: 28px; padding: 7% 8%; box-shadow: 0 6px 0 rgba(43,42,51,.10); color: var(--ink); }
+  .tier.hot { outline: 5px solid var(--grape); }
+  .tier b { display: block; font-size: clamp(14px, 1.7vw, 28px); font-weight: 900; }
+  .tier .n { font-size: clamp(26px, 4vw, 66px); font-weight: 900; color: var(--grape-lip); margin: 4% 0 2%; }
+  .tier .n small { font-size: .4em; color: var(--muted); }
+  .tier p { margin: 0; font-size: clamp(11px, 1.25vw, 21px); font-weight: 800; color: var(--muted); line-height: 1.35; }
+  .price .foot { grid-column: 1 / -1; text-align: center; font: 800 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: var(--muted); }
+  /* real devices, the models, what's next */
+  .devs { width: 90%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4%; }
+  .devs h2, .models h2 { grid-column: 1 / -1; margin: 0 0 1%; text-align: center; font-size: clamp(20px, 3.2vw, 54px); font-weight: 900; color: var(--ink); }
+  .dev { background: #FFFFFF; border-radius: 24px; overflow: hidden; box-shadow: 0 6px 0 rgba(43,42,51,.10); color: var(--ink); }
+  .dev .pic { aspect-ratio: 4 / 3; background: #EDE7F7; display: grid; place-items: center; overflow: hidden; }
+  .dev .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dev .pic img.stk { width: 84%; height: 84%; object-fit: contain; filter: drop-shadow(0 5px 0 rgba(43,42,51,.14)); animation: bob 2.6s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-4%) rotate(-2deg); } }
+  .dev b { display: block; padding: 4% 6% 0; font-size: clamp(13px, 1.6vw, 26px); font-weight: 900; }
+  .dev p { margin: 0; padding: 1% 6% 6%; font-size: clamp(10px, 1.15vw, 19px); font-weight: 800; color: var(--muted); }
+  .dev.soon b::after { content: "concept"; margin-left: .5em; font-size: .6em; vertical-align: middle; background: #F1EEF6; color: var(--grape-lip); padding: .15em .6em; border-radius: 99px; }
+  .credit { grid-column: 1 / -1; text-align: center; font: 800 clamp(9px, .9vw, 14px) Nunito, sans-serif; color: #A9A4B6; }
+  .phone { width: 34%; aspect-ratio: 9 / 18; background: var(--ink); border-radius: 18%/9%; padding: 4%; }
+  .phone div { width: 100%; height: 100%; background: #EDE7F7; border-radius: 14%/7%; display: grid; place-items: center; }
+  .phone img { width: 86%; filter: drop-shadow(0 3px 0 rgba(43,42,51,.15)); }
+  .charm { width: 46%; aspect-ratio: 1; border-radius: 28%; background: linear-gradient(160deg, #FFFFFF, #E9E1F8); border: 4px solid var(--ink); display: grid; place-items: center; position: relative; }
+  .charm img { width: 70%; }
+  .charm::before { content: ""; position: absolute; top: -14%; left: 50%; width: 18%; height: 18%; border: 4px solid var(--ink); border-radius: 50%; transform: translateX(-50%); }
+  .models { width: 86%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2%; }
+  .model { background: #FFFFFF; border-radius: 22px; padding: 7% 8%; box-shadow: 0 6px 0 rgba(43,42,51,.10); border-top: 8px solid var(--grape); }
+  .model b { display: block; font-size: clamp(13px, 1.6vw, 26px); font-weight: 900; color: var(--ink); }
+  .model p { margin: .5em 0 0; font-size: clamp(10px, 1.1vw, 18px); font-weight: 800; color: var(--muted); line-height: 1.35; }
+  .models .foot { grid-column: 1 / -1; text-align: center; font: 800 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: var(--muted); }
+  #go { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(246,245,249,.75); cursor: pointer; }
+  #go span { background: var(--grape); color: #FFFFFF; font: 900 clamp(18px, 2.6vw, 40px) Nunito, sans-serif; padding: .5em 1.2em; border-radius: 999px; box-shadow: 0 .15em 0 var(--grape-lip); }
+  #hint { position: absolute; right: 14px; bottom: 10px; font: 800 12px Nunito, sans-serif; color: #B3AEC0; }
+  /* placeholders for the real footage */
+  .vid { width: 74%; aspect-ratio: 16 / 9; background: #FFFFFF; border-radius: 36px; box-shadow: 0 8px 0 rgba(43,42,51,.10); display: grid; place-content: center; text-align: center; position: relative; }
+  .vid b { font-size: clamp(30px, 6vw, 104px); font-weight: 900; color: #D9D4E4; letter-spacing: .02em; }
+  .vid p { margin: .2em 0 0; font-size: clamp(13px, 1.7vw, 28px); font-weight: 900; color: var(--ink); }
+  .vid small { display: block; margin-top: .4em; font-size: clamp(10px, 1.1vw, 18px); font-weight: 800; color: var(--muted); }
+  .vid .shot { position: absolute; top: 5%; left: 4%; font: 900 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: #FFFFFF; background: var(--grape); padding: .3em .8em; border-radius: 99px; }
+  .vid .secs { position: absolute; top: 5%; right: 4%; font: 900 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: var(--grape-lip); background: #F1EEF6; padding: .3em .8em; border-radius: 99px; }
+  /* one Muse Spark call, step by step */
+  .call { width: 92%; display: grid; grid-template-columns: 1fr auto 1.15fr auto 1.25fr; align-items: center; gap: 1.6%; }
+  .call h2 { grid-column: 1 / -1; margin: 0 0 1.5%; text-align: center; font-size: clamp(20px, 3.2vw, 54px); font-weight: 900; color: var(--ink); }
+  .call .step { background: #FFFFFF; border-radius: 24px; padding: 6%; box-shadow: 0 6px 0 rgba(43,42,51,.10); opacity: 0; transform: translateY(12px) scale(.97); transition: opacity .45s, transform .45s cubic-bezier(.2,.9,.3,1); }
+  .call .on { opacity: 1; transform: none; }
+  .call .tag { display: inline-block; font: 900 clamp(9px, 1vw, 16px) Nunito, sans-serif; color: #FFFFFF; background: var(--grape); padding: .25em .8em; border-radius: 99px; margin-bottom: 4%; }
+  .call img { width: 100%; border-radius: 14px; display: block; }
+  .call .step p { margin: 4% 0 0; font: 800 clamp(9px, 1.05vw, 17px) Nunito, sans-serif; color: var(--muted); }
+  .call .arrow { font: 900 clamp(18px, 3vw, 50px) Nunito, sans-serif; color: var(--grape); opacity: 0; transition: opacity .4s; }
+  .call ul { margin: 0; padding-left: 1.1em; font: 800 clamp(10px, 1.15vw, 19px) Nunito, sans-serif; color: var(--ink); line-height: 1.45; }
+  .call li { opacity: 0; transition: opacity .35s; }
+  .call li.on { opacity: 1; }
+  .call pre { margin: 0; background: #2B2A33; color: #EDE7F7; border-radius: 14px; padding: 5% 6%; font: 700 clamp(8px, .95vw, 16px)/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; min-height: 15em; }
+  .call pre i { font-style: normal; color: #FFB23F; }
+  .call pre em { font-style: normal; color: #8FD3A8; }
+  .call .out { grid-column: 1 / -1; justify-self: center; display: flex; align-items: center; gap: .7em; background: #FFFFFF; border-radius: 99px; padding: .45em 1.2em .45em .5em; box-shadow: 0 5px 0 #D9900A; opacity: 0; transform: scale(.9); transition: opacity .4s, transform .4s cubic-bezier(.2,.9,.3,1); margin-top: 1.5%; }
+  .call .out.on { opacity: 1; transform: none; }
+  .call .out i { width: 1.8em; height: 1.8em; border-radius: 50%; background: #FFB627; color: #FFFFFF; display: grid; place-items: center; font: 900 clamp(12px, 1.4vw, 24px) Nunito, sans-serif; font-style: normal; }
+  .call .out span { font: 900 clamp(12px, 1.5vw, 26px) Nunito, sans-serif; color: var(--ink); }
+  .call .out small { font: 800 clamp(9px, 1vw, 17px) Nunito, sans-serif; color: var(--muted); margin-left: .4em; }
+  @media (prefers-reduced-motion: reduce) { #cap span, #scene svg g { transition: none; } }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="extra"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
+<div id="hint"><b id="tc">0:00</b> · R or click to replay · M mutes</div>
+<script>
+// The FurSight film (about 3:00): the intro's story, white "VID HERE" boxes where the real footage goes, one
+// Muse Spark call shown step by step, then the closing slides. The intro itself stays as it is (/intro/, tag intro-v1).
+// FurSight's intro: Xiaosi's story in the kit schematic's style, with his own stickers. He had GI stasis; since
+// then every treat feels like a risk; he roams, chews a cable, finds avocado (healthy for us, can be fatal for
+// him). Then the kit arrives and each worry gets an answer.
+// The scene (props in groups, his stickers, where he goes) comes from docs/kit-src/make_intro.py.
+const $ = (id) => document.getElementById(id);
+let S, run = 0;
+const wait = (ms, r) => new Promise((ok, no) => setTimeout(() => (r === run ? ok() : no("stop")), ms));
+const show = (id, on = true) => { const el = $(id); if (el) el.setAttribute("opacity", on ? "1" : "0"); };
+// the camera: zoomed right in on his sticker, or the whole room
+const closeUp = (on) => {
+  const sc = $("scene"), [x, y] = S.spots.pen;
+  if (on) { sc.style.transition = "none"; sc.style.transformOrigin = `${x / 16}% ${(y - 60) / 9}%`; sc.style.transform = "scale(3.4)"; void sc.offsetWidth; sc.style.transition = ""; }
+  else sc.style.transform = "";
+};
+const extra = (html) => { $("extra").innerHTML = html || $("extra").innerHTML; $("extra").classList.toggle("on", !!html); };
+const caption = async (text, ms, r, dark = false) => {
+  const c = $("capText"); c.classList.remove("on"); await wait(220, r);
+  c.textContent = text; c.classList.toggle("dark", dark); c.classList.add("on"); await wait(ms, r);
+};
+const card = (html) => { $("card").innerHTML = html; $("card").classList.toggle("on", !!html); };
+
+// ---------------------------------------------------------------- sound: ElevenLabs effects (docs/kit-src/make_sfx.mjs)
+const AC = new (window.AudioContext || window.webkitAudioContext)(), master = AC.createGain(); master.connect(AC.destination);
+const buf = {}, NAMES = ["pop", "hop", "chew", "munch", "sting", "warn", "chime", "click", "whoosh", "ping", "title", "end", "bed"];
+NAMES.forEach((n) => fetch(`/intro/sfx/${n}.mp3`).then((x) => x.arrayBuffer()).then((a) => AC.decodeAudioData(a)).then((b) => (buf[n] = b)).catch(() => {}));
+let bed = null;
+function sfx(n, vol = 0.7, loop = false) {
+  if (!buf[n]) return null;
+  const src = AC.createBufferSource(), g = AC.createGain(); src.buffer = buf[n]; src.loop = loop; g.gain.value = vol;
+  src.connect(g).connect(master); src.start(); return { src, g };
+}
+function music(on) {
+  if (bed) { const b = bed; b.g.gain.setTargetAtTime(0, AC.currentTime, .4); setTimeout(() => b.src.stop(), 2000); bed = null; }
+  if (on) bed = sfx("bed", 0.16, true);
+}
+
+// ---------------------------------------------------------------- Xiaosi: one sticker, moved and posed
+let bun = { x: 0, y: 0, face: 1, pose: "side", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 };
+function draw() {
+  const st = S.stickers[bun.pose], k = 0.62 * bun.size, w = st.w * k, h = st.h * k;
+  const img = $("bun");
+  if (img.getAttribute("href") !== st.src) { img.setAttribute("href", st.src); img.setAttributeNS("http://www.w3.org/1999/xlink", "href", st.src); }
+  img.setAttribute("width", w); img.setAttribute("height", h); img.setAttribute("x", -w / 2); img.setAttribute("y", -h + 6);
+  img.setAttribute("transform", `translate(0 ${-bun.lift}) rotate(${bun.tilt}) scale(${bun.face * bun.sx} ${bun.sy})`);
+  $("bunshadow").setAttribute("rx", 34 * bun.size * (1 - bun.lift / 120)); $("bunshadow").setAttribute("opacity", 0.14 * (1 - bun.lift / 90));
+  $("bunwrap").setAttribute("transform", `translate(${bun.x} ${bun.y})`);
+}
+const tween = (ms, r, step) => new Promise((ok, no) => {
+  const t0 = performance.now();
+  (function f(t) { if (r !== run) return no("stop"); const k = Math.min(1, (t - t0) / ms); step(k); draw(); k < 1 ? requestAnimationFrame(f) : ok(); })(t0);
+});
+// hop to a spot: little arcs, squash on landing, facing the way he's going
+async function hop(spot, ms, r, hops = 3) {
+  const [x0, y0] = [bun.x, bun.y], [x1, y1] = S.spots[spot];
+  bun.face = x1 < x0 ? -1 : 1;
+  let landed = 0;
+  await tween(ms, r, (k) => {
+    const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, ph = (k * hops) % 1;
+    if (Math.floor(k * hops + .5) > landed) { landed++; sfx("hop", 1.4); }
+    bun.x = x0 + (x1 - x0) * e; bun.y = y0 + (y1 - y0) * e;
+    bun.lift = Math.sin(ph * Math.PI) * 26; bun.sy = ph < .12 || ph > .9 ? .9 : 1.04; bun.sx = 2 - bun.sy;
+  });
+  bun.lift = 0; bun.sx = bun.sy = 1;
+}
+const breathe = (ms, r) => tween(ms, r, (k) => { const s = Math.sin(k * Math.PI * 2 * ms / 1800); bun.sy = 1 - s * .025; bun.sx = 1 + s * .02; });
+const nod = (ms, r) => tween(ms, r, (k) => { bun.tilt = Math.max(0, Math.sin(k * Math.PI * 2 * ms / 500)) * 9 * bun.face; });
+const chew = (ms, r) => tween(ms, r, (k) => { bun.tilt = Math.sin(k * Math.PI * 2 * ms / 160) * 3; bun.sy = 1 + Math.sin(k * Math.PI * 2 * ms / 160) * .02; });
+// turn to look at something (the stickers face right as drawn)
+const faceTo = (t) => { bun.face = S.targets[t][0] < bun.x ? -1 : 1; draw(); };
+const pose = (p, face = 1) => { bun.pose = p; bun.face = face; draw(); };
+const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 1.08 - (k - .7) / .3 * .08; });
+
+// ---------------------------------------------------------------- the story
+async function story(r) {
+  for (const id of ["cablering", "avoglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardAvo", "cardHay", "cardTray", "cardBerry", "berry", "berryq", "cardAsk", "cardAway", "cardWeek", "devices", "traykg"]) show(id, false);
+  $("dim").style.opacity = 0; card(""); extra(""); $("capText").classList.remove("on");
+  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 }); draw();
+
+  // open close up on him, then pull back to the room
+  closeUp(true); music(true); sfx("title", .6);
+  await breathe(1400, r);
+  card(`<div class="plate"><h1>FurSight</h1><p>a story about Xiaosi</p></div>`); await breathe(2600, r); card("");
+  closeUp(false); sfx("whoosh", .4); await breathe(2000, r);
+  await Promise.all([breathe(1800, r), caption("Meet Xiaosi.", 1800, r)]);
+  pose("alert");
+  await Promise.all([breathe(2200, r), caption("He loves a treat. We love giving him one.", 2200, r)]);
+
+  // the scare
+  pose("loaf"); $("dim").style.opacity = .42; music(false); sfx("sting", .6);
+  await Promise.all([breathe(3000, r), caption("A few months ago, he got GI stasis. His gut just stopped.", 3000, r, true)]);
+  await caption("Rabbits hide illness until it's serious.", 2400, r, true);
+  $("dim").style.opacity = 0; pose("alert"); music(true);
+  show("berry"); sfx("pop", .5); await wait(500, r); show("berryq"); sfx("warn", .5);
+  await caption("Since then, every treat feels like a risk.", 2600, r);
+  show("berryq", false);
+
+  // and he gets into everything
+  bun.pose = "side"; draw();
+  await caption("And when he roams free...", 900, r);
+  await hop("gate", 1300, r, 3); await hop("cable", 1100, r, 2);
+  faceTo("cable"); show("cablering"); sfx("chew", .7);
+  await Promise.all([chew(2000, r), caption("...cables look like chew toys.", 2000, r)]);
+  await hop("avo", 1300, r, 3);
+  pose("standing"); show("avoglow"); sfx("warn", .55);
+  await Promise.all([nod(2600, r), caption("You'd think avocado is good for him. It can be fatal.", 2600, r)]);
+  pose("bum"); await hop("hay", 1800, r, 4);
+  pose("eating"); sfx("munch", .6);
+  await Promise.all([nod(2400, r), caption("Hay should be most of what he eats. Less hay is the first sign.", 2400, r)]);
+  show("cablering", false); show("avoglow", false);
+
+  // the kit
+  pose("grooming");
+  await Promise.all([breathe(1600, r), caption("So we built FurSight.", 1600, r, true)]);
+  show("cam1"); sfx("click", .7); await wait(500, r);
+  await caption("A cam on his pen, for his hay, food and water.", 1900, r);
+  show("cam2"); sfx("click", .7); await wait(300, r);
+  pose("side");
+  await Promise.all([hop("away", 1800, r, 3), caption("A cam that follows him when he roams.", 1800, r)]);
+  pose("loaf", 1);
+  show("trayscale"); sfx("click", .7); await wait(300, r); show("traytop"); show("traykg"); sfx("click", .5);
+  await caption("And a litter tray that weighs him every visit.", 2000, r);
+
+  // and each worry gets an answer
+  pose("alert");
+  show("cardBerry"); sfx("chime", .5); await caption("Show FurSight the treats you give him. It remembers, and tells you if and when he can have the next.", 3600, r);
+  show("cardAvo"); show("avoglow"); sfx("chime", .5); await caption("It checks food before you share it.", 2200, r);
+  show("cardCable"); show("cablering"); sfx("chime", .5); await caption("It warns you about hazards before he finds them.", 2400, r);
+  show("cardHay"); show("cardTray"); sfx("chime", .5); await caption("And it notices when something changes.", 2400, r);
+  for (const id of ["cardBerry", "cardAvo", "cardCable", "cardHay", "cardTray", "cablering", "avoglow"]) show(id, false);
+
+  // the real thing: placeholders for the footage, in order
+  const shots = [
+    ["The pet cam", "Xiaosi on his pet cam; the diary filling up as he eats, flops and grooms", 12000, "Here he is for real. His pet cam keeps his diary as he goes."],
+    ["Ray-Ban Display", "Hold up a strawberry; the verdict appears on the glasses", 13000, "Hold a treat up to your Ray-Ban Display. Can he have it?"],
+    null,   // the Muse Spark call
+    ["Meta Quest: room check", "Look round the room; cards pinned on what he could chew", 15000, "On Quest, check the room. Every hazard is pinned where it is."],
+    ["Meta Quest: food in hand", "Hold food up; the answer sits on your hand and follows it", 10000, "Hold food up, and the answer sits right on your hand."],
+    ["Phone: away from home", "A sticker alert when he flops; ask \"what's he doing?\" and get his sticker back", 15000, "Away from home? A sticker when he flops, and you can ask how he is."],
+    ["The app: diary and stats", "Scroll his diary (checks with their marked-up photos), then his stats: weight, tray visits, hay, the calendar", 14000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
+  ];
+  let n = 0;
+  for (const sh of shots) {
+    $("capText").classList.remove("on"); sfx("whoosh", .5);
+    if (!sh) { await museCall(r); continue; }
+    n++;
+    const [what, film, ms, line] = sh;
+    extra(`<div class="vid"><span class="shot">Shot ${n} of 6</span><span class="secs">${Math.round(ms / 1000)} s</span><div><b>VID HERE</b><p>${what}</p><small>${film}</small></div></div>`);
+    await wait(300, r); await caption(line, ms - 520, r);
+  }
+  $("capText").classList.remove("on");
+
+  // where it runs, and on what
+  sfx("whoosh", .6);
+  extra(`<div class="devs"><h2>Works today on</h2>
+    <div class="dev"><div class="pic"><img class="stk" src="/meta/ray-ban-display.png" alt="Meta Ray-Ban Display"></div><b>Meta Ray-Ban Display</b><p>Hold up food, ask about him, peek at the pet cam</p></div>
+    <div class="dev"><div class="pic"><img class="stk" src="/meta/quest-3.png" alt="Meta Quest 3" style="animation-delay:-.9s"></div><b>Meta Quest</b><p>Room checks, food cards on your hand, spoken notes</p></div>
+    <div class="dev"><div class="pic"><div class="phone"><div><img src="${S.stickers.bum.src}" alt=""></div></div></div><b>Your phone</b><p>His diary, alerts with stickers, his week</p></div>
+    <div class="credit">Product images: Meta</div></div>`);
+  await wait(300, r); await caption("Meta Ray-Ban Display, Meta Quest and your phone.", 3600, r);
+  $("capText").classList.remove("on"); sfx("whoosh", .6);
+  extra(`<div class="models"><h2>Built on Meta's models</h2>
+    <div class="model"><b>Muse Spark</b><p>Food verdicts, what he's doing on the pet cam, hay levels, room checks, the Ask agent, his week</p></div>
+    <div class="model" style="border-top-color:var(--sky,#2EA8F5)"><b>SAM 3.1</b><p>Finds him on every cam, cuts out his stickers, outlines room hazards, measures the hay</p></div>
+    <div class="model" style="border-top-color:#FFB23F"><b>Muse Voice Transcribe</b><p>Spoken questions and notes on Quest</p></div>
+    <div class="model" style="border-top-color:#3DBB6E"><b>Muse Image</b><p>Redraws his photo for the weekly Wrapped poster</p></div>
+    <div class="foot">All through the Meta Model API</div></div>`);
+  await wait(300, r); await caption("All of it runs on Meta's models, through the Meta Model API.", 4200, r);
+  extra(""); await wait(500, r);
+
+  // his week, on a card
+  pose("stretch");
+  for (const im of document.querySelectorAll("image.wk")) { const src = S.stickers[im.dataset.k].src; im.setAttribute("href", src); im.setAttributeNS("http://www.w3.org/1999/xlink", "href", src); }
+  show("cardWeek"); sfx("whoosh", .6); await Promise.all([breathe(3000, r), caption("And every week, his week on a card: flops, weight, the lot.", 3000, r)]);
+  show("cardWeek", false);
+  await Promise.all([breathe(2600, r), caption("Treat them. Without the worry.", 2600, r)]);
+  $("capText").classList.remove("on");
+
+  // the kit, and what it would cost as a product
+  sfx("whoosh", .6);
+  extra(`<div class="kitrow"><img class="kit" src="/kit/kit.svg" alt=""><figure><img src="/kit/tray.jpg" alt=""><figcaption>The FurSight Tray, a concept render</figcaption></figure></div>`);
+  await wait(400, r); await caption("The kit: two cams and the FurSight Tray. Set it up once.", 4200, r);
+  $("capText").classList.remove("on"); sfx("whoosh", .6);
+  extra(`<div class="price"><h2>If FurSight were a product</h2>
+    <div class="tier hot"><b>The kit</b><div class="n">$249</div><p>Two FurSight Cams, the FurSight Tray, and 3 months of FurSight Plus</p></div>
+    <div class="tier"><b>Free</b><div class="n">$0</div><p>Live view, his weight and tray visits, the diary and the calendar</p></div>
+    <div class="tier"><b>FurSight Plus</b><div class="n">$7.99<small> a month</small></div><p>or $69 a year. The AI: food checks, Ask, early warnings, stickers and his weekly card</p></div>
+    <div class="foot">Rough concept pricing. In this hackathon build the Tray's sensors are simulated; the cams are real.</div></div>`);
+  await wait(5200, r);
+  sfx("whoosh", .6);
+  extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:54%"><h2>Where it could go next</h2>
+    <div class="dev soon"><div class="pic"><img class="stk" src="/meta/vr-glasses.png" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
+    <div class="dev soon"><div class="pic"><img class="stk" src="/meta/muse-charm.png" alt="Muse Charm" style="animation-delay:-1.2s"></div><b>Muse Charm</b><p>His sticker on its screen; ask Muse how he is</p></div>
+    <div class="credit">Images: Meta, VRX. FurSight on these is an idea, not built yet.</div></div>`);
+  await wait(300, r); await caption("And next: Meta VR Glasses, and Muse Charm on your keychain.", 4000, r);
+  $("capText").classList.remove("on");
+  extra(""); await wait(500, r);
+  music(false); sfx("end", .7);
+  card(`<div class="plate"><h1>FurSight</h1><p>Spoil them. Worry less.</p></div>`);
+}
+
+// One real Muse Spark call (a strawberry, from the Quest's test photos), step by step: the picture that's sent,
+// what Muse Spark is asked to do, the JSON that came back, and the card it becomes.
+async function museCall(r) {
+  const J = `{
+  "food": <i>"strawberry"</i>,
+  "held": <em>true</em>,
+  "verdict": <i>"caution"</i>,
+  "portion": <i>"half a small strawberry"</i>,
+  "reason": <i>"High sugar can upset rabbit digestion so feed only as treat."</i>,
+  "instead": <i>"timothy hay"</i>,
+  "wait_days": <em>3</em>,
+  "box": [<em>15, 60, 909, 982</em>]
+}`;
+  extra(`<div class="call"><h2>One Muse Spark call</h2>
+    <div class="step" id="c1"><span class="tag">1 · Sent</span><img src="sent.jpg" alt="A strawberry"><p>One frame from the glasses, 512 px</p></div>
+    <div class="arrow" id="a1">→</div>
+    <div class="step" id="c2"><span class="tag">2 · Muse Spark</span><ul>
+      <li>What food is it? Is it held?</li><li>Safe, a treat, or never?</li><li>How much, and what instead?</li><li>Days until the next one</li><li>A box round it in the picture</li></ul>
+      <p>Checked against the rabbit safety list, which always wins. Through the Meta Model API.</p></div>
+    <div class="arrow" id="a2">→</div>
+    <div class="step" id="c3"><span class="tag">3 · Back in 4 s</span><pre id="json"></pre></div>
+    <div class="out" id="c4"><i>!</i><span>Strawberry: small treat only</span><small>half a small one · next in 3 days</small></div></div>`);
+  await wait(300, r);
+  caption("Here's one Muse Spark call: the picture sent, what it's asked, and what comes back.", 4200, r).catch(() => {});
+  const on = (id) => $(id) && $(id).classList.add("on"), op = (id) => $(id) && ($(id).style.opacity = 1);
+  on("c1"); sfx("click", .5); await wait(900, r); op("a1"); on("c2"); sfx("click", .5);
+  for (const li of document.querySelectorAll(".call li")) { await wait(380, r); li.classList.add("on"); }
+  await wait(700, r); op("a2"); on("c3"); sfx("ping", .4);
+  const lines = J.split("\n"), pre = $("json");
+  for (let k = 1; k <= lines.length; k++) { pre.innerHTML = lines.slice(0, k).join("\n"); await wait(260, r); }
+  await wait(500, r); on("c4"); sfx("chime", .55);
+  await caption("Then it's a card on the food, on your glasses, Quest or phone.", 5600, r);
+}
+
+let t0 = 0;
+setInterval(() => { if (t0) { const t = Math.floor((performance.now() - t0) / 1000); $("tc").textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; } }, 250);
+async function play() {
+  if (!S) return;
+  t0 = performance.now();
+  $("go").style.display = "none"; AC.resume();
+  const r = ++run; music(false);
+  try { await story(r); } catch (e) { if (e !== "stop") console.error(e); }
+}
+Promise.all([fetch("/intro/intro.svg").then((x) => x.text()), fetch("/intro/scene.json").then((x) => x.json())]).then(([svg, scene]) => {
+  $("scene").innerHTML = svg; S = scene;
+  Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], pose: "loaf", size: 1 }); draw(); closeUp(true);
+});
+addEventListener("keydown", (e) => { if (e.key === "m" || e.key === "M") master.gain.value = master.gain.value ? 0 : 1; });
+addEventListener("keydown", (e) => { if (e.key === "r" || e.key === "R") play(); });
+$("stage").addEventListener("click", play);
+</script>
+</body>
+</html>
