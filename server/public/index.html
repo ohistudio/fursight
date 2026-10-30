@@ -109,6 +109,15 @@
   .bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin-top: 10px; }
   .bar i { display: block; height: 100%; background: var(--fern); border-radius: 6px; transition: width .3s; }
   .row > svg.bean { flex: none; }
+  .foodcam { position: fixed; inset: 0; z-index: 70; background: #14131A; display: grid; grid-template-rows: 1fr auto; padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); gap: 14px; }
+  .fc-frame { position: relative; border-radius: 22px; overflow: hidden; background: #000; min-height: 0; }
+  .fc-frame video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fc-aim { position: absolute; left: 50%; top: 50%; width: 46%; aspect-ratio: 1; transform: translate(-50%, -50%); border: 3px solid rgba(255,255,255,.85); border-radius: 28px; box-shadow: 0 0 0 999px rgba(20,19,26,.25); }
+  .fc-frame p { position: absolute; left: 0; right: 0; bottom: 14px; margin: 0; text-align: center; color: #fff; font: 900 16px Nunito, sans-serif; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .fc-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+  .fc-row .btn { width: auto; background: rgba(255,255,255,.12); color: #fff; box-shadow: none; }
+  .fc-shutter { width: 74px; height: 74px; border-radius: 50%; border: 5px solid #fff; background: var(--fern); box-shadow: 0 4px 0 var(--fern-lip); cursor: pointer; }
+  .fc-shutter:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--fern-lip); }
   .hz { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
   .hz i { width: 26px; height: 26px; border-radius: 50%; color: var(--ink); font-style: normal; font-weight: 900; display: grid; place-items: center; }
   .moment { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; }
@@ -469,11 +478,12 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<label class="btn" for="foodPhoto">Can ${esc(me.pets[0].name)} eat this?</label><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("foodPhoto").onchange = async (e) => e.target.files[0] && foodCheck(await shrink(e.target.files[0]));
+  document.getElementById("foodLive").onclick = foodCamera;
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
   document.getElementById("upload").onclick = () => uploadPage();
   for (const b of document.querySelectorAll("[data-show]")) b.onclick = () => { diaryShow = b.dataset.show; today(); };
@@ -1470,6 +1480,35 @@ async function markUp(im) {
 // species safety list has the last word), the foods boxed on the picture, the verdict, how much, when he last had
 // it, and "We fed him this" to put the next OK day on the calendar. Saved to the diary with its marks.
 const VWORD = { safe: "Safe", caution: "Small treat only", toxic: "Don't" };
+
+// Like the iPhone app: a live camera you hold the food up to, then Check. The frame goes to foodCheck, which boxes
+// the food on it. No camera (a laptop without one, or permission refused): choose a photo instead.
+async function foodCamera() {
+  const pick = () => document.getElementById("foodPhoto").click();
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return pick();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false }); }
+  catch (e) { toast("No camera, so choose a photo"); return pick(); }
+  const sheet = document.createElement("div");
+  sheet.className = "foodcam";
+  sheet.innerHTML = `<div class="fc-frame"><video playsinline autoplay muted></video><div class="fc-aim"></div><p>Hold the food up in the middle</p></div>
+    <div class="fc-row"><button class="btn ghost small" id="fcPick">Choose a photo</button><button class="fc-shutter" id="fcGo" aria-label="Check this food"></button><button class="btn ghost small" id="fcClose">Cancel</button></div>`;
+  document.body.appendChild(sheet);
+  const v = sheet.querySelector("video"); v.srcObject = stream;
+  const close = () => { stream.getTracks().forEach((t) => t.stop()); sheet.remove(); };
+  sheet.querySelector("#fcClose").onclick = close;
+  sheet.querySelector("#fcPick").onclick = () => { close(); pick(); };
+  sheet.querySelector("#fcGo").onclick = () => {
+    if (!v.videoWidth) return;
+    const k = Math.min(1, 768 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement("canvas");
+    c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+    c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+    const photo = c.toDataURL("image/jpeg", 0.85);
+    close();
+    foodCheck(photo);
+    document.getElementById("foodOut")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+}
 async function foodCheck(photo) {
   const $o = document.getElementById("foodOut"), p = me.pets[0], name = p.name;
   if (!$o) return;
