@@ -46,7 +46,13 @@ namespace FurSight
             req.timeout = 10;
             var op = req.SendWebRequest();
             while (!op.isDone) await Task.Yield();
+            Online = req.responseCode > 0;   // any answer from the server (even "POST only") means we can reach it
+            CheckedAt = Time.realtimeSinceStartup;
         }
+
+        // can we reach FurSight right now: the last request (or the knock at launch) got an answer
+        public static bool Online { get; private set; }
+        public static float CheckedAt { get; private set; } = -1f;
 
         public static async Task<JObject> Post(string path, object body, int timeoutSeconds = 45)
         {
@@ -60,6 +66,7 @@ namespace FurSight
             req.timeout = timeoutSeconds;
             var op = req.SendWebRequest();
             while (!op.isDone) await Task.Yield();
+            Online = req.responseCode > 0; CheckedAt = Time.realtimeSinceStartup;
             if (req.result != UnityWebRequest.Result.Success)
                 throw new System.Exception($"{path}: {req.responseCode} {req.error} {req.downloadHandler?.text}");
             return JObject.Parse(req.downloadHandler.text);

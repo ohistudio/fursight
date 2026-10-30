@@ -62,6 +62,10 @@ namespace FurSight
         const int Grid = 9;             // 9x9 depth samples per snapshot
 
         public static PetCamera Instance { get; private set; }
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // the passthrough camera, playing (for the ripple, which redraws the real room)
+        public Meta.XR.PassthroughCameraAccess Live => _pca != null && _pca.IsPlaying && _pca.CurrentResolution.x > 0 ? _pca : null;
+#endif
         public bool Ready => Source() != null;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -96,7 +100,16 @@ namespace FurSight
                 // one dialog at a time: a second request while the first is up gets dropped
                 Permissions.Ask(Permissions.Scene, depthOk =>
                 {
-                    if (depthOk && Meta.XR.EnvironmentRaycastManager.IsSupported) _depth = gameObject.AddComponent<Meta.XR.EnvironmentRaycastManager>();
+                    if (depthOk && Meta.XR.EnvironmentRaycastManager.IsSupported)
+                    {
+                        // our own depth manager, set up before the raycaster looks for one: soft occlusion on for the
+                        // UI's shader (FurSight/Occluded Unlit), and hands kept in the depth so they go over the UI
+                        var dm = gameObject.AddComponent<Meta.XR.EnvironmentDepth.EnvironmentDepthManager>();
+                        dm.OcclusionShadersMode = Meta.XR.EnvironmentDepth.OcclusionShadersMode.SoftOcclusion;
+                        dm.RemoveHands = false;
+                        _depth = gameObject.AddComponent<Meta.XR.EnvironmentRaycastManager>();
+                        StartCoroutine(DepthReport(dm));
+                    }
                     else Debug.LogWarning("[FurSight] no live depth: answers will float at arm's length");
                 });
             });
@@ -171,6 +184,30 @@ namespace FurSight
                 }
             if (showScan) StartCoroutine(Scan(shot));
             return shot;
+        }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // made before the headset's XR is up, the manager finds depth "not supported" and switches itself off: wait
+        // until it is, then switch it on (and say how it went, for the log)
+        System.Collections.IEnumerator DepthReport(Meta.XR.EnvironmentDepth.EnvironmentDepthManager dm)
+        {
+            float until = Time.time + 20f;
+            while (!Meta.XR.EnvironmentDepth.EnvironmentDepthManager.IsSupported && Time.time < until) yield return null;
+            if (dm != null && !dm.enabled) dm.enabled = true;
+            yield return new WaitForSeconds(3f);
+            Debug.Log($"[FurSight] depth: enabled {dm.isActiveAndEnabled}, available {dm.IsDepthAvailable}, occlusion {dm.OcclusionShadersMode}, " +
+                      $"SOFT_OCCLUSION {Shader.IsKeywordEnabled("SOFT_OCCLUSION")}, managers {FindObjectsByType<Meta.XR.EnvironmentDepth.EnvironmentDepthManager>(FindObjectsSortMode.None).Length}");
+        }
+#endif
+
+        // where a ray meets the real room right now, and which way that surface faces (false: no depth there)
+        public bool DepthHit(Ray ray, out Vector3 point, out Vector3 normal)
+        {
+            point = normal = Vector3.zero;
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (_depth != null && _depth.Raycast(ray, out var hit, 4f)) { point = hit.point; normal = hit.normal; return true; }
+#endif
+            return false;
         }
 
         // metres along a ray to the real room right now, or -1 (no live depth, nothing within 4 m, or the editor)

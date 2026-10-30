@@ -115,6 +115,8 @@ namespace FurSight
             Button(tile, At(), "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
             Button(tile, At(), "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.21f);
             if (VerdictCard.Count > 0) CloseAllPill(tile, -h / 2f - 0.045f, 0.25f);
+            Status(tile, h / 2f + 0.03f);
+            FurSightApi.Warm();   // check again now, so the status is fresh
         }
 
         void Button(Transform tile, Vector2 at, string label, Color col, Color lip, System.Action<Transform, Color> icon, System.Action action, float delay)
@@ -141,6 +143,39 @@ namespace FurSight
             var cb = CardButton.Add(coin.gameObject, Coin + 0.01f, () => { Close(); action(); });
             if (_onPalm) cb.notHand = Hands.Left;   // the hand holding the menu can't press it by accident
             StartCoroutine(Juice.Pop(b, delay, 0.3f, 2.2f));
+        }
+
+        // above the menu: are we live? A green dot and "Live · connected to FurSight" (and whose household), amber
+        // "Offline" when the server can't be reached (check the Wi-Fi or the proxy), grey while it's checking
+        TextMeshPro _statusText;
+        Transform _statusDot;
+        void Status(Transform tile, float y)
+        {
+            var b = new GameObject("Status").transform;
+            b.SetParent(tile, false);
+            b.localPosition = new Vector3(0f, y, -Thick);
+            _statusDot = Shapes.Make("Dot", b, Shapes.Circle(0.007f, 20), Theme.CardLip, new Vector3(-0.1f, 0f, -0.001f)).transform;
+            _statusText = new GameObject("Label").AddComponent<TextMeshPro>();
+            _statusText.transform.SetParent(b, false);
+            _statusText.transform.localScale = Vector3.one * 0.01f;
+            _statusText.transform.localPosition = new Vector3(0.012f, 0f, -0.0012f);
+            if (Theme.Bold != null) _statusText.font = Theme.Bold;
+            _statusText.fontSize = 13f; _statusText.color = Theme.Ink;
+            _statusText.alignment = TextAlignmentOptions.Left;
+            _statusText.rectTransform.sizeDelta = new Vector2(20f, 3f);
+            UpdateStatus();
+        }
+
+        void UpdateStatus()
+        {
+            if (_statusText == null) return;
+            bool checking = FurSightApi.CheckedAt < 0f, live = FurSightApi.Online;
+            string who = HubClient.Linked && PetProfile.Current != null ? " · " + PetProfile.Current.petName : "";
+            _statusText.text = checking ? "Connecting to FurSight…" : live ? "Live · connected to FurSight" + who : "Offline · check Wi-Fi or the proxy";
+            var col = checking ? Theme.CardLip : live ? Theme.Fern : Theme.Sun;
+            foreach (var r in _statusDot.GetComponentsInChildren<MeshRenderer>()) r.sharedMaterial = Shapes.Flat(col);
+            // the live dot breathes
+            _statusDot.localScale = Vector3.one * (live ? 1f + Mathf.Sin(Time.time * 4f) * 0.18f : 1f);
         }
 
         // under the menu while any card is up: clears every card, gauge and sticker in one press
@@ -178,7 +213,7 @@ namespace FurSight
             _panel = null;
         }
 
-        void LateUpdate() { if (_panel != null) Face(_panel); }
+        void LateUpdate() { if (_panel != null) { Face(_panel); UpdateStatus(); } }
 
         static void Face(Transform t)
         {

@@ -43,7 +43,8 @@
     "com.unity.render-pipelines.universal": "17.3.0",
     "com.unity.xr.management": "4.5.4",
     "com.unity.xr.openxr": "1.16.1",
-    "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity"
+    "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity",
+    "com.unity.xr.meta-openxr": "2.4.1"
   },
   "scopedRegistries": [
     {

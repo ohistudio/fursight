@@ -110,6 +110,7 @@ namespace FurSight
                 card.KeepOpen();
                 _cards.Add(card);
                 Sfx.Pin(point);
+                Ripple.On(shot, box, risk == "high" ? Theme.Coral : risk == "medium" ? Theme.Sun : Theme.Sky);
                 if (risk == "high") Sfx.Nope(point); else if (risk == "medium") Sfx.Treat(point);
                 StartCoroutine(Juice.Buzz(risk == "high" ? 0.5f : 0.2f, 0.05f));
                 yield return new WaitForSeconds(cardGap);

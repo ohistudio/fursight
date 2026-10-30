@@ -117,6 +117,7 @@ namespace FurSight
                 if (i == held) heldItem = it;
                 int hand = i == held ? InHand(shot, box) : -1;
                 var at = hand >= 0 ? HandPoint(Hands.Get(hand)) : PetCamera.Instance.Locate(shot, box, 0.45f);
+                if (hand < 0) Ripple.On(shot, box, Theme.For(verdict).main);
                 var card = VerdictCard.Verdict(at, (string)it["food"], verdict, (string)it["reason"], i == held ? Extra(it, verdict) : null, i == held);
                 _cards.Add(card);
                 if (hand >= 0) card.Follow(() => { var hd = Hands.Get(hand); return hd.tracked ? HandPoint(hd) : (Vector3?)null; });

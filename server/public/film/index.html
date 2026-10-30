@@ -248,10 +248,10 @@ async function story(r) {
   // the real thing: placeholders for the footage, in order. Each: a title, the boxes (one per clip, side by
   // side: [label, what to film]), seconds, and the caption over it. null = the Muse Spark call.
   const shots = [
-    ["His three pet cams", [["Cage cam", "Eating in his cage"], ["Litter cam", "On the litter tray"], ["Free-roam cam", "Roaming the room"]], 8000, "Three pet cams: his cage, his litter tray, and the room he roams."],
-    ["The free-roam cam finds him", [["Free-roam cam", "Wide view of the room; FurSight finds him and zooms in, then pan and zoom with the cam controls"]], 8000, "When he roams, the cam finds him with SAM 3.1 and zooms in."],
+    ["His three pet cams", [["Cage cam", "Eating in his cage"], ["Litter cam", "On the litter tray"], ["Free-roam cam", "Roaming the room"]], 7000, "Three pet cams: his cage, his litter tray, and the room he roams."],
+    ["The free-roam cam finds him", [["Free-roam cam", "Wide view of the room; FurSight finds him and zooms in, then pan and zoom with the cam controls"]], 7000, "When he roams, the cam finds him with SAM 3.1 and zooms in."],
     ["On the FurSight Tray", [["Litter cam", "He hops on; his weight and the visit appear (the scale is simulated in this build)"]], 7000, "He hops on the tray: weighed, and the visit logged."],
-    ["Hay through the day", [["Morning", "Full rack · SAM: hay 100%"], ["Midday", "Him eating · SAM: 60%"], ["Evening", "Low rack · SAM: 20%"]], 8000, "SAM 3.1 measures his hay through the day. Less hay is the first sign."],
+    ["Hay through the day", [["Morning", "Full rack · SAM: hay 100%"], ["Midday", "Him eating · SAM: 60%"], ["Evening", "Low rack · SAM: 20%"]], 7000, "SAM 3.1 measures his hay through the day. Less hay is the first sign."],
     ["Food, pellets and water", [["Bowls", "Labels on hay, pellets and water updating as levels drop"]], 6000, "And his pellets and water, so you know when to top up."],
     ["Ray-Ban Display: food check", [["Ray-Ban Display", "Hold up a strawberry; the verdict on the glasses"]], 10000, "Hold a treat up to your Ray-Ban Display. Can he have it?"],
     null,
@@ -259,7 +259,7 @@ async function story(r) {
     ["Meta Quest: room check", [["Meta Quest", "Look round the room; cards pinned on what he could chew"]], 11000, "On Quest, check the room. Every hazard is pinned where it is."],
     ["Meta Quest: food in hand", [["Meta Quest", "Hold food up; the answer sits on your hand and follows it"]], 7000, "Hold food up, and the answer sits right on your hand."],
     ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops"]], 7000, "When he flops, you get a sticker."],
-    ["The app: diary and stats", [["Web app", "Scroll the diary (marked-up check photos), then weight, tray visits, hay, his week"]], 9000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
+    ["The app: diary and stats", [["Web app", "Scroll the diary (marked-up check photos), then weight, tray visits, hay, his week"]], 8000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
   ];
   const total = shots.filter(Boolean).length;
   let n = 0;
@@ -305,7 +305,15 @@ async function story(r) {
     <div class="dev soon"><div class="pic"><img class="stk" src="/meta/vr-glasses.png" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
     <div class="dev soon"><div class="pic"><img class="stk" src="/meta/muse-charm.png" alt="Muse Charm" style="animation-delay:-1.2s"></div><b>Muse Charm</b><p>His sticker on its screen; ask Muse how he is</p></div>
     <div class="credit">Images: Meta, VRX. FurSight on these is an idea, not built yet.</div></div>`);
-  await wait(300, r); await caption("And next: Meta VR Glasses, and Muse Charm on your keychain.", 4000, r);
+  await wait(300, r); await caption("And next: Meta VR Glasses, and Muse Charm on your keychain.", 3600, r);
+  $("capText").classList.remove("on"); sfx("whoosh", .6);
+  extra(`<div class="models"><h2>And every kind of pet</h2>
+    <div class="model" style="border-top-color:#3DBB6E"><b>Reptiles</b><p>Basking and cool-side temperature, UV lamp hours, humidity, shedding and feeding days</p></div>
+    <div class="model" style="border-top-color:var(--sky,#2EA8F5)"><b>Amphibians</b><p>Water temperature and humidity, misting, which live food is safe</p></div>
+    <div class="model" style="border-top-color:#FFB23F"><b>Cats and dogs</b><p>Free-roam cams that find them, food and plant checks, litter and walks</p></div>
+    <div class="model"><b>Small pets</b><p>Guinea pigs, hamsters, birds: hay, cage and the same early warnings</p></div>
+    <div class="foot">Same kit and models, a care plan for each species</div></div>`);
+  await wait(300, r); await caption("And beyond rabbits: reptiles and their heat, amphibians, cats and dogs.", 4200, r);
   $("capText").classList.remove("on");
   extra(""); await wait(500, r);
   music(false); sfx("end", .7);

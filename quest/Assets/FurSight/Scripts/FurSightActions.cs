@@ -68,12 +68,12 @@ namespace FurSight
                     : m["from"]?.Type == JTokenType.Integer ? $"It was {(int)m["from"]}% at {(string)m["since"]}." : "No pet cam reading from this morning to compare.";
                 if (level < 20) why += kind == "water" ? " Time to fill it." : kind == "hay" ? " Time for more hay." : " Top it up.";
                 var at = PetCamera.Instance.Locate(shot, box);
-                StartCoroutine(GaugeLater(delay, at, label, verdict, why, word));
+                StartCoroutine(GaugeLater(delay, at, label, verdict, why, word, shot, box));
                 delay += 0.35f;
             }
         }
 
-        System.Collections.IEnumerator GaugeLater(float wait, Vector3 at, string label, string verdict, string why, string word)
+        System.Collections.IEnumerator GaugeLater(float wait, Vector3 at, string label, string verdict, string why, string word, Snapshot shot, int[] box)
         {
             yield return new WaitForSeconds(wait);
             var head = Camera.main.transform.position;
@@ -82,6 +82,7 @@ namespace FurSight
             g.KeepOpen();
             _gauges.Add(g);
             Sfx.Pin(at);
+            Ripple.On(shot, box, Theme.For(verdict).main);
         }
 
         async Task StickerOn(VerdictCard card, string photo)
@@ -141,6 +142,7 @@ namespace FurSight
                 string q = (string)res["question"], answer = (string)res["answer"], about = (string)res["about"], verdict = (string)res["verdict"];
                 var box = res["box"]?.Type == JTokenType.Array ? res["box"].ToObject<int[]>() : null;
                 var at = box != null && box.Length == 4 ? PetCamera.Instance.Locate(_askShot, box) : InFront();
+                if (box != null && box.Length == 4) Ripple.On(_askShot, box, Theme.Grape);
                 string kind = verdict == "safe" || verdict == "caution" || verdict == "toxic" || verdict == "vet" ? verdict : "answer";
                 string title = string.IsNullOrEmpty(about) ? PetProfile.Current.petName : about;
                 if (res["needs"]?.Type == JTokenType.Object)
