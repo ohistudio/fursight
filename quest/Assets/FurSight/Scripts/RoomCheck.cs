@@ -118,14 +118,8 @@ namespace FurSight
             _busy = false;
         }
 
-        // the live depth along the ray through the middle of its outline; without depth, the snapshot's grid
-        static Vector3 Place(Snapshot shot, int[] box)
-        {
-            var c = new Vector2((box[0] + box[2]) / 2000f, 1f - (box[1] + box[3]) / 2000f);
-            var ray = shot.Ray(c);
-            float d = PetCamera.Instance.DepthAlong(ray);
-            return d > 0f ? ray.GetPoint(Mathf.Clamp(d - 0.03f, 0.15f, 4f)) : shot.WorldPoint(box, 1.2f);
-        }
+        // at the live depth through its outline (PetCamera.Locate); without depth, the snapshot's grid
+        static Vector3 Place(Snapshot shot, int[] box) => PetCamera.Instance.Locate(shot, box, 1.2f);
 
         // SAM can return the same thing for two names ("sideboard plants", "desk plants"), so take its first outline
         // whose middle isn't one already pinned. 0-1 from the top left -> [x1,y1,x2,y2] on the 0-1000 grid.

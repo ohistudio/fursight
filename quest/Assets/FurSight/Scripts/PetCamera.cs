@@ -169,6 +169,7 @@ namespace FurSight
                     if (_depth != null && _depth.Raycast(ray, out var hit, 4f)) shot.gridDepth[i] = Vector3.Distance(ray.origin, hit.point);
 #endif
                 }
+            if (showScan) StartCoroutine(Scan(shot));
             return shot;
         }
 
@@ -179,6 +180,63 @@ namespace FurSight
             if (_depth != null && _depth.Raycast(ray, out var hit, 4f)) return Vector3.Distance(ray.origin, hit.point);
 #endif
             return -1f;
+        }
+
+        // Where something in the picture is in the room, at the live depth. Five rays through its box (the middle,
+        // and four points a quarter of the way in) and the median of those that hit: a thin thing (a cable, a
+        // strawberry stem) lets one ray slip past to the wall behind, and the median ignores it. Without depth, the
+        // snapshot's own grid. The point sits just in front of the surface, along the ray through the middle.
+        public Vector3 Locate(Snapshot shot, int[] box, float fallback = 0.6f)
+        {
+            var c = new Vector2((box[0] + box[2]) / 2000f, 1f - (box[1] + box[3]) / 2000f);
+            float qx = (box[2] - box[0]) / 4000f, qy = (box[3] - box[1]) / 4000f;
+            var hits = new System.Collections.Generic.List<float>();
+            foreach (var v in new[] { c, c + new Vector2(-qx, qy), c + new Vector2(qx, qy), c + new Vector2(-qx, -qy), c + new Vector2(qx, -qy) })
+            {
+                float d = DepthAlong(shot.Ray(v));
+                if (d > 0f) hits.Add(d);
+            }
+            if (hits.Count == 0) return shot.WorldPoint(box, fallback);
+            hits.Sort();
+            float m = hits.Count % 2 == 1 ? hits[hits.Count / 2] : (hits[hits.Count / 2 - 1] + hits[hits.Count / 2]) / 2f;
+            return shot.Ray(c).GetPoint(Mathf.Clamp(m - 0.02f, 0.15f, 4f));
+        }
+
+        // A capture shows its depth: a sweep of small dots landing on the real surfaces the camera measured,
+        // from the middle outwards, then fading. Only where there's live depth.
+        public bool showScan = true;
+        System.Collections.IEnumerator Scan(Snapshot shot)
+        {
+            const int Cols = 16, Rows = 12;
+            var root = new GameObject("Depth scan").transform;
+            var head = Camera.main != null ? Camera.main.transform.position : shot.pose.position;
+            var dots = new System.Collections.Generic.List<(Transform t, float delay)>();
+            for (int y = 0; y < Rows; y++)
+                for (int x = 0; x < Cols; x++)
+                {
+                    var v = new Vector2((x + 0.5f) / Cols, (y + 0.5f) / Rows);
+                    var ray = shot.Ray(v);
+                    float d = DepthAlong(ray);
+                    if (d <= 0f) continue;
+                    var p = ray.GetPoint(d - 0.01f);
+                    var dot = Shapes.Make("Dot", root, Shapes.Circle(0.005f, 12), Theme.Grape, Vector3.zero).transform;
+                    dot.position = p;
+                    dot.rotation = Quaternion.LookRotation(p - head);
+                    dot.localScale = Vector3.zero;
+                    dots.Add((dot, (v - new Vector2(0.5f, 0.5f)).magnitude * 0.5f));
+                }
+            if (dots.Count == 0) { Destroy(root.gameObject); yield break; }
+            for (float t = 0f; t < 1.6f; t += Time.deltaTime)
+            {
+                foreach (var (dt, delay) in dots)
+                {
+                    float k = t - delay, d = Vector3.Distance(head, dt.position);
+                    float s = k <= 0f ? 0f : k < 0.15f ? k / 0.15f : k < 0.7f ? 1f : Mathf.Max(0f, 1f - (k - 0.7f) / 0.4f);
+                    dt.localScale = Vector3.one * s * Mathf.Clamp(d, 0.4f, 3f);   // the same size to the eye, near or far
+                }
+                yield return null;
+            }
+            Destroy(root.gameObject);
         }
 
         Rect _crop = new Rect(0f, 0f, 1f, 1f);

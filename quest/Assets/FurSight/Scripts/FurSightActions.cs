@@ -49,6 +49,41 @@ namespace FurSight
             room.Run();
         }
 
+        // "Hay: 40% left, 60% eaten since 08:10" on the rack itself; green when there's plenty, amber, red to top up
+        readonly System.Collections.Generic.List<VerdictCard> _gauges = new System.Collections.Generic.List<VerdictCard>();
+        void ShowLevels(JArray marks, Snapshot shot)
+        {
+            foreach (var g in _gauges) if (g != null) g.Dismiss();
+            _gauges.Clear();
+            float delay = 0.6f;
+            foreach (var m in marks)
+            {
+                var box = m["box"]?.ToObject<int[]>();
+                if (box == null || box.Length != 4) continue;
+                int level = (int)m["level"];
+                string kind = (string)m["kind"], label = (string)m["label"];
+                string verdict = level >= 50 ? "safe" : level >= 20 ? "caution" : "toxic";
+                string word = kind == "hay" ? $"{level}% left" : $"{level}% full";
+                string why = m["gone"]?.Type == JTokenType.Integer ? $"{(int)m["gone"]}% eaten since {(string)m["since"]}, when it was {(int)m["from"]}%."
+                    : m["from"]?.Type == JTokenType.Integer ? $"It was {(int)m["from"]}% at {(string)m["since"]}." : "No pet cam reading from this morning to compare.";
+                if (level < 20) why += kind == "water" ? " Time to fill it." : kind == "hay" ? " Time for more hay." : " Top it up.";
+                var at = PetCamera.Instance.Locate(shot, box);
+                StartCoroutine(GaugeLater(delay, at, label, verdict, why, word));
+                delay += 0.35f;
+            }
+        }
+
+        System.Collections.IEnumerator GaugeLater(float wait, Vector3 at, string label, string verdict, string why, string word)
+        {
+            yield return new WaitForSeconds(wait);
+            var head = Camera.main.transform.position;
+            var g = VerdictCard.Verdict(at, label, verdict, why, null, false, word);
+            g.transform.localScale = Vector3.one * 0.72f * Mathf.Clamp(Vector3.Distance(head, at) / 0.7f, 1f, 3f);
+            g.KeepOpen();
+            _gauges.Add(g);
+            Sfx.Pin(at);
+        }
+
         async Task StickerOn(VerdictCard card, string photo)
         {
             try
@@ -97,6 +132,7 @@ namespace FurSight
                     audio = System.Convert.ToBase64String(wav),
                     pet = PetProfile.Current.ForServer(),
                     from = "quest",
+                    tz = FoodCheck.TzMinutes,
                     followup = _pending,
                 }, 60);
                 _pending = null;
@@ -104,7 +140,7 @@ namespace FurSight
                 if (_status != null) _status.Dismiss();
                 string q = (string)res["question"], answer = (string)res["answer"], about = (string)res["about"], verdict = (string)res["verdict"];
                 var box = res["box"]?.Type == JTokenType.Array ? res["box"].ToObject<int[]>() : null;
-                var at = box != null && box.Length == 4 ? _askShot.WorldPoint(box) : InFront();
+                var at = box != null && box.Length == 4 ? PetCamera.Instance.Locate(_askShot, box) : InFront();
                 string kind = verdict == "safe" || verdict == "caution" || verdict == "toxic" || verdict == "vet" ? verdict : "answer";
                 string title = string.IsNullOrEmpty(about) ? PetProfile.Current.petName : about;
                 if (res["needs"]?.Type == JTokenType.Object)
@@ -118,10 +154,15 @@ namespace FurSight
                 _last = VerdictCard.Verdict(at, title, kind, answer, string.IsNullOrEmpty(asked) ? null : "<color=#9A98A6>" + asked.TrimStart('\n') + "</color>");
                 var marks = box != null && box.Length == 4 ? new System.Collections.Generic.List<HubClient.Mark> { new HubClient.Mark { b = box, v = kind, t = title } } : null;
                 HubClient.Diary("ask", string.IsNullOrEmpty(q) ? title : q, answer, kind == "answer" ? null : kind, _askShot.jpeg, marks);
-                // it found him on a pet cam: his sticker, from that picture, on the answer
+                // his sticker on the answer: from the pet cam picture where it found him, else from what you're
+                // looking at (if he's in it; SAM finds nothing otherwise and there's no sticker)
                 var snap = res["snapshot"] as JObject;
                 if (snap != null && snap["found"]?.Type == JTokenType.Boolean && (bool)snap["found"] && !string.IsNullOrEmpty((string)snap["image"]))
                     _ = StickerOn(_last, (string)snap["image"]);
+                else
+                    _ = StickerOn(_last, "data:image/jpeg;base64," + System.Convert.ToBase64String(_askShot.jpeg));
+                // hay, pellets and water measured in what you're looking at: a gauge pinned on each, at its depth
+                if (res["marks"] is JArray lm) ShowLevels(lm, _askShot);
             }
             catch (System.Exception e)
             {

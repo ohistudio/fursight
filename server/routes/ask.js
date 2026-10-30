@@ -28,6 +28,7 @@ const FSRoutine = require("../public/routines.js");
 const FSActivity = require("../public/activity.js");
 const FSClimate = require("../public/climate.js");
 const FSLevels = require("../public/levels.js");
+const { measure } = require("../lib/levels");
 const fed = require("../lib/fed");
 
 const RANK = { safe: 0, caution: 1, toxic: 2 };
@@ -192,6 +193,33 @@ module.exports = handler(async (body, req) => {
       seen.set("levels", { kind: "levels" });
       return { output: { id: "levels", hay: lv.hay, food_bowl: lv.food, water: lv.water, checks_today: lv.readings, last_check: new Date(lv.at).toISOString().slice(11, 16), notes: lv.reasons, simulated: lv.simulated },
         step: { tool: "levels", label: `Checked his hay and bowls: ${lv.hay ? `${lv.hay.gone}% of the hay gone` : "hay not in view"}${lv.water ? `, water ${lv.water.level}%` : ""}` } };
+    },
+  };
+  // the owner is at his cage, looking at it (glasses, Quest, phone): measure what they see, against this morning's
+  // pet cam reading. Levels (how full), not the hay's area: the photo is from a different angle to the pet cam.
+  const levelMarks = [];
+  if (ctx && photo) tools.measure_hay_and_bowls_in_photo = {
+    description: `Measure ${p.name}'s hay, food bowl and water in what the owner is looking at right now (the photo), and compare with this morning's first pet cam reading. Use it when they're at his cage and ask "how much hay has he eaten", "how much water is left", "does he need a top up".`,
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    async run() {
+      const m = await measure(photo, p.name);
+      if (!m.hay.found && !m.food.found && !m.water.found) return { output: { error: "No hay, food bowl or water in the photo. Ask them to look at his cage." }, step: { tool: "levels", label: "Looked for his hay and bowls: not in view" } };
+      // today's pet cam readings, from midnight where the owner is
+      const tz = fed.tzOf(body.tz), now = Date.now(), local = new Date(now + tz * 60e3), start = now - ((local.getUTCHours() * 60 + local.getUTCMinutes()) * 60e3 + local.getUTCSeconds() * 1e3);
+      const today = (await recent(home.token, 200).catch(() => [])).filter((e) => e.kind === "levels" && e.extra && e.at >= start).sort((a, b) => a.at - b.at);
+      const hhmm = (at) => new Date(at + tz * 60e3).toISOString().slice(11, 16);
+      const first = (k) => { const e = today.find((x) => x.extra[k] && x.extra[k].found); return e ? { level: e.extra[k].level, at: hhmm(e.at) } : null; };
+      const out = { id: "photo", now: { hay: m.hay.found ? m.hay.level : null, food_bowl: m.food.found ? m.food.level : null, water: m.water.found ? m.water.level : null },
+        this_morning: { hay: first("hay"), food_bowl: first("food"), water: first("water") }, notes: [m.hay.note, m.food.note, m.water.note].filter(Boolean),
+        simulated_morning: today.some((e) => e.extra.sim) || undefined };
+      for (const [k, label] of [["hay", "Hay"], ["food", "Pellets"], ["water", "Water"]]) {
+        const x = m[k];
+        if (!x.found || !Array.isArray(x.box) || x.box.length !== 4) continue;
+        const f = first(k), gone = f && k === "hay" ? Math.max(0, f.level - x.level) : null;
+        levelMarks.push({ kind: k, label, level: x.level, box: x.box, since: f ? f.at : null, gone, from: f ? f.level : null });
+      }
+      seen.set("photo", { kind: "photo" });
+      return { output: out, step: { tool: "levels", label: `Measured what you're looking at: ${m.said}` } };
     },
   };
   if (ctx) tools.read_calendar = {
@@ -387,5 +415,5 @@ Answers: short and spoken, at most 45 words, no lists, no markdown, no em dashes
   const all = [...pictures.values()];
   // ...or, if it looked through a pet cam at all, the last picture it saw there (unless it looked and he wasn't in view)
   const snapshot = cited.find((x) => x.found) || cited[cited.length - 1] || [...all].reverse().find((x) => x.found) || [...all].reverse().find((x) => x.found !== false) || null;
-  return { question, answer: r.result.answer, about: r.result.about || "", box, verdict: r.result.verdict || "none", evidence: r.result.evidence, looked, steps: ordered, needs: null, snapshot, turns: r.turns, ms, asr_ms };
+  return { question, answer: r.result.answer, about: r.result.about || "", box, marks: levelMarks.length ? levelMarks : undefined, verdict: r.result.verdict || "none", evidence: r.result.evidence, looked, steps: ordered, needs: null, snapshot, turns: r.turns, ms, asr_ms };
 });
