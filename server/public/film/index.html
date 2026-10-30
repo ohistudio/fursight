@@ -74,12 +74,18 @@
   #go span { background: var(--grape); color: #FFFFFF; font: 900 clamp(18px, 2.6vw, 40px) Nunito, sans-serif; padding: .5em 1.2em; border-radius: 999px; box-shadow: 0 .15em 0 var(--grape-lip); }
   #hint { position: absolute; right: 14px; bottom: 10px; font: 800 12px Nunito, sans-serif; color: #B3AEC0; }
   /* placeholders for the real footage */
-  .vid { width: 74%; aspect-ratio: 16 / 9; background: #FFFFFF; border-radius: 36px; box-shadow: 0 8px 0 rgba(43,42,51,.10); display: grid; place-content: center; text-align: center; position: relative; }
-  .vid b { font-size: clamp(30px, 6vw, 104px); font-weight: 900; color: #D9D4E4; letter-spacing: .02em; }
-  .vid p { margin: .2em 0 0; font-size: clamp(13px, 1.7vw, 28px); font-weight: 900; color: var(--ink); }
-  .vid small { display: block; margin-top: .4em; font-size: clamp(10px, 1.1vw, 18px); font-weight: 800; color: var(--muted); }
-  .vid .shot { position: absolute; top: 5%; left: 4%; font: 900 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: #FFFFFF; background: var(--grape); padding: .3em .8em; border-radius: 99px; }
-  .vid .secs { position: absolute; top: 5%; right: 4%; font: 900 clamp(10px, 1.1vw, 18px) Nunito, sans-serif; color: var(--grape-lip); background: #F1EEF6; padding: .3em .8em; border-radius: 99px; }
+  .vids { width: 92%; }
+  .vids h2 { margin: 0 0 2%; display: flex; align-items: center; justify-content: center; gap: .6em; font-size: clamp(18px, 2.8vw, 48px); font-weight: 900; color: var(--ink); }
+  .vids .shot, .vids .secs { font: 900 clamp(9px, 1vw, 16px) Nunito, sans-serif; padding: .3em .8em; border-radius: 99px; }
+  .vids .shot { color: #FFFFFF; background: var(--grape); }
+  .vids .secs { color: var(--grape-lip); background: #F1EEF6; }
+  .vids .row { display: grid; gap: 2%; justify-content: center; }
+  .vids .row[style*="(1,"] { grid-template-columns: min(100%, 72vh * 16 / 9 * .82) !important; }
+  .vid { aspect-ratio: 16 / 9; background: #FFFFFF; border-radius: 28px; box-shadow: 0 8px 0 rgba(43,42,51,.10); display: grid; place-content: center; text-align: center; padding: 4%; }
+  .vid b { font-size: clamp(18px, 3.4vw, 64px); font-weight: 900; color: #D9D4E4; letter-spacing: .02em; }
+  .row[style*="(1,"] .vid b { font-size: clamp(30px, 6vw, 104px); }
+  .vid p { margin: .2em 0 0; font-size: clamp(11px, 1.5vw, 26px); font-weight: 900; color: var(--ink); }
+  .vid small { display: block; margin-top: .4em; font-size: clamp(9px, 1vw, 17px); font-weight: 800; color: var(--muted); }
   /* one Muse Spark call, step by step */
   .call { width: 92%; display: grid; grid-template-columns: 1fr auto 1.15fr auto 1.25fr; align-items: center; gap: 1.6%; }
   .call h2 { grid-column: 1 / -1; margin: 0 0 1.5%; text-align: center; font-size: clamp(20px, 3.2vw, 54px); font-weight: 900; color: var(--ink); }
@@ -239,36 +245,37 @@ async function story(r) {
   show("cardHay"); show("cardTray"); sfx("chime", .5); await caption("And it notices when something changes.", 2400, r);
   for (const id of ["cardBerry", "cardAvo", "cardCable", "cardHay", "cardTray", "cablering", "avoglow"]) show(id, false);
 
-  // the real thing: placeholders for the footage, in order
+  // the real thing: placeholders for the footage, in order. Each: a title, the boxes (one per clip, side by
+  // side: [label, what to film]), seconds, and the caption over it. null = the Muse Spark call.
   const shots = [
-    ["The pet cam", "Xiaosi on his pet cam; the diary filling up as he eats, flops and grooms", 12000, "Here he is for real. His pet cam keeps his diary as he goes."],
-    ["Ray-Ban Display", "Hold up a strawberry; the verdict appears on the glasses", 13000, "Hold a treat up to your Ray-Ban Display. Can he have it?"],
-    null,   // the Muse Spark call
-    ["Meta Quest: room check", "Look round the room; cards pinned on what he could chew", 15000, "On Quest, check the room. Every hazard is pinned where it is."],
-    ["Meta Quest: food in hand", "Hold food up; the answer sits on your hand and follows it", 10000, "Hold food up, and the answer sits right on your hand."],
-    ["Phone: away from home", "A sticker alert when he flops; ask \"what's he doing?\" and get his sticker back", 15000, "Away from home? A sticker when he flops, and you can ask how he is."],
-    ["The app: diary and stats", "Scroll his diary (checks with their marked-up photos), then his stats: weight, tray visits, hay, the calendar", 14000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
+    ["His three pet cams", [["Cage cam", "Eating in his cage"], ["Litter cam", "On the litter tray"], ["Free-roam cam", "Roaming the room"]], 8000, "Three pet cams: his cage, his litter tray, and the room he roams."],
+    ["The free-roam cam finds him", [["Free-roam cam", "Wide view of the room; FurSight finds him and zooms in, then pan and zoom with the cam controls"]], 8000, "When he roams, the cam finds him with SAM 3.1 and zooms in."],
+    ["On the FurSight Tray", [["Litter cam", "He hops on; his weight and the visit appear (the scale is simulated in this build)"]], 7000, "He hops on the tray: weighed, and the visit logged."],
+    ["Hay through the day", [["Morning", "Full rack · SAM: hay 100%"], ["Midday", "Him eating · SAM: 60%"], ["Evening", "Low rack · SAM: 20%"]], 8000, "SAM 3.1 measures his hay through the day. Less hay is the first sign."],
+    ["Food, pellets and water", [["Bowls", "Labels on hay, pellets and water updating as levels drop"]], 6000, "And his pellets and water, so you know when to top up."],
+    ["Ray-Ban Display: food check", [["Ray-Ban Display", "Hold up a strawberry; the verdict on the glasses"]], 10000, "Hold a treat up to your Ray-Ban Display. Can he have it?"],
+    null,
+    ["Away from home", [["Ray-Ban Display", "\"How is he?\" Spoken answer with his sticker"], ["Meta Quest", "Watching his pet cam stream in a window"]], 11000, "Away from home, ask your glasses how he is, or watch his cam on Quest."],
+    ["Meta Quest: room check", [["Meta Quest", "Look round the room; cards pinned on what he could chew"]], 11000, "On Quest, check the room. Every hazard is pinned where it is."],
+    ["Meta Quest: food in hand", [["Meta Quest", "Hold food up; the answer sits on your hand and follows it"]], 7000, "Hold food up, and the answer sits right on your hand."],
+    ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops"]], 7000, "When he flops, you get a sticker."],
+    ["The app: diary and stats", [["Web app", "Scroll the diary (marked-up check photos), then weight, tray visits, hay, his week"]], 9000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
   ];
+  const total = shots.filter(Boolean).length;
   let n = 0;
   for (const sh of shots) {
     $("capText").classList.remove("on"); sfx("whoosh", .5);
     if (!sh) { await museCall(r); continue; }
     n++;
-    const [what, film, ms, line] = sh;
-    extra(`<div class="vid"><span class="shot">Shot ${n} of 6</span><span class="secs">${Math.round(ms / 1000)} s</span><div><b>VID HERE</b><p>${what}</p><small>${film}</small></div></div>`);
+    const [what, boxes, ms, line] = sh;
+    extra(`<div class="vids"><h2>${what}<span class="shot">Shot ${n} of ${total}</span><span class="secs">${Math.round(ms / 1000)} s</span></h2>
+      <div class="row" style="grid-template-columns:repeat(${boxes.length},1fr)">${boxes.map(([l, f]) => `<div class="vid"><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div></div>`).join("")}</div></div>`);
     await wait(300, r); await caption(line, ms - 520, r);
   }
   $("capText").classList.remove("on");
 
-  // where it runs, and on what
+  // the models
   sfx("whoosh", .6);
-  extra(`<div class="devs"><h2>Works today on</h2>
-    <div class="dev"><div class="pic"><img class="stk" src="/meta/ray-ban-display.png" alt="Meta Ray-Ban Display"></div><b>Meta Ray-Ban Display</b><p>Hold up food, ask about him, peek at the pet cam</p></div>
-    <div class="dev"><div class="pic"><img class="stk" src="/meta/quest-3.png" alt="Meta Quest 3" style="animation-delay:-.9s"></div><b>Meta Quest</b><p>Room checks, food cards on your hand, spoken notes</p></div>
-    <div class="dev"><div class="pic"><div class="phone"><div><img src="${S.stickers.bum.src}" alt=""></div></div></div><b>Your phone</b><p>His diary, alerts with stickers, his week</p></div>
-    <div class="credit">Product images: Meta</div></div>`);
-  await wait(300, r); await caption("Meta Ray-Ban Display, Meta Quest and your phone.", 3600, r);
-  $("capText").classList.remove("on"); sfx("whoosh", .6);
   extra(`<div class="models"><h2>Built on Meta's models</h2>
     <div class="model"><b>Muse Spark</b><p>Food verdicts, what he's doing on the pet cam, hay levels, room checks, the Ask agent, his week</p></div>
     <div class="model" style="border-top-color:var(--sky,#2EA8F5)"><b>SAM 3.1</b><p>Finds him on every cam, cuts out his stickers, outlines room hazards, measures the hay</p></div>
@@ -278,25 +285,21 @@ async function story(r) {
   await wait(300, r); await caption("All of it runs on Meta's models, through the Meta Model API.", 4200, r);
   extra(""); await wait(500, r);
 
-  // his week, on a card
-  pose("stretch");
-  for (const im of document.querySelectorAll("image.wk")) { const src = S.stickers[im.dataset.k].src; im.setAttribute("href", src); im.setAttributeNS("http://www.w3.org/1999/xlink", "href", src); }
-  show("cardWeek"); sfx("whoosh", .6); await Promise.all([breathe(3000, r), caption("And every week, his week on a card: flops, weight, the lot.", 3000, r)]);
-  show("cardWeek", false);
+  extra(""); pose("stretch");
   await Promise.all([breathe(2600, r), caption("Treat them. Without the worry.", 2600, r)]);
   $("capText").classList.remove("on");
 
   // the kit, and what it would cost as a product
   sfx("whoosh", .6);
   extra(`<div class="kitrow"><img class="kit" src="/kit/kit.svg" alt=""><figure><img src="/kit/tray.jpg" alt=""><figcaption>The FurSight Tray, a concept render</figcaption></figure></div>`);
-  await wait(400, r); await caption("The kit: two cams and the FurSight Tray. Set it up once.", 4200, r);
+  await wait(400, r); await caption("The kit: two cams and the FurSight Tray. Set it up once.", 3600, r);
   $("capText").classList.remove("on"); sfx("whoosh", .6);
   extra(`<div class="price"><h2>If FurSight were a product</h2>
     <div class="tier hot"><b>The kit</b><div class="n">$249</div><p>Two FurSight Cams, the FurSight Tray, and 3 months of FurSight Plus</p></div>
     <div class="tier"><b>Free</b><div class="n">$0</div><p>Live view, his weight and tray visits, the diary and the calendar</p></div>
     <div class="tier"><b>FurSight Plus</b><div class="n">$7.99<small> a month</small></div><p>or $69 a year. The AI: food checks, Ask, early warnings, stickers and his weekly card</p></div>
     <div class="foot">Rough concept pricing. In this hackathon build the Tray's sensors are simulated; the cams are real.</div></div>`);
-  await wait(5200, r);
+  await wait(4500, r);
   sfx("whoosh", .6);
   extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:54%"><h2>Where it could go next</h2>
     <div class="dev soon"><div class="pic"><img class="stk" src="/meta/vr-glasses.png" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
@@ -340,7 +343,7 @@ async function museCall(r) {
   const lines = J.split("\n"), pre = $("json");
   for (let k = 1; k <= lines.length; k++) { pre.innerHTML = lines.slice(0, k).join("\n"); await wait(260, r); }
   await wait(500, r); on("c4"); sfx("chime", .55);
-  await caption("Then it's a card on the food, on your glasses, Quest or phone.", 5600, r);
+  await caption("Then it's a card on the food, on your glasses, Quest or phone.", 4000, r);
 }
 
 let t0 = 0;
