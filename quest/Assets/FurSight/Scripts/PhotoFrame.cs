@@ -7,8 +7,8 @@ namespace FurSight
     // Take a photo like framing with your fingers: pinch with both hands and a viewfinder appears between
     // your pinches (corner brackets, a dotted edge, a bead on each pinch). Move your hands to size and aim it,
     // let go to take it: a shutter flash, and just what's inside the frame goes to the diary with a note.
-    // Works any time both hands pinch; the menu's Photo button shows how. Without tracked hands (controllers,
-    // or the editor) Photo takes the whole view instead. Adapted from Roll's TextureGrab.
+    // Only after pressing Photo on the hand menu (for 20 s, or until a photo is taken): a two-hand pinch is easy
+    // to make by accident. Without tracked hands (controllers, or the editor) Photo takes the whole view instead. Adapted from Roll's TextureGrab.
     public class PhotoFrame : MonoBehaviour
     {
         static PhotoFrame _instance;
@@ -17,7 +17,8 @@ namespace FurSight
         readonly bool[] _pinch = new bool[2];
         readonly Vector3[] _last = new Vector3[2];
         readonly Vector3[] _corners = new Vector3[4];
-        float _bothFor, _apartFor, _lostFor, _startedAt;
+        float _bothFor, _apartFor, _lostFor, _startedAt, _armedUntil;
+        const float ArmedFor = 20f;
         bool _framing;
         Transform _root;
         readonly Transform[] _arms = new Transform[8];
@@ -35,6 +36,7 @@ namespace FurSight
             if (me == null || !hands) { FurSightActions.Instance?.TakePhoto(); return; }
             var head = Camera.main.transform;
             if (me._hint != null) me._hint.Dismiss();
+            me._armedUntil = Time.time + ArmedFor;
             me._hint = VerdictCard.Verdict(head.position + head.forward * 0.5f + Vector3.up * 0.05f, "Frame a photo", "none",
                 "Pinch with both hands, pull them apart to frame it, then let go.", null);
         }
@@ -56,8 +58,9 @@ namespace FurSight
             bool both = _pinch[0] && _pinch[1];
             if (!_framing)
             {
-                _bothFor = both && tracked && Vector3.Distance(_last[0], _last[1]) > 0.08f ? _bothFor + dt : 0f;
-                if (_bothFor > 0.08f) { _framing = true; _startedAt = Time.time; _apartFor = _lostFor = 0f; Sfx.Tick((_last[0] + _last[1]) / 2f); if (_hint != null) _hint.Dismiss(); }
+                if (Time.time > _armedUntil) { _bothFor = 0f; if (_hint != null) { _hint.Dismiss(); _hint = null; } return; }
+                _bothFor = both && tracked && Vector3.Distance(_last[0], _last[1]) > 0.1f ? _bothFor + dt : 0f;
+                if (_bothFor > 0.2f) { _framing = true; _startedAt = Time.time; _apartFor = _lostFor = 0f; Sfx.Tick((_last[0] + _last[1]) / 2f); if (_hint != null) _hint.Dismiss(); }
                 return;
             }
             _lostFor = tracked ? 0f : _lostFor + dt;
@@ -166,7 +169,7 @@ namespace FurSight
 
         void End()
         {
-            _framing = false; _bothFor = 0f;
+            _framing = false; _bothFor = 0f; _armedUntil = 0f;
             if (_root != null) { Destroy(_root.gameObject); _root = null; _dots.Clear(); }
         }
     }
