@@ -219,6 +219,7 @@ const hashT = /^#t=(fs1\.[\w.-]+)$/.exec(location.hash);
 if (hashT) { store.set("fs.token", hashT[1]); history.replaceState(null, "", location.pathname + location.search); }
 let token = store.get("fs.token"), me = null, tab = store.get("fs.tab") || "today";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const p0name = () => (me && me.pets && me.pets[0] ? me.pets[0].name : "His");
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
 
 async function hub(path, opt = {}) {
@@ -468,7 +469,7 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<label class="btn" for="foodPhoto">Can ${esc(me.pets[0].name)} eat this?</label><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+  $app.innerHTML = `<div class="stack">${header()}<label class="btn" for="foodPhoto">Can ${esc(me.pets[0].name)} eat this?</label><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
@@ -487,6 +488,15 @@ async function today() {
   if (!$l) return;   // you've moved to another tab while this loaded
   // live: his sticker doing what the pet cam last saw (only on the everything view)
   const st = !kinds && FSLive.state(me, all), stk = FSLive.sticker(all), p0 = me.pets[0];
+  // treats: the "OK again" days from We fed him this, the ones that have come (the last 3 days) and the ones still to wait for
+  if (!kinds) {
+    const today = FSCal.key(new Date()), back = FSCal.key(new Date(Date.now() - 3 * 864e5)), fedEvs = FSCal.events(all).filter((ev) => ev.extra.fed);
+    const ready = fedEvs.filter((ev) => ev.extra.date <= today && ev.extra.date >= back), waiting = fedEvs.filter((ev) => ev.extra.date > today).sort((a, b) => (a.extra.date < b.extra.date ? -1 : 1));
+    const dayName = (k) => (k === today ? "today" : FSCal.day(k).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }));
+    if (ready.length || waiting.length) document.getElementById("treatsNow").innerHTML = `<div class="card stack pop"><h3>${esc(p0name())}'s treats</h3>
+      ${ready.map((ev) => `<div class="row" style="gap:10px"><span class="chip" style="background:var(--fern);color:#fff;border:0;flex:none">OK again</span><b style="flex:1;min-width:0">${esc(cap(ev.extra.fed))}</b><span class="when">since ${esc(dayName(ev.extra.date))}</span></div>`).join("")}
+      ${waiting.slice(0, 5).map((ev) => `<div class="row" style="gap:10px"><span class="chip" style="background:var(--sun);color:var(--ink);border:0;flex:none">Not yet</span><b style="flex:1;min-width:0">${esc(cap(ev.extra.fed))}</b><span class="when">OK ${esc(dayName(ev.extra.date))}</span></div>`).join("")}</div>`;
+  }
   // hay and bowls today, from the pet cam's checks
   const lv = !kinds && FSLevels.summary(all);
   if (lv && lv.has) {
