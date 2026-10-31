@@ -1546,18 +1546,20 @@ async function roomCheck(req) {
   $o.innerHTML = `<div class="center stack">${bean("thinking", 80)}<p class="muted">Looking around the room…</p></div>`;
   try {
     const r = await api("/api/room", req), src = req.image || r.image;
-    const colour = { high: "#FF4D5E", medium: "#FFB627", low: "#2FA8F5" }, icon = { chew: "Chew", toxic: "Toxic", cable: "Cable", swallow: "Swallow", stuck: "Stuck", stain: "Pee spot" };
+    const colour = { high: "#FF4D5E", medium: "#FFB627", low: "#2FA8F5", good: "#3DBE6B" }, icon = { chew: "Chew", toxic: "Toxic", cable: "Cable", swallow: "Swallow", stuck: "Stuck", stain: "Pee spot", good: "Good for him" };
+    // the hazards, then what is already good for him (green), numbered on from them
+    const good = (r.good || []).map((g) => ({ ...g, risk: "good", kind: "good" })), all = r.hazards.concat(good);
     const pic = await new Promise((ok) => { const i = new Image(); i.onload = () => {
       const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
       const lw = Math.max(3, i.width / 220); g.lineWidth = lw; g.font = `900 ${Math.round(lw * 7)}px Nunito, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
-      r.hazards.forEach((h, n) => { g.strokeStyle = colour[h.risk]; for (const b of h.boxes) {
+      all.forEach((h, n) => { g.strokeStyle = colour[h.risk]; for (const b of h.boxes) {
         const cx = (b.x0 + b.x1) / 2 * i.width, cy = (b.y0 + b.y1) / 2 * i.height;
         g.beginPath(); g.ellipse(cx, cy, (b.x1 - b.x0) / 2 * i.width + lw * 2, (b.y1 - b.y0) / 2 * i.height + lw * 2, 0, 0, Math.PI * 2); g.stroke();
         g.fillStyle = colour[h.risk]; g.beginPath(); g.arc(cx, (b.y0 * i.height) - lw * 2, lw * 5, 0, Math.PI * 2); g.fill(); g.fillStyle = "#fff"; g.fillText(String(n + 1), cx, (b.y0 * i.height) - lw * 2);
       } }); ok(c.toDataURL("image/jpeg", 0.85)); }; i.src = src; });
-    $o.innerHTML = `<img src="${pic}" alt="Room with ${r.hazards.length} things ringed" style="width:100%;border-radius:14px">
-      ${r.hazards.map((h, n) => `<div class="hz"><i style="background:${colour[h.risk]}">${n + 1}</i><div><b>${esc(h.label)}</b> <span class="chip">${icon[h.kind] || h.kind}</span><br><span class="muted">${esc(h.why)}</span><br><span>Fix: ${esc(h.fix)}</span></div></div>`).join("")}`;
-    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "room", title: `Room check: ${r.hazards.length} things to sort`, note: r.hazards.slice(0, 5).map((h) => h.label).join(", "), image: pic, pet: name, extra: { hazards: r.hazards.map((h) => ({ label: h.label, kind: h.kind, risk: h.risk, fix: h.fix })) } }) }).catch(() => {});
+    $o.innerHTML = `<img src="${pic}" alt="Room with ${all.length} things ringed" style="width:100%;border-radius:14px">
+      ${all.map((h, n) => `<div class="hz"><i style="background:${colour[h.risk]}">${n + 1}</i><div><b>${esc(h.label)}</b> <span class="chip">${icon[h.kind] || h.kind}</span><br><span class="muted">${esc(h.why)}</span>${h.fix ? `<br><span>Fix: ${esc(h.fix)}</span>` : ""}</div></div>`).join("")}`;
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "room", title: `Room check: ${r.hazards.length} things to sort${good.length ? `, ${good.length} good` : ""}`, note: all.slice(0, 6).map((h) => h.label).join(", "), image: pic, pet: name, extra: { hazards: r.hazards.map((h) => ({ label: h.label, kind: h.kind, risk: h.risk, fix: h.fix })), good: good.map((g) => ({ label: g.label })) } }) }).catch(() => {});
   } catch (e) { $o.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
 }
 

@@ -260,10 +260,16 @@ namespace FurSight
             Directory.CreateDirectory(dir);
             File.WriteAllBytes(Path.Combine(dir, stamp + ".jpg"), shot.jpeg);   // the photo is kept even if the note fails
             var cardAt = at ?? InFront();
+            // the picture you took, straight away on the "writing a note" card, and his sticker looked for alongside
+            string dataUrl = "data:image/jpeg;base64," + System.Convert.ToBase64String(shot.jpeg);
+            var pic = new Texture2D(2, 2);
+            if (!pic.LoadImage(shot.jpeg)) pic = null;
+            var sticker = Sticker.Make(dataUrl);
             _status = VerdictCard.Checking(cardAt - Vector3.up * 0.04f, "Writing a diary note", "Saving", Theme.Sky);
+            _status.AddPhoto(pic);
             try
             {
-                var res = await FurSightApi.Post("/api/photo", new { image = "data:image/jpeg;base64," + System.Convert.ToBase64String(shot.jpeg), pet = PetProfile.Current.ForServer() });
+                var res = await FurSightApi.Post("/api/photo", new { image = dataUrl, pet = PetProfile.Current.ForServer() });
                 File.WriteAllText(Path.Combine(dir, stamp + ".json"), res.ToString());
                 if (_status != null) _status.Dismiss();
                 _last = VerdictCard.Verdict(cardAt, (string)res["title"], "saved", (string)res["note"], null);
@@ -275,6 +281,10 @@ namespace FurSight
                 if (_status != null) _status.Dismiss();
                 _last = VerdictCard.Verdict(cardAt, "Photo saved", "saved", "Couldn't write a note just now; the picture is in the diary.", null);
             }
+            _last.AddPhoto(pic);
+            // him cut out, if he's in it (no sticker when he isn't)
+            try { var tex = await sticker; if (tex != null && _last != null) _last.AddSticker(tex); }
+            catch (System.Exception e) { Debug.LogWarning("[FurSight] sticker: " + e.Message); }
             finally { Busy = false; }
         }
 

@@ -61,7 +61,7 @@ namespace FurSight
                     image = "data:image/jpeg;base64," + System.Convert.ToBase64String(shot.jpeg),
                 }, 110);
                 Debug.Log($"[FurSight] room check {Time.realtimeSinceStartup - t0:F1}s: {res.ToString(Newtonsoft.Json.Formatting.None)}");
-                StartCoroutine(Show(res["hazards"] as JArray, shot));
+                StartCoroutine(Show(res["hazards"] as JArray, res["good"] as JArray, shot));
             }
             catch (System.Exception e)
             {
@@ -73,11 +73,13 @@ namespace FurSight
             }
         }
 
-        IEnumerator Show(JArray hazards, Snapshot shot)
+        IEnumerator Show(JArray hazards, JArray good, Snapshot shot)
         {
             if (_checking != null) { _checking.Dismiss(); _checking = null; }
             var head = Camera.main.transform;
-            if (hazards == null || hazards.Count == 0)
+            hazards ??= new JArray();
+            good ??= new JArray();
+            if (hazards.Count == 0 && good.Count == 0)
             {
                 _cards.Add(VerdictCard.Verdict(head.position + head.forward * checkingDistance, "Looks clear", "safe",
                     $"Nothing here for {PetProfile.Current.petName} to chew or swallow.", null));
@@ -91,32 +93,55 @@ namespace FurSight
             int shown = 0;
             foreach (var h in hazards)
             {
-                var box = Box(h["boxes"] as JArray, used);
-                if (box == null) continue;   // nothing left that isn't already pinned (two names for one plant)
-                shown++;
-                marks.Add(new HubClient.Mark { b = box, v = (string)h["risk"], t = (string)h["label"], n = shown });
-                names.Add($"{shown} {h["label"]}");
-                var point = Place(shot, box);
                 string risk = (string)h["risk"];
-                string verdict = risk == "high" ? "toxic" : risk == "medium" ? "caution" : "low";
-                // far cards are bigger so they read the same as one at arm's length
-                float scale = Mathf.Clamp(Vector3.Distance(head.position, point) / 0.7f, 1f, 3.2f);
-                // two things close together: lift the later card clear of the first
-                foreach (var p in placed) if (Vector3.Distance(p, point) < 0.22f * scale) point += Vector3.up * 0.2f * scale;
-                placed.Add(point);
-                var card = VerdictCard.Verdict(point, (string)h["label"], verdict, (string)h["why"],
-                    string.IsNullOrEmpty((string)h["fix"]) ? null : "<color=#2B2A33>Fix:</color> " + (string)h["fix"], false, Word((string)h["kind"], risk));
-                card.transform.localScale = Vector3.one * 0.72f * scale;
-                card.KeepOpen();
-                _cards.Add(card);
-                Sfx.Pin(point);
-                Ripple.On(shot, box, risk == "high" ? Theme.Coral : risk == "medium" ? Theme.Sun : Theme.Sky);
-                if (risk == "high") Sfx.Nope(point); else if (risk == "medium") Sfx.Treat(point);
+                var card = Pin(h, risk, risk == "high" ? "toxic" : risk == "medium" ? "caution" : "low", Word((string)h["kind"], risk),
+                    string.IsNullOrEmpty((string)h["fix"]) ? null : "<color=#2B2A33>Fix:</color> " + (string)h["fix"],
+                    risk == "high" ? Theme.Coral : risk == "medium" ? Theme.Sun : Theme.Sky, shot, head, placed, used, marks, names, ref shown);
+                if (card == null) continue;
+                if (risk == "high") Sfx.Nope(card.transform.position); else if (risk == "medium") Sfx.Treat(card.transform.position);
                 StartCoroutine(Juice.Buzz(risk == "high" ? 0.5f : 0.2f, 0.05f));
                 yield return new WaitForSeconds(cardGap);
             }
-            HubClient.Diary("room", $"Room check: {shown} things to sort", string.Join(", ", names), "caution", shot.jpeg, marks);
+            // then what's already good for him, in green
+            int goodShown = 0;
+            foreach (var g in good)
+            {
+                var card = Pin(g, "safe", "safe", "Good for him", null, Theme.Fern, shot, head, placed, used, marks, names, ref shown);
+                if (card == null) continue;
+                goodShown++;
+                Sfx.Safe(card.transform.position);
+                StartCoroutine(Juice.Buzz(0.15f, 0.04f));
+                yield return new WaitForSeconds(cardGap);
+            }
+            int toSort = shown - goodShown;
+            HubClient.Diary("room", $"Room check: {toSort} things to sort" + (goodShown > 0 ? $", {goodShown} good" : ""), string.Join(", ", names),
+                toSort > 0 ? "caution" : "safe", shot.jpeg, marks);
             _busy = false;
+        }
+
+        // one card pinned on the real thing at its depth, numbered like the diary picture's marks; null if SAM's
+        // outline is one already pinned
+        VerdictCard Pin(JToken h, string markVerdict, string verdict, string word, string extra, Color ripple, Snapshot shot, Transform head,
+            List<Vector3> placed, List<Vector2> used, List<HubClient.Mark> marks, List<string> names, ref int shown)
+        {
+            var box = Box(h["boxes"] as JArray, used);
+            if (box == null) return null;   // nothing left that isn't already pinned (two names for one plant)
+            shown++;
+            marks.Add(new HubClient.Mark { b = box, v = markVerdict, t = (string)h["label"], n = shown });
+            names.Add($"{shown} {h["label"]}");
+            var point = Place(shot, box);
+            // far cards are bigger so they read the same as one at arm's length
+            float scale = Mathf.Clamp(Vector3.Distance(head.position, point) / 0.7f, 1f, 3.2f);
+            // two things close together: lift the later card clear of the first
+            foreach (var p in placed) if (Vector3.Distance(p, point) < 0.22f * scale) point += Vector3.up * 0.2f * scale;
+            placed.Add(point);
+            var card = VerdictCard.Verdict(point, (string)h["label"], verdict, (string)h["why"], extra, false, word);
+            card.transform.localScale = Vector3.one * 0.72f * scale;
+            card.KeepOpen();
+            _cards.Add(card);
+            Sfx.Pin(point);
+            Ripple.On(shot, box, ripple);
+            return card;
         }
 
         // at the live depth through its outline (PetCamera.Locate); without depth, the snapshot's grid

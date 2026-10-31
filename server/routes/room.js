@@ -3,7 +3,8 @@
 // (and the Quest, later) can ring it. On demand only: about one Spark call and a SAM call per item.
 //
 //   POST /api/room  { image }  or  { cam: true } (the household's first pet cam, wide)
-//   -> { hazards: [{ label, kind: chew|toxic|cable|swallow|stuck|stain, risk: high|medium|low, why, fix, boxes: [{x0,y0,x1,y1}], approx? }], image, ms }
+//   -> { hazards: [{ label, kind: chew|toxic|cable|swallow|stuck|stain, risk: high|medium|low, why, fix, boxes: [{x0,y0,x1,y1}], approx? }],
+//        good: [{ label, why, boxes, approx? }], image, ms }
 //
 // Every hazard gets a ring: SAM with Spark's noun phrase, then with just its last word ("pastel keyboard" ->
 // "keyboard"), and if SAM still finds nothing, Spark's own box for it (approx: true).
@@ -20,7 +21,13 @@ const SCHEMA = { type: "object", properties: { hazards: { type: "array", items: 
   why: { type: "string", description: "one short sentence" },
   fix: { type: "string", description: "one short practical fix" },
   box: { type: "array", items: { type: "integer" }, description: "[x_min, y_min, x_max, y_max] around it on a 0-1000 grid, origin top-left" },
-}, required: ["sam_prompt", "label", "kind", "risk", "why", "fix", "box"] } } }, required: ["hazards"] };
+}, required: ["sam_prompt", "label", "kind", "risk", "why", "fix", "box"] } },
+  good: { type: "array", description: "things already in the room that are good for him", items: { type: "object", properties: {
+    sam_prompt: { type: "string", description: "a short concrete noun phrase (1-3 words) for a segmentation model, e.g. 'hay rack', 'tunnel'" },
+    label: { type: "string", description: "what it is, 1-4 words" },
+    why: { type: "string", description: "one short sentence on why it's good for him" },
+    box: { type: "array", items: { type: "integer" }, description: "[x_min, y_min, x_max, y_max] on a 0-1000 grid, origin top-left" },
+  }, required: ["sam_prompt", "label", "why", "box"] } } }, required: ["hazards", "good"] };
 
 // "small cosmetic bottles" -> "bottle"
 const lastWord = (p) => String(p || "").trim().toLowerCase().split(/\s+/).pop().replace(/ies$/, "y").replace(/(s|x|ch|sh)es$/, "$1").replace(/s$/, "");
@@ -46,12 +53,15 @@ module.exports = handler(async (body, req) => {
   if (!img) throw bad("send a photo, or turn the pet cam on");
   const name = (ctx && ctx.pet && ctx.pet.name) || "the rabbit";
   const { data } = await spark({
-    system: `You check a room for ${name}, a free-roaming house rabbit. List the things you can actually SEE that matter: things he'll chew (cables first, wooden furniture legs, skirting, door frames, books), toxic plants, small things he could swallow, gaps he could get stuck in, and soft furnishings he may pee on or mark (rugs, sofa, bed, cushions). Most important first, at most 8. No em dashes.`,
+    system: `You check a room for ${name}, a free-roaming house rabbit. List the things you can actually SEE that matter: things he'll chew (cables first, wooden furniture legs, skirting, door frames, books), toxic plants, small things he could swallow, gaps he could get stuck in, and soft furnishings he may pee on or mark (rugs, sofa, bed, cushions). Most important first, at most 8. Then, under good, up to 4 things you can see that are already good for him (hay, a hideaway or tunnel, chew toys, a litter tray, water, cable covers, a pen, soft flooring for grip); an empty list if there are none. No em dashes.`,
     text: `Check this room for ${name}.`, images: [img], schema: SCHEMA, name: "Room", maxTokens: 4000,
   });
   const hazards = await Promise.all((data.hazards || []).slice(0, 8).map(async (h) => ({
     label: h.label, kind: h.kind, risk: h.risk, why: h.why, fix: h.fix,
     ...(await ring(img, h)),
   })));
-  return { hazards, image: body.image ? undefined : img, ms: Date.now() - t0 };
+  const good = await Promise.all((data.good || []).slice(0, 4).map(async (g) => ({
+    label: g.label, why: g.why, ...(await ring(img, g)),
+  })));
+  return { hazards, good, image: body.image ? undefined : img, ms: Date.now() - t0 };
 });

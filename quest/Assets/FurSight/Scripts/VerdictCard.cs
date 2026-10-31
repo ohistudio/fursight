@@ -215,6 +215,7 @@ namespace FurSight
             c._card.SetParent(c.transform, false);
             Shapes.MakeSlab("Lip", c._card, Shapes.RoundedRectRing(w, h, h / 2f), Thick, tint * 0.82f, tint * 0.82f, new Vector3(0f, -0.006f, 0.003f));
             Shapes.MakeSlab("Face", c._card, Shapes.RoundedRectRing(w, h, h / 2f), Thick, Theme.Card, Theme.CardLip, Vector3.zero);
+            c._h = h;
             c._spinner = new GameObject("Spinner").transform;
             c._spinner.SetParent(c._card, false);
             c._spinner.localPosition = new Vector3(-w / 2f + 0.032f, 0f, Front - 0.001f);
@@ -302,7 +303,9 @@ namespace FurSight
             t.SetParent(_card, false);
             float w = height * tex.width / tex.height;
             t.localScale = new Vector3(w, height, 1f);
-            t.localPosition = new Vector3(W / 2f - w * 0.35f, _h / 2f + height * 0.3f, Front - 0.004f);
+            // on the photo's top right corner when there is one, else the card's
+            t.localPosition = _photoTop > 0f ? new Vector3(_photoRight - w * 0.3f, _photoTop - height * 0.2f, Front - 0.012f)
+                : new Vector3(W / 2f - w * 0.35f, _h / 2f + height * 0.3f, Front - 0.004f);
             t.localRotation = Quaternion.Euler(0f, 0f, -8f);
             var mat = _stickerMat != null ? new Material(_stickerMat) : Shapes.Unlit();
             mat.SetTexture("_BaseMap", tex);
@@ -311,6 +314,39 @@ namespace FurSight
             Sfx.Pin(t.position);
             StartCoroutine(Juice.Pop(t, 0f, 0.35f, 2.6f));
             StartCoroutine(Bob(t));
+            KeepOpen();
+        }
+
+        // the picture you just took, as a polaroid standing on the card's top edge (the Bean steps aside for it)
+        float _photoTop, _photoRight;
+        public void AddPhoto(Texture2D tex, float height = 0.15f)
+        {
+            if (_card == null || tex == null) return;
+            const float border = 0.008f, foot = 0.018f;
+            float w = height * tex.width / tex.height;
+            if (w > 0.25f) { height *= 0.25f / w; w = 0.25f; }   // a wide crop from the photo frame fits the card's width
+            float fw = w + border * 2f, fh = height + border + foot;
+            var p = new GameObject("Photo").transform;
+            p.SetParent(_card, false);
+            p.localPosition = new Vector3(0f, _h / 2f + 0.012f + fh / 2f, 0f);
+            p.localRotation = Quaternion.Euler(0f, 0f, 2.5f);
+            Shapes.MakeSlab("Lip", p, Shapes.RoundedRectRing(fw, fh, 0.008f), 0.006f, Theme.CardLip, Theme.CardLip, new Vector3(0f, -0.004f, 0.002f));
+            Shapes.MakeSlab("Frame", p, Shapes.RoundedRectRing(fw, fh, 0.008f), 0.006f, Theme.Card, Theme.CardLip, Vector3.zero);
+            var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(q.GetComponent<Collider>());
+            q.name = "Picture";
+            q.transform.SetParent(p, false);
+            q.transform.localScale = new Vector3(w, height, 1f);
+            q.transform.localPosition = new Vector3(0f, (foot - border) / 2f, -0.0062f);
+            var mat = Shapes.Unlit();
+            mat.SetTexture("_BaseMap", tex);
+            mat.SetColor("_BaseColor", Color.white);
+            q.GetComponent<MeshRenderer>().sharedMaterial = mat;
+            _photoTop = p.localPosition.y + fh / 2f;
+            _photoRight = fw / 2f;
+            if (_bean != null) _bean.gameObject.SetActive(false);
+            Sfx.Pin(p.position);
+            StartCoroutine(Juice.Pop(p, 0.1f, 0.35f, 2.2f));
             KeepOpen();
         }
 
