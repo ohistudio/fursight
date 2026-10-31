@@ -27,6 +27,7 @@ struct FoodView: View {
     @State private var look: [String: Any]?
     @State private var looking = false
     @State private var photo = ""                      // the checked frame, for a closer look at him
+    @State private var mode = "auto"                   // what it is, if you say so before the photo: auto, food, room, pet
 
     var body: some View {
         GeometryReader { geo in
@@ -41,12 +42,21 @@ struct FoodView: View {
                 else { noCamera }
 
                 // the labels, pinned where each food is in the picture
+                // a few things: a full label on each, pushed apart so none covers another. Many (a room): a numbered
+                // dot on each, and the full label only on the one you've tapped (its details are below)
                 if let still, !checking {
+                    let spots = places(still.size, geo.size)
+                    let compact = items.count > 3
                     ForEach(Array(items.enumerated()), id: \.offset) { n, it in
-                        if let p = anchor(it, image: still.size, view: geo.size) {
-                            FoodTag(item: it, on: n == selected).position(x: p.x, y: p.y)
-                                .onTapGesture { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { selected = n } }
-                                .transition(.scale(scale: 0.2).combined(with: .opacity))
+                        if let p = spots[n] {
+                            Group {
+                                if compact && n != selected { NumberDot(n: n + 1, verdict: it.str("verdict")) }
+                                else { FoodTag(item: it, on: n == selected) }
+                            }
+                            .position(x: p.x, y: p.y)
+                            .zIndex(n == selected ? 1 : 0)
+                            .onTapGesture { withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { selected = n } }
+                            .transition(.scale(scale: 0.2).combined(with: .opacity))
                         }
                     }
                 }
@@ -56,13 +66,22 @@ struct FoodView: View {
                     Spacer()
                     if checking { checkingPill }
                     if let error { Text(error).font(.nunito(15)).foregroundStyle(Color.ink).padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.white)) }
-                    if still != nil, !checking, items.indices.contains(selected) { details(items[selected]) }
-                    if still != nil, !checking, let seen { petCard(seen) }
+                    // the answer scrolls in its own space, so the buttons under it never cover it
+                    if still != nil, !checking, items.indices.contains(selected) || seen != nil {
+                        ScrollView {
+                            if items.indices.contains(selected) { details(items[selected]) }
+                            if let seen { petCard(seen) }
+                        }
+                        .frame(maxHeight: geo.size.height * 0.42)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
                     if still != nil, !checking, items.isEmpty, error == nil, seen == nil {
                         Text("Nothing to check there. Try again, or say what it is below.").font(.nunito(15)).foregroundStyle(Color.ink)
                             .padding(14).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 16).fill(.white))
                     }
-                    if still != nil, !checking { checkAs }
+                    // couldn't tell what it was: say, and the same photo is checked again as that
+                    if still != nil, !checking, items.isEmpty, seen == nil { checkAs }
+                    if still == nil { modes }
                     controls
                 }
                 .padding(16)
@@ -78,7 +97,7 @@ struct FoodView: View {
         .onChange(of: onGlasses) { _, on in if on { camera.stop() } else { camera.start() } }
         // a check made from the lens: show it here with its labels
         .onChange(of: glasses.results) { _, _ in if let r = glasses.lastResult { show(r) } }
-        .fullScreenCover(isPresented: $picking) { CameraPicker { img in picking = false; if let img { check(img) } }.ignoresSafeArea() }
+        .fullScreenCover(isPresented: $picking) { CameraPicker { img in picking = false; if let img { check(img, as: mode == "auto" ? nil : mode) } }.ignoresSafeArea() }
     }
 
     // ---------------------------------------------------------------- pieces
@@ -134,7 +153,7 @@ struct FoodView: View {
             HStack(spacing: 10) {
                 VerdictBadge(verdict: v, size: 34)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(i.str("food").capitalized).font(.nunito(21)).foregroundStyle(Color.ink)
+                    Text((items.count > 3 ? "\((items.firstIndex { $0.str("food") == i.str("food") } ?? 0) + 1)  " : "") + i.str("food").capitalized).font(.nunito(21)).foregroundStyle(Color.ink)
                     Text(word(i)).font(.nunito(15)).foregroundStyle(v == "caution" ? Color.sunLip : v == "safe" ? Color.fernLip : c)
                 }
             }
@@ -168,6 +187,24 @@ struct FoodView: View {
         return v.contains("toxic") ? "toxic" : v.contains("caution") ? "caution" : v.isEmpty ? "idle" : "safe"
     }
 
+    // every label's place, kept apart: each starts at its box, then moves down past any already placed that it
+    // would overlap (a full label is about 190 x 64 points; a numbered dot about 40)
+    private func places(_ image: CGSize, _ view: CGSize) -> [CGPoint?] {
+        let compact = items.count > 3
+        var out = [CGPoint?](repeating: nil, count: items.count), taken: [CGRect] = []
+        let order = items.indices.sorted { (anchor(items[$0], image: image, view: view)?.y ?? 0) < (anchor(items[$1], image: image, view: view)?.y ?? 0) }
+        for n in order {
+            guard var p = anchor(items[n], image: image, view: view) else { continue }
+            let size = compact && n != selected ? CGSize(width: 40, height: 40) : CGSize(width: 190, height: 64)
+            var r = CGRect(x: p.x - size.width / 2, y: p.y - size.height / 2, width: size.width, height: size.height)
+            for _ in 0..<12 where taken.contains(where: { $0.intersects(r) }) { r.origin.y += size.height * 0.6 + 6 }
+            p.y = r.midY
+            taken.append(r)
+            out[n] = p
+        }
+        return out
+    }
+
     // where a food's label goes: the top middle of its box (0-1000 grid), on a picture that fills the screen
     private func anchor(_ it: [String: Any], image: CGSize, view: CGSize) -> CGPoint? {
         guard let b = it["box"] as? [Any], b.count == 4 else { return nil }
@@ -185,7 +222,7 @@ struct FoodView: View {
     private func snap() {
         guard !checking, let img = onGlasses ? glasses.currentFrame : camera.frame() else { return }
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        check(img)
+        check(img, as: mode == "auto" ? nil : mode)
     }
 
     private func reset() { withAnimation { still = nil; items = []; fed = [:]; error = nil; selected = 0; seen = nil; options = []; look = nil } }
@@ -260,10 +297,24 @@ struct FoodView: View {
         do { let r = try await FoodCheck.look(photo, focus: focus); withAnimation { look = r } } catch { if let m = error.shown { self.error = m } }
     }
 
-    // not what it thought? say what it is, and the same photo is checked again as that
+    // before the photo: Auto works it out; or say what it is and it goes straight to that check
+    private var modes: some View {
+        HStack(spacing: 6) {
+            ForEach([("auto", "Auto"), ("food", "Food"), ("room", "Room"), ("pet", "Him")], id: \.0) { k, l in
+                Button(l) { withAnimation(.spring(response: 0.25)) { mode = k } }
+                    .font(.nunito(15)).foregroundStyle(mode == k ? Color.white : Color.ink)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(Capsule().fill(mode == k ? Color.grapeLip : Color.white))
+            }
+        }
+        .padding(5)
+        .background(Capsule().fill(.black.opacity(0.4)))
+    }
+
+    // couldn't tell what it was: say what it is, and the same photo is checked again as that
     private var checkAs: some View {
         HStack(spacing: 8) {
-            Text("Not right? Check as").font(.nunito(13)).foregroundStyle(.white)
+            Text("Check it as").font(.nunito(13)).foregroundStyle(.white)
             ForEach([("food", "Food"), ("room", "Room"), ("pet", "Him")], id: \.0) { k, l in
                 Button(l) { if let still { check(still, as: k) } }
                     .font(.nunito(14)).foregroundStyle(Color.ink).padding(.horizontal, 12).padding(.vertical, 6)
@@ -319,6 +370,19 @@ private struct FoodTag: View {
         }
         .scaleEffect(on ? 1.06 : 0.94)
         .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
+    }
+}
+
+// one of many things on a room photo: its number in a dot of its colour (tap it for its label and details)
+private struct NumberDot: View {
+    let n: Int, verdict: String
+    var body: some View {
+        let (c, lip) = Color.verdict(verdict)
+        Text("\(n)").font(.nunito(16)).foregroundStyle(verdict == "caution" ? Color.ink : .white)
+            .frame(width: 32, height: 32)
+            .background(Circle().fill(c)).overlay(Circle().strokeBorder(.white, lineWidth: 3))
+            .background(Circle().fill(lip).offset(y: 2))
+            .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
     }
 }
 

@@ -58,18 +58,28 @@ module.exports = handler(async (body, req) => {
   const as = { food: "food", room: "object", object: "object", pet: "pet", him: "pet" }[body.as];
   if (as === "food") return { kind: "food", food: await call(food, { image: body.image, pet: body.pet || p, tz: body.tz }, req) };
   if (as === "object") return roomAnswer(await call(room, { image: body.image }, req));
+  // Auto: the food check starts at once, alongside working out what it is, so food (the usual case) answers as
+  // fast as the food check alone; it's dropped if this turns out to be him or a room
+  const foodRun = as ? null : call(food, { image: body.image, pet: body.pet || p, tz: body.tz }, req).catch((e) => ({ error: e }));
   const { data } = await spark({
-    system: `You are FurSight's Check for ${name}, a pet ${species}. Look at the photo and say what the owner is looking at, then answer for that kind.${as === "pet" ? ` The owner says this is ${name}: kind is pet.` : ""} No em dashes.`,
-    text: "What is this, and what matters about it?", images: [img], schema: WHAT, name: "Check",
+    system: `You are FurSight's Check for ${name}, a pet ${species}. Say what the owner is pointing the camera at. Be decisive. food: anything edible or that could be eaten, held, on a plate or in a bowl, including plants and treats (most checks are food). pet: only when a ${species} is clearly the main subject of the photo; never guess pet when no ${species} is visible. object: a room, furniture, cables, plants in pots, rugs or small things he could chew or swallow. none: only when it's genuinely unclear.${as === "pet" ? ` The owner says this is ${name}: kind is pet.` : ""} No em dashes.`,
+    text: "What is this?", images: [img], schema: WHAT, name: "Check",
   });
   if (as === "pet") data.kind = "pet";
-  if (data.kind === "food") return { kind: "food", food: await call(food, { image: body.image, pet: body.pet || p, tz: body.tz }, req) };
+  if (data.kind === "food") {
+    const f = await foodRun;
+    if (f && f.error) throw f.error;
+    return { kind: "food", food: f };
+  }
   // things he could chew: the room check, so each one comes back outlined (the phone labels them on the photo)
   if (data.kind === "object") return roomAnswer(await call(room, { image: body.image }, req));
   if (data.kind === "pet") {
     const options = [...new Set((data.options || []).filter((o) => FOCUS[o]))].slice(0, 4);
     return { kind: "pet", seen: data.seen, options: (options.length ? options : ["coat", "eyes", "mood"]).map((id) => ({ id, label: FOCUS[id] })) };
   }
+  // unsure, but the food check (already running) found food: that's the answer
+  const f = foodRun && (await foodRun);
+  if (f && !f.error && (f.items || []).length) return { kind: "food", food: f };
   return { kind: "none", says: data.says || "Point at food, something he might chew, or him." };
 });
 
