@@ -37,6 +37,8 @@ namespace FurSight
                 if (kb != null && kb.nKey.wasPressedThisFrame) act.Note();
                 if (kb != null && kb.rKey.wasPressedThisFrame) act.CheckRoom();
                 if (kb != null && kb.fKey.wasPressedThisFrame) act.TakePhoto();
+                if (kb != null && kb.pKey.wasPressedThisFrame) PooCheck.Begin();
+                if (kb != null && kb.tKey.wasPressedThisFrame) Todos.Show();
                 if (kb != null && kb.cKey.wasPressedThisFrame) CamWindow.Toggle();
             }
             Palm();
@@ -96,10 +98,10 @@ namespace FurSight
             _panel.position = at;
             _panel.localScale = Vector3.one * (onPalm ? PalmScale : 1f);
             Face(_panel);
-            // floating: one row of six. On the palm: two rows of three, so it fits on the hand
+            // two rows of four, on the palm or floating
             float gap = 0.104f, rowGap = 0.13f;
-            int cols = onPalm ? 3 : 6, rows = onPalm ? 2 : 1;
-            float w = gap * cols + 0.02f, h = onPalm ? H + rowGap : H;
+            int cols = 4, rows = 2;
+            float w = gap * cols + 0.02f, h = H + rowGap;
             var tile = new GameObject("Tile").transform;
             tile.SetParent(_panel, false);
             Shapes.MakeSlab("Lip", tile, Shapes.RoundedRectRing(w, h, 0.03f), Thick, Theme.CardLip, Theme.CardLip, new Vector3(0f, -0.007f, 0.003f));
@@ -110,10 +112,12 @@ namespace FurSight
             Vector2 At() { int c = n % cols, r = n / cols; n++; return new Vector2(-gap * (cols - 1) / 2f + c * gap, (rows - 1) * rowGap / 2f - r * rowGap); }
             Button(tile, At(), "Check food", Theme.Fern, Theme.FernLip, AppleIcon, () => FurSightActions.Instance?.CheckFood(), 0.06f);
             Button(tile, At(), "Check room", Theme.Coral, Theme.CoralLip, HouseIcon, () => FurSightActions.Instance?.CheckRoom(), 0.09f);
+            Button(tile, At(), "Poo check", Theme.Hex("#A0764A"), Theme.Hex("#7E5A35"), PooIcon, PooCheck.Begin, 0.1f);
             Button(tile, At(), "Ask", Theme.Grape, Theme.GrapeLip, MicIcon, () => FurSightActions.Instance?.Ask(), 0.12f);
             Button(tile, At(), "Note", Theme.Ink, Theme.Hex("#141319"), PencilIcon, () => FurSightActions.Instance?.Note(), 0.15f);
             Button(tile, At(), "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
             Button(tile, At(), "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.21f);
+            Button(tile, At(), "To-dos", Theme.Fern, Theme.FernLip, ListIcon, Todos.Show, 0.24f);
             if (VerdictCard.Count > 0) CloseAllPill(tile, -h / 2f - 0.045f, 0.25f);
             Status(tile, h / 2f + 0.03f);
             FurSightApi.Warm();   // check again now, so the status is fresh
@@ -266,6 +270,25 @@ namespace FurSight
             Shapes.MakeSlab("Body", p, Shapes.RoundedRectRing(0.03f, 0.02f, 0.005f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, -0.002f, 0f));
             Shapes.MakeSlab("Bump", p, Shapes.RoundedRectRing(0.011f, 0.006f, 0.002f), 0.002f, Color.white, Theme.CardLip, new Vector3(-0.005f, 0.009f, 0f));
             Shapes.MakeSlab("Lens", p, Shapes.CircleRing(0.0062f), 0.0015f, col, col, new Vector3(0f, -0.002f, -0.002f));
+        }
+
+        // three droppings in a little pile: the poo check
+        static void PooIcon(Transform p, Color col)
+        {
+            Shapes.MakeSlab("A", p, Shapes.CircleRing(0.0062f), 0.002f, Color.white, Theme.CardLip, new Vector3(-0.0068f, -0.0055f, 0f));
+            Shapes.MakeSlab("B", p, Shapes.CircleRing(0.0062f), 0.002f, Color.white, Theme.CardLip, new Vector3(0.0068f, -0.0055f, 0f));
+            Shapes.MakeSlab("C", p, Shapes.CircleRing(0.0062f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, 0.0062f, 0f));
+        }
+
+        // three ticked lines: today's to-dos
+        static void ListIcon(Transform p, Color col)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                float y = 0.009f - i * 0.009f;
+                Shapes.MakeSlab("Tick" + i, p, Shapes.CircleRing(0.0028f), 0.002f, Color.white, Theme.CardLip, new Vector3(-0.0105f, y, 0f));
+                Shapes.MakeSlab("Line" + i, p, Shapes.RoundedRectRing(0.017f, 0.0042f, 0.0021f), 0.002f, Color.white, Theme.CardLip, new Vector3(0.003f, y, 0f));
+            }
         }
 
         // a little screen with a live dot: the pet cam

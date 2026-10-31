@@ -37,9 +37,10 @@ namespace FurSight
                 var head = Camera.main.transform;
                 var card = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked",
                     $"Looking after {pet.petName} together.", "<color=#9A98A6>To link another household, hold the left thumbstick for 3 seconds" + (Application.isEditor ? " (U)" : "") + ".</color>");
-                yield return new WaitForSeconds(6f);
+                yield return new WaitForSeconds(4f);
                 if (card != null) card.Dismiss();
             }
+            if (Me != null) { yield return new WaitForSeconds(0.4f); Todos.Show(); }
         }
 
         float _held;
@@ -86,7 +87,10 @@ namespace FurSight
                 _codeCard.Dismiss();
                 yield return Refresh();
                 var pet = PetProfile.Current;
-                VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked", pet != null ? $"Looking after {pet.petName} together." : "This Quest is part of your household now.", null);
+                var linked = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked", pet != null ? $"Looking after {pet.petName} together." : "This Quest is part of your household now.", null);
+                yield return new WaitForSeconds(4f);
+                if (linked != null) linked.Dismiss();
+                Todos.Show();
                 yield break;
             }
         }
@@ -140,20 +144,23 @@ namespace FurSight
 
         // fire and forget: a check, an answer or a photo, with the picture. marks: what was found in it, drawn over
         // the picture in the app's diary (Mark), so the photo shows what FurSight saw and where
-        public static void Diary(string kind, string title, string note, string verdict, byte[] jpeg, System.Collections.Generic.List<Mark> marks = null)
+        // extra: anything else the entry keeps (a poo check's count and verdict, for the next check to compare with)
+        public static void Diary(string kind, string title, string note, string verdict, byte[] jpeg, System.Collections.Generic.List<Mark> marks = null, JObject extra = null)
         {
             if (!Linked || Instance == null) return;
-            Instance.StartCoroutine(Instance.Post(kind, title, note, verdict, jpeg, marks));
+            var x = extra ?? new JObject();
+            if (marks != null && marks.Count > 0) x["marks"] = JArray.FromObject(marks);
+            Instance.StartCoroutine(Instance.Post(kind, title, note, verdict, jpeg, x.Count > 0 ? x : null));
         }
 
         // b: [x1,y1,x2,y2] on the 0-1000 grid (origin top left), v: its colour (safe, caution, toxic, high, medium,
         // low...), t: a short label, n: a number for a numbered list (0 = none)
         public class Mark { public int[] b; public string v; public string t; public int n; }
 
-        IEnumerator Post(string kind, string title, string note, string verdict, byte[] jpeg, System.Collections.Generic.List<Mark> marks)
+        IEnumerator Post(string kind, string title, string note, string verdict, byte[] jpeg, JObject extra)
         {
             var r = Send("POST", "/hub/diary", new { kind, title, note, verdict, pet = PetProfile.Current?.petName, image = jpeg != null ? "data:image/jpeg;base64," + System.Convert.ToBase64String(jpeg) : null,
-                extra = marks != null && marks.Count > 0 ? new { marks } : null }, true);
+                extra }, true);
             yield return r.SendWebRequest();
             if (r.result != UnityWebRequest.Result.Success) Debug.LogWarning("[FurSight] diary: " + r.error + " " + r.downloadHandler?.text);
         }

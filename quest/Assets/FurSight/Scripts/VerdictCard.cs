@@ -366,6 +366,7 @@ namespace FurSight
         // change the big line on a Checking card ("Hold it up 3")
         public void SetLabel(string label) => _label = label;
 
+        public bool Leaving => _leaving;
         public void Dismiss()
         {
             if (_leaving) return;
