@@ -48,7 +48,7 @@ function todoList(all, ctx, due, tz) {
   const todayKey = new Date(start + off).toISOString().slice(0, 10);
   const out = [];
   const poo = all.find((e) => e.kind === "droppings");
-  if (!poo || poo.at < start) out.push({ id: "poo", title: "Poo check", note: `A photo of ${name}'s litter tray` + (poo ? `; the last one was ${Math.max(1, Math.round((Date.now() - poo.at) / 864e5))} day${Date.now() - poo.at > 1.5 * 864e5 ? "s" : ""} ago.` : "; there's no check yet."), verdict: "caution", action: "poo" });
+  if (!poo || poo.at < start) out.push({ id: "poo", title: "Poo check", note: `A close photo of a few of ${name}'s droppings` + (poo ? `; the last one was ${Math.max(1, Math.round((Date.now() - poo.at) / 864e5))} day${Date.now() - poo.at > 1.5 * 864e5 ? "s" : ""} ago.` : "; there's no check yet."), verdict: "caution", action: "poo" });
   for (const r of due) out.push({ id: "routine-" + r.id, title: r.title, note: r.when, verdict: r.days < 0 ? "caution" : "none" });
   const lv = FSLevels.summary(all);
   if (lv && lv.has && lv.at >= start) {

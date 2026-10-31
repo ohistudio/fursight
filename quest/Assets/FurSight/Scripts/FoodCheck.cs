@@ -130,7 +130,8 @@ namespace FurSight
             if (heldItem != null)
             {
                 string v = (string)heldItem["verdict"];
-                HubClient.Diary("food", Capital((string)heldItem["food"]), (string)heldItem["reason"] + Plain(Extra(heldItem, v)), v, shot.jpeg, marks);
+                var story = new JObject { ["caption"] = new JObject { ["title"] = Capital((string)heldItem["food"]) + ": " + Theme.Word(v), ["line"] = (string)heldItem["reason"], ["v"] = v } };
+                HubClient.Diary("food", Capital((string)heldItem["food"]), (string)heldItem["reason"] + Plain(Extra(heldItem, v)), v, shot.jpeg, marks, story);
             }
         }
 

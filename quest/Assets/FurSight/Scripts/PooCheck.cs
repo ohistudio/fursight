@@ -6,10 +6,11 @@ using UnityEngine;
 
 namespace FurSight
 {
-    // The daily poo check. Press Poo check on the hand menu (or on today's to-dos) and look at the litter tray: after
+    // The daily poo check. Press Poo check on the hand menu (or on today's to-dos) and look at a few of his droppings,
+    // wherever he left them: after
     // a countdown one frame goes to /api/droppings. SAM counts and outlines the droppings, Muse Spark judges size and
     // shape next to the last check's photo and count. A dot sits on each dropping at its real depth, and a card over
-    // the tray gives the verdict and how it compares with last time. Saved to the diary with the droppings marked.
+    // them gives the verdict (shape, size, colour) and how it compares with last time. Saved to the diary with the droppings marked.
     public class PooCheck : MonoBehaviour
     {
         public float countdown = 3f;
@@ -40,10 +41,10 @@ namespace FurSight
             _busy = true;
             Clear();
             var head = Camera.main.transform;
-            _checking = VerdictCard.Checking(head.position + head.forward * 0.6f - Vector3.up * 0.2f, "Look at the litter tray, hands down", "Tray in view 3", Theme.Sun);
+            _checking = VerdictCard.Checking(head.position + head.forward * 0.6f - Vector3.up * 0.2f, "Look at a few of his droppings, hands down", "Close up 3", Theme.Sun);
             for (int n = Mathf.CeilToInt(countdown); n > 0; n--)
             {
-                if (_checking != null) _checking.SetLabel("Tray in view " + n);
+                if (_checking != null) _checking.SetLabel("Close up " + n);
                 Sfx.Count(head.position + head.forward * 0.4f);
                 yield return new WaitForSeconds(1f);
             }
@@ -59,7 +60,7 @@ namespace FurSight
             Sfx.Snap(head.position + head.forward * 0.3f);
             StartCoroutine(Juice.Buzz(0.2f, 0.04f));
             if (_checking != null) _checking.Dismiss();
-            _checking = VerdictCard.Checking(head.position + head.forward * 0.6f - Vector3.up * 0.15f, "Counting, and comparing with the last check", "Poo check", Theme.Sun);
+            _checking = VerdictCard.Checking(head.position + head.forward * 0.6f - Vector3.up * 0.15f, "Looking at them, and comparing with the last check", "Poo check", Theme.Sun);
             try
             {
                 var res = await FurSightApi.Post("/api/droppings", new { image = "data:image/jpeg;base64," + System.Convert.ToBase64String(shot.jpeg) }, 90);
@@ -105,15 +106,17 @@ namespace FurSight
             }
             else at = head.position + head.forward * 0.6f;
 
-            string prev = res["previous"] is JArray p && p.Count > 0 && p[0]["count"] != null && p[0]["count"].Type == JTokenType.Integer ? $" (last time {(int)p[0]["count"]})" : "";
+            string prev = "";
             string compare = $"<color=#2B2A33>{(Trends.TryGetValue(trend, out var tw) ? tw : Trends["first"])}:</color> {(string)res["compare"]}{prev}";
-            _card = VerdictCard.Verdict(at, $"{count} found", verdict, (string)res["summary"], compare, true, word);
+            _card = VerdictCard.Verdict(at, "His droppings", verdict, (string)res["summary"], compare, true, word);
             float scale = Mathf.Clamp(Vector3.Distance(head.position, at) / 0.7f, 1f, 2.2f);
             _card.transform.localScale = Vector3.one * scale;
             StartCoroutine(DotsGoWith(_card));
 
-            var extra = new JObject { ["count"] = count, ["verdict"] = v, ["trend"] = trend, ["size_spread"] = res["size_spread"] };
-            HubClient.Diary("droppings", "Droppings check", $"{count} found. {(string)res["summary"]} {(string)res["compare"]}".Trim(), verdict, shot.jpeg, marks, extra);
+            if (marks.Count > 0) marks.Add(new HubClient.Mark { b = new[] { x0, y0, x1, y1 }, v = verdict, t = word });   // the group, labelled with the verdict
+            var extra = new JObject { ["count"] = count, ["verdict"] = v, ["trend"] = trend, ["size_spread"] = res["size_spread"],
+                ["caption"] = new JObject { ["title"] = "Poo check: " + word.ToLowerInvariant(), ["line"] = (Trends.TryGetValue(trend, out var t2) ? t2 : Trends["first"]) + ". " + (string)res["compare"], ["v"] = verdict } };
+            HubClient.Diary("droppings", "Droppings check", $"{(string)res["summary"]} {(string)res["compare"]}".Trim(), verdict, shot.jpeg, marks, extra);
             Todos.Done("poo");
         }
 

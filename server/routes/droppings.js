@@ -1,5 +1,5 @@
-// Droppings check (the poo check), from a photo of the litter tray: the FurSight Tray's camera, a phone, the
-// glasses or the Quest.
+// Droppings check (the poo check), from a close photo of a few of his droppings, wherever he left them (the floor,
+// his pen, the litter tray), taken on a phone, the glasses or the Quest. It's about what they look like, not how many.
 //
 //   POST /api/droppings  { image: "data:image/jpeg;base64,..." }
 //   -> { count, boxes: [{ x0, y0, x1, y1 }] (0-1), size_spread, verdict: normal|watch|vet, summary,
@@ -20,7 +20,7 @@ const SCHEMA = {
     verdict: { type: "string", enum: ["normal", "watch", "vet"] },
     summary: { type: "string", description: "one or two plain spoken sentences, at most 35 words, no em dashes" },
     trend: { type: "string", enum: ["first", "better", "same", "worse"], description: "against the last check; first if there is none" },
-    compare: { type: "string", description: "one short sentence against the last check (count, size, shape), or what to look for next time if this is the first; no em dashes" },
+    compare: { type: "string", description: "one short sentence against the last check (shape, size, colour, texture; never the count), or what to look for next time if this is the first; no em dashes" },
   },
   required: ["verdict", "summary", "trend", "compare"],
 };
@@ -36,7 +36,7 @@ module.exports = handler(async (body, req) => {
   const last = past[0];
   const lastPic = last && last.has_image ? await diaryImage(home.token, last.id).catch(() => null) : null;
 
-  // SAM: every small brown thing; drop specks and big blobs (litter clumps, the tray edge) by size
+  // SAM: every small brown thing; drop specks and big blobs (litter clumps, a rug's pattern) by size
   let boxes = await find(img, "small brown object").catch(() => []);
   const area = (b) => (b.x1 - b.x0) * (b.y1 - b.y0);
   const sorted = boxes.map(area).sort((a, b) => a - b), median = sorted[Math.floor(sorted.length / 2)] || 0;
@@ -45,12 +45,12 @@ module.exports = handler(async (body, req) => {
   const spread = sides.length > 1 ? Math.sqrt(sides.reduce((a, s) => a + (s - mean) ** 2, 0) / sides.length) / mean : 0;
 
   const history = past.length
-    ? `Earlier checks, newest first: ${past.slice(0, 5).map((e) => `${ago(e.at)}: ${(e.extra && e.extra.count) ?? "?"} found, ${(e.extra && e.extra.verdict) || e.verdict || "?"}`).join("; ")}.` +
-      (lastPic ? " The second photo is the last check's tray." : "")
+    ? `Earlier checks, newest first: ${past.slice(0, 5).map((e) => `${ago(e.at)}: ${(e.extra && e.extra.verdict) || e.verdict || "?"}${e.note ? " (" + e.note.slice(0, 120) + ")" : ""}`).join("; ")}.` +
+      (lastPic ? " The second photo is the last check's droppings." : "")
     : "This is the first droppings check.";
   const { data } = await spark({
-    system: `You check a rabbit's droppings from a photo of the litter tray, for ${name}'s owner, and compare with the last check. Healthy: plenty of round, evenly sized, firm, fibrous pellets. Watch: fewer than usual, small, dry, misshapen or uneven, a few strung together with hair, or soft sticky clusters (uneaten caecotrophs) now and then. Vet today: none at all, mostly tiny pellets, mucus, diarrhoea, or a long string of pellets joined by hair. A tray cleaned at different times holds different amounts, so weigh size and shape over the raw count. Judge only what you can see; say what to watch for. No em dashes.`,
-    text: `SAM found ${boxes.length} dropping-sized objects in the first photo; their sizes vary by ${Math.round(spread * 100)}% (under about 25% is even). Check the photo yourself too: SAM may count bits of litter or miss some. ${history}`,
+    system: `You check a rabbit's droppings from a close photo of a few of them, wherever he left them (floor, pen or litter tray), for ${name}'s owner, and compare with the last check. Judge what they look like: shape, size, colour and texture. How many are in the photo means nothing (the owner photographs just a few), so never judge or compare the count. Healthy: round, evenly sized, firm, fibrous pellets, mid to dark brown. Watch: small, dry, hard, misshapen or uneven ones, a few strung together with hair, unusually pale or very dark, or soft sticky clusters (uneaten caecotrophs) now and then. Vet today: mucus, diarrhoea, mostly tiny pellets, or a long string of pellets joined by hair. Judge only what you can see; say what to watch for. No em dashes.`,
+    text: `SAM outlined ${boxes.length} dropping-sized objects in the first photo; their sizes vary by ${Math.round(spread * 100)}% (under about 25% is even). Look at them yourself too: SAM may pick up bits of litter or miss some. ${history}`,
     images: lastPic ? [img, lastPic] : [img], schema: SCHEMA, name: "Droppings",
   });
   return {

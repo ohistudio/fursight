@@ -549,7 +549,7 @@ async function today() {
       <div class="vword" style="color:var(--grape-lip)">${esc(me.pets[0].name)}'s week</div><h2>${esc(e.title)}</h2><p class="muted" style="margin-top:6px;white-space:pre-line">${esc((e.note || "").replace(/ (• |Watch: |Care streak: )/g, "\n$1"))}</p>
       <button class="del" data-del="${e.id}">Remove</button></div>`;
     return `${head}<div class="card entry pop" style="margin-bottom:10px" data-entry="${e.id}">
-      ${e.has_image ? `<img loading="lazy" class="${e.png || (e.extra && e.extra.sticker) ? "sticker" : ""}" src="${img(`/diary/${e.id}/image`)}"${e.extra && Array.isArray(e.extra.marks) ? ` data-marks="${esc(JSON.stringify(e.extra.marks))}"` : ""} alt="">` : `<div class="badge v-${v}">${icon}</div>`}
+      ${e.has_image ? `<img loading="lazy" class="${e.png || (e.extra && e.extra.sticker) ? "sticker" : ""}" src="${img(`/diary/${e.id}/image`)}"${e.extra && Array.isArray(e.extra.marks) ? ` data-marks="${esc(JSON.stringify(e.extra.marks))}"${e.extra.caption ? ` data-cap="${esc(JSON.stringify(e.extra.caption))}"` : ""}` : ""} alt="">` : `<div class="badge v-${v}">${icon}</div>`}
       <div style="min-width:0"><h3>${esc(e.title || word)}</h3><div class="vword t-${v}">${esc(word)}</div>
       ${e.note ? `<p class="muted" style="margin-top:4px">${esc(e.note)}</p>` : ""}${howDecided(e)}${recordDetails(e)}
       <div class="when">${e.extra && e.extra.uploaded ? `Uploaded${e.extra.pages ? ` · ${e.extra.pages} page${e.extra.pages === 1 ? "" : "s"}` : e.extra.secs ? ` · ${e.extra.secs} s video` : ""}` : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${e.source ? " · from " + esc(e.source) : ""} · <button class="del" data-del="${e.id}">Remove</button></div></div></div>`;
@@ -1445,28 +1445,53 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
 // a ring round each thing in its colour, and a numbered dot (room) or a label (food, an answer). Swaps the img's
 // src for the drawn picture, so the enlarged view shows it too.
 const MARK = { high: "#FF4D5E", toxic: "#FF4D5E", vet: "#FF4D5E", medium: "#FFB627", caution: "#FFB627", low: "#2FA8F5", safe: "#3DBE6B", answer: "#9B6CF0" };
-// draw marks on a picture (a data URL, or a diary image the hub serves with CORS) -> a JPEG data URL
-function drawMarks(src, marks) {
+// draw marks on a picture (a data URL, or a diary image the hub serves with CORS) -> a JPEG data URL. Each mark is
+// ringed in its colour and labelled ("2  Lamp cable", "Strawberry: Small treat only"), labels nudged apart so none
+// cover another; cap: { title, line, v } adds a strip along the bottom that says what the check found, so the
+// picture tells the story on its own.
+function drawMarks(src, marks, cap) {
   return new Promise((ok) => {
     const i = new Image(); i.crossOrigin = "anonymous";
     i.onload = () => {
       const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
       const lw = Math.max(3, i.width / 200); g.lineWidth = lw; g.textBaseline = "middle";
-      for (const m of marks) {
-        if (!Array.isArray(m.b) || m.b.length !== 4) continue;
-        const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5", cx = (x0 + x1) / 2;
+      const placed = [], hits = (r) => placed.some((q) => r.x < q.x + q.w && r.x + r.w > q.x && r.y < q.y + q.h && r.y + r.h > q.y);
+      const ok2 = marks.filter((m) => Array.isArray(m.b) && m.b.length === 4);
+      for (const m of ok2) {
+        const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5";
         g.strokeStyle = "#fff"; g.lineWidth = lw * 2.2; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
         g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
-        const ty = Math.max(lw * 6, y0 - lw * 1.5);
-        if (m.n) {
-          g.fillStyle = col; g.beginPath(); g.arc(cx, ty, lw * 5, 0, Math.PI * 2); g.fill();
-          g.font = `900 ${Math.round(lw * 6.5)}px Nunito, sans-serif`; g.textAlign = "center"; g.fillStyle = "#fff"; g.fillText(String(m.n), cx, ty + lw * 0.3);
-        } else if (m.t) {
-          g.font = `900 ${Math.round(lw * 5.5)}px Nunito, sans-serif`; g.textAlign = "left";
-          const tw = g.measureText(m.t).width, pw = tw + lw * 6, ph = lw * 9, px = Math.min(Math.max(0, cx - pw / 2), i.width - pw), py = Math.max(0, ty - ph / 2);
-          g.fillStyle = col; g.beginPath(); g.roundRect(px, py, pw, ph, ph / 2); g.fill();
-          g.fillStyle = "#fff"; g.fillText(m.t, px + lw * 3, py + ph / 2 + lw * 0.3);
-        }
+      }
+      // labels after every ring, so no ring is drawn over a label
+      for (const m of ok2) {
+        const text = m.n && m.t ? `${m.n}  ${m.t}` : m.t || (m.n ? String(m.n) : "");
+        if (!text) continue;
+        const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5", cx = (x0 + x1) / 2;
+        g.font = `900 ${Math.round(lw * 4.7)}px Nunito, sans-serif`; g.textAlign = "left";
+        const tw = g.measureText(text).width, pw = tw + lw * 5, ph = lw * 7.6;
+        let r = { x: Math.min(Math.max(lw, cx - pw / 2), i.width - pw - lw), y: y0 - ph - lw * 1.5, w: pw, h: ph };
+        if (r.y < lw) r.y = y1 + lw * 1.5;   // no room above: under it
+        for (let k = 0; k < 8 && hits(r); k++) r.y += ph + lw;   // nudged down past any label already there
+        r.y = Math.min(r.y, i.height - ph - lw);
+        placed.push(r);
+        g.fillStyle = "rgba(20,19,26,.25)"; g.beginPath(); g.roundRect(r.x, r.y + lw * 0.8, pw, ph, ph / 2); g.fill();
+        g.fillStyle = col; g.beginPath(); g.roundRect(r.x, r.y, pw, ph, ph / 2); g.fill();
+        g.fillStyle = m.v === "caution" || m.v === "medium" ? "#2B2A33" : "#fff"; g.fillText(text, r.x + lw * 2.5, r.y + ph / 2 + lw * 0.3);
+      }
+      // the story strip: what the check found, along the bottom
+      if (cap && cap.title) {
+        const pad = lw * 3.4, fs = Math.round(lw * 5.6), ls = Math.round(lw * 4), col = MARK[cap.v] || "#2FA8F5";
+        g.font = `800 ${ls}px Nunito, sans-serif`;
+        const lines = [], words = String(cap.line || "").split(/\s+/).filter(Boolean); let cur = "";
+        for (const w of words) { const t = cur ? cur + " " + w : w; if (g.measureText(t).width > i.width - pad * 2 - lw * 10 && cur) { lines.push(cur); cur = w; } else cur = t; }
+        if (cur) lines.push(cur);
+        const show = lines.slice(0, 2), h = pad * 2 + fs + show.length * ls * 1.3;
+        g.fillStyle = "rgba(255,255,255,.93)"; g.fillRect(0, i.height - h, i.width, h);
+        g.fillStyle = col; g.fillRect(0, i.height - h, lw * 2.5, h);
+        g.textAlign = "left"; g.fillStyle = "#2B2A33"; g.font = `900 ${fs}px Nunito, sans-serif`;
+        g.fillText(cap.title, pad + lw * 2, i.height - h + pad + fs / 2);
+        g.fillStyle = "#6B6977"; g.font = `800 ${ls}px Nunito, sans-serif`;
+        show.forEach((l, k) => g.fillText(l, pad + lw * 2, i.height - h + pad + fs + ls * 0.8 + k * ls * 1.3));
       }
       try { ok(c.toDataURL("image/jpeg", 0.88)); } catch (e) { ok(src); }
     };
@@ -1475,15 +1500,16 @@ function drawMarks(src, marks) {
   });
 }
 async function markUp(im) {
-  let marks; try { marks = JSON.parse(im.dataset.marks); } catch (e) { return; }
+  let marks, cap = null; try { marks = JSON.parse(im.dataset.marks); cap = im.dataset.cap ? JSON.parse(im.dataset.cap) : null; } catch (e) { return; }
   delete im.dataset.marks;
-  im.src = await drawMarks(im.src, marks);
+  im.src = await drawMarks(im.src, marks, cap);
 }
 
 // Food check from the phone, the same as the glasses and Quest: one photo to /api/food (Muse Spark, then the
 // species safety list has the last word), the foods boxed on the picture, the verdict, how much, when he last had
 // it, and "We fed him this" to put the next OK day on the calendar. Saved to the diary with its marks.
 const VWORD = { safe: "Safe", caution: "Small treat only", toxic: "Don't" };
+const cap1 = (x) => (x ? String(x)[0].toUpperCase() + String(x).slice(1) : "");
 
 // Like the iPhone app: a live camera you hold the food up to, then Check. The frame goes to foodCheck, which boxes
 // the food on it. No camera (a laptop without one, or permission refused): choose a photo instead.
@@ -1525,7 +1551,8 @@ async function foodCheck(photo) {
     if (!items.length) { $o.innerHTML = `<div class="card stack pop"><h3>No food seen</h3><p class="muted">Hold it up close, in good light, and try again.</p></div>`; return; }
     const held = items[r.held] || items[0];
     const marks = items.map((it) => ({ b: it.box, v: it.verdict, t: cap(it.food) + ": " + (VWORD[it.verdict] || it.verdict) }));
-    const pic = await drawMarks(photo, marks), v = held.verdict;
+    const v = held.verdict, cap = { title: `${cap1(held.food)}: ${VWORD[v] || v}`, line: v === "caution" && held.portion && held.portion !== "none" ? `How much: ${held.portion}` : held.reason || "", v };
+    const pic = await drawMarks(photo, marks, cap);
     const fed = held.fed && held.fed.said ? `<p style="margin:0;color:${held.fed.wait_left > 0 ? "var(--sun-lip)" : "var(--muted)"}">${esc(held.fed.said)}</p>` : "";
     const more = v === "caution" && held.portion && held.portion !== "none" ? `<p style="margin:0"><b>How much:</b> ${esc(held.portion)}</p>` : v === "toxic" && held.instead ? `<p style="margin:0"><b>Instead:</b> ${esc(held.instead)}</p>` : "";
     const others = items.filter((it) => it !== held).map((it) => `<div class="hz"><i class="v-${it.verdict}"></i><div><b>${esc(cap(it.food))}</b> <span class="t-${it.verdict}">${VWORD[it.verdict] || ""}</span><br><span class="muted">${esc(it.reason || "")}</span></div></div>`).join("");
@@ -1542,11 +1569,11 @@ async function foodCheck(photo) {
         $f.textContent = f.next ? "OK again " + new Date(f.next + "T12:00").toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) : "Marked";
       } catch (e) { $f.disabled = false; $f.textContent = `We fed ${name} this`; toast(e.message); }
     };
-    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "food", title: cap(held.food), note: held.reason || "", verdict: v, image: photo, pet: name, extra: { marks } }) }).catch(() => {});
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "food", title: cap(held.food), note: held.reason || "", verdict: v, image: photo, pet: name, extra: { marks, caption: cap } }) }).catch(() => {});
   } catch (e) { $o.innerHTML = `<div class="card stack pop"><h3>Couldn't check</h3><p class="muted">${esc(e.message)}</p></div>`; }
 }
 
-// Poo check: once a day, a photo of the litter tray. SAM counts and rings the droppings, Muse Spark judges size and
+// Poo check: once a day, a close photo of a few of his droppings, wherever he left them. SAM rings them, Muse Spark judges shape, size, colour and texture, and
 // shape side by side with the last check's photo. The card is the reminder: due until today's check is done, with
 // the last week's checks as dots underneath.
 const POO = { normal: ["safe", "Looks healthy", "✓"], watch: ["caution", "Keep an eye on it", "!"], vet: ["vet", "See a vet today", "✕"] };
@@ -1561,32 +1588,35 @@ function pooCard(all) {
   const when = !last ? "No checks yet" : done ? `Done at ${t(last.at)}` : `Last one ${new Date(last.at).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}`;
   const lv = last && ((last.extra && last.extra.verdict) || { safe: "normal", caution: "watch", vet: "vet" }[last.verdict]);
   const dots = checks.slice(0, 7).reverse().map((e) => { const k = (e.extra && e.extra.verdict) || { safe: "normal", caution: "watch", vet: "vet" }[e.verdict] || "normal";
-    return `<div class="pdot" title="${esc(new Date(e.at).toLocaleDateString())}: ${esc(POO[k] ? POO[k][1] : k)}"><i class="v-${POO[k] ? POO[k][0] : "safe"}"></i><span>${e.extra && Number.isFinite(e.extra.count) ? e.extra.count : ""}</span></div>`; }).join("");
+    return `<div class="pdot" title="${esc(new Date(e.at).toLocaleDateString())}: ${esc(POO[k] ? POO[k][1] : k)}"><i class="v-${POO[k] ? POO[k][0] : "safe"}"></i><span>${esc(new Date(e.at).toLocaleDateString([], { weekday: "narrow" }))}</span></div>`; }).join("");
   $p.innerHTML = `<div class="card stack pop" style="${done ? "" : "border-color:var(--sun)"}">
     <div class="row" style="justify-content:space-between;gap:10px"><h3 style="margin:0">Poo check</h3>${done ? `<span class="chip" style="flex:none;background:var(--fern);color:#fff;border:0">Done today</span>` : `<span class="chip" style="flex:none;background:var(--sun);color:var(--ink);border:0">Due today</span>`}</div>
-    <p class="muted" style="margin:0">${done ? `${esc(when)}${lv && POO[lv] ? ": " + POO[lv][1].toLowerCase() : ""}.` : `A photo of ${esc(p0name())}'s litter tray, once a day. Fewer, smaller or misshapen droppings are an early sign of gut trouble. ${esc(when)}.`}</p>
+    <p class="muted" style="margin:0">${done ? `${esc(when)}${lv && POO[lv] ? ": " + POO[lv][1].toLowerCase() : ""}.` : `A close photo of a few of ${esc(p0name())}'s droppings, wherever he left them, once a day. Small, misshapen or odd-coloured droppings are an early sign of gut trouble. ${esc(when)}.`}</p>
     ${dots ? `<div class="pdots">${dots}</div>` : ""}
-    <button class="btn ${done ? "ghost" : "sun"}" id="pooGo">${done ? "Check again" : "Take a photo of the tray"}</button></div>`;
-  document.getElementById("pooGo").onclick = () => liveCamera("Get the whole litter tray in", "Check his droppings", "pooPhoto", "pooOut", pooCheck);
+    <button class="btn ${done ? "ghost" : "sun"}" id="pooGo">${done ? "Check again" : "Take a photo"}</button></div>`;
+  document.getElementById("pooGo").onclick = () => liveCamera("Get a few of his droppings in, close up", "Check his droppings", "pooPhoto", "pooOut", pooCheck);
 }
 async function pooCheck(photo) {
   const $o = document.getElementById("pooOut"), name = me.pets[0].name;
   if (!$o) return;
-  $o.innerHTML = `<div class="card center stack pop">${bean("thinking", 80)}<p class="muted">Counting and comparing with the last check…</p></div>`;
+  $o.innerHTML = `<div class="card center stack pop">${bean("thinking", 80)}<p class="muted">Looking at them, and comparing with the last check…</p></div>`;
   try {
     const r = await api("/api/droppings", { image: photo });
     const [v, word, icon] = POO[r.verdict] || POO.watch;
+    // each dropping ringed, the group labelled with the verdict, and the story along the bottom
     const marks = (r.boxes || []).map((b) => ({ b: [b.x0, b.y0, b.x1, b.y1].map((n) => Math.round(n * 1000)), v }));
-    const pic = await drawMarks(photo, marks);
+    if (marks.length) { const u = marks.reduce((a, m) => [Math.min(a[0], m.b[0]), Math.min(a[1], m.b[1]), Math.max(a[2], m.b[2]), Math.max(a[3], m.b[3])], [1000, 1000, 0, 0]); marks.push({ b: u, v, t: word }); }
+    const cap = { title: `Poo check: ${word.toLowerCase()}`, line: `${TREND[r.trend] || TREND.first}. ${r.compare || r.summary || ""}`, v };
+    const pic = await drawMarks(photo, marks, cap);
     const prev = (r.previous || [])[0];
-    $o.innerHTML = `<div class="card stack pop"><img src="${pic}" alt="Litter tray, ${r.count} droppings ringed" style="width:100%;border-radius:14px;cursor:zoom-in" id="pooPic">
-      <div class="row" style="gap:12px;align-items:center"><div class="badge v-${v}" style="flex:none;display:grid;place-items:center;color:#fff;font:900 22px Nunito,sans-serif">${icon}</div><div style="min-width:0"><h2 style="margin:0">${r.count} found</h2><div class="vword t-${v}">${word}</div></div></div>
+    $o.innerHTML = `<div class="card stack pop"><img src="${pic}" alt="His droppings, ringed" style="width:100%;border-radius:14px;cursor:zoom-in" id="pooPic">
+      <div class="row" style="gap:12px;align-items:center"><div class="badge v-${v}" style="flex:none;display:grid;place-items:center;color:#fff;font:900 22px Nunito,sans-serif">${icon}</div><div style="min-width:0"><h2 style="margin:0">His droppings</h2><div class="vword t-${v}">${word}</div></div></div>
       <p class="muted" style="margin:0">${esc(r.summary || "")}</p>
-      <div class="row" style="gap:10px;align-items:flex-start"><span class="chip" style="flex:none;${r.trend === "worse" ? "background:var(--sun);color:var(--ink);border:0" : r.trend === "better" ? "background:var(--fern);color:#fff;border:0" : ""}">${TREND[r.trend] || TREND.first}</span><span style="min-width:0">${esc(r.compare || "")}${prev && Number.isFinite(prev.count) ? ` <span class="muted">(last time ${prev.count})</span>` : ""}</span></div>
+      <div class="row" style="gap:10px;align-items:flex-start"><span class="chip" style="flex:none;${r.trend === "worse" ? "background:var(--sun);color:var(--ink);border:0" : r.trend === "better" ? "background:var(--fern);color:#fff;border:0" : ""}">${TREND[r.trend] || TREND.first}</span><span style="min-width:0">${esc(r.compare || "")}</span></div>
       <p class="muted" style="margin:0;font-size:13px">It notices; the vet decides. No droppings for 12 hours is a vet call.</p></div>`;
     document.getElementById("pooPic").onclick = () => enlarge(pic, false);
     await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "droppings", title: "Droppings check", note: `${r.count} found. ${r.summary || ""} ${r.compare || ""}`.trim(), verdict: v, image: photo, pet: name,
-      extra: { count: r.count, verdict: r.verdict, trend: r.trend, size_spread: r.size_spread, marks } }) }).catch(() => {});
+      extra: { count: r.count, verdict: r.verdict, trend: r.trend, size_spread: r.size_spread, marks, caption: cap } }) }).catch(() => {});
     hub("/diary?limit=120").then((d) => pooCard(d.entries)).catch(() => {});
   } catch (e) { $o.innerHTML = `<div class="card stack pop"><h3>Couldn't check</h3><p class="muted">${esc(e.message)}</p></div>`; }
 }
@@ -1600,14 +1630,11 @@ async function roomCheck(req) {
     const colour = { high: "#FF4D5E", medium: "#FFB627", low: "#2FA8F5", good: "#3DBE6B" }, icon = { chew: "Chew", toxic: "Toxic", cable: "Cable", swallow: "Swallow", stuck: "Stuck", stain: "Pee spot", good: "Good for him" };
     // the hazards, then what is already good for him (green), numbered on from them
     const good = (r.good || []).map((g) => ({ ...g, risk: "good", kind: "good" })), all = r.hazards.concat(good);
-    const pic = await new Promise((ok) => { const i = new Image(); i.onload = () => {
-      const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
-      const lw = Math.max(3, i.width / 220); g.lineWidth = lw; g.font = `900 ${Math.round(lw * 7)}px Nunito, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
-      all.forEach((h, n) => { g.strokeStyle = colour[h.risk]; for (const b of h.boxes) {
-        const cx = (b.x0 + b.x1) / 2 * i.width, cy = (b.y0 + b.y1) / 2 * i.height;
-        g.beginPath(); g.ellipse(cx, cy, (b.x1 - b.x0) / 2 * i.width + lw * 2, (b.y1 - b.y0) / 2 * i.height + lw * 2, 0, 0, Math.PI * 2); g.stroke();
-        g.fillStyle = colour[h.risk]; g.beginPath(); g.arc(cx, (b.y0 * i.height) - lw * 2, lw * 5, 0, Math.PI * 2); g.fill(); g.fillStyle = "#fff"; g.fillText(String(n + 1), cx, (b.y0 * i.height) - lw * 2);
-      } }); ok(c.toDataURL("image/jpeg", 0.85)); }; i.src = src; });
+    // every thing ringed and labelled ("1  Lamp cable"), red to blue by risk and green for what's good, with the story along the bottom
+    const RISKV = { high: "high", medium: "medium", low: "low", good: "safe" };
+    const marks = all.flatMap((h, n) => (h.boxes || []).slice(0, 1).map((b) => ({ b: [b.x0, b.y0, b.x1, b.y1].map((v) => Math.round(v * 1000)), v: RISKV[h.risk], t: h.label, n: n + 1 })));
+    const cap = { title: `Room check: ${r.hazards.length} to sort${good.length ? `, ${good.length} good` : ""}`, line: r.hazards.length ? `Fix first: ${r.hazards[0].label.toLowerCase()}. ${r.hazards[0].fix || ""}` : `Nothing here for ${name} to chew or swallow.`, v: r.hazards.some((h) => h.risk === "high") ? "high" : r.hazards.length ? "medium" : "safe" };
+    const pic = await drawMarks(src, marks, cap);
     $o.innerHTML = `<img src="${pic}" alt="Room with ${all.length} things ringed" style="width:100%;border-radius:14px">
       ${all.map((h, n) => `<div class="hz"><i style="background:${colour[h.risk]}">${n + 1}</i><div><b>${esc(h.label)}</b> <span class="chip">${icon[h.kind] || h.kind}</span><br><span class="muted">${esc(h.why)}</span>${h.fix ? `<br><span>Fix: ${esc(h.fix)}</span>` : ""}</div></div>`).join("")}`;
     hub("/diary", { method: "POST", body: JSON.stringify({ kind: "room", title: `Room check: ${r.hazards.length} things to sort${good.length ? `, ${good.length} good` : ""}`, note: all.slice(0, 6).map((h) => h.label).join(", "), image: pic, pet: name, extra: { hazards: r.hazards.map((h) => ({ label: h.label, kind: h.kind, risk: h.risk, fix: h.fix })), good: good.map((g) => ({ label: g.label })) } }) }).catch(() => {});

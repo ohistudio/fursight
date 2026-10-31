@@ -58,7 +58,7 @@ module.exports = handler(async (body, req) => {
       images: foodPics.map((e) => ({ id: e.id, verdict: e.verdict, caption: e.title })) });
   }
   const poos = week.filter((e) => e.kind === "droppings");
-  if (poos.length) S.push({ colour: COLOURS[6], kicker: "Poo patrol", title: "Litter tray checks", big: { n: poos.length, fmt: "n" },
+  if (poos.length) S.push({ colour: COLOURS[6], kicker: "Poo patrol", title: "Poo checks", big: { n: poos.length, fmt: "n" },
     body: poos.every((e) => e.verdict === "safe") ? "Every one looked healthy. A happy gut." : "One or two to keep an eye on; the diary has the details." });
   const groomed = week.filter((e) => e.kind === "routine-done"), cared = week.filter((e) => e.kind === "care").length;
   if (groomed.length || cared) {

@@ -114,8 +114,13 @@ namespace FurSight
                 yield return new WaitForSeconds(cardGap);
             }
             int toSort = shown - goodShown;
+            string first = hazards.Count > 0 ? (string)hazards[0]["label"] : null, fix = hazards.Count > 0 ? (string)hazards[0]["fix"] : null;
+            var story = new Newtonsoft.Json.Linq.JObject { ["caption"] = new Newtonsoft.Json.Linq.JObject {
+                ["title"] = $"Room check: {toSort} to sort" + (goodShown > 0 ? $", {goodShown} good" : ""),
+                ["line"] = first != null ? $"Fix first: {first.ToLowerInvariant()}. {fix}" : $"Nothing here for {PetProfile.Current.petName} to chew or swallow.",
+                ["v"] = toSort > 0 ? "high" : "safe" } };
             HubClient.Diary("room", $"Room check: {toSort} things to sort" + (goodShown > 0 ? $", {goodShown} good" : ""), string.Join(", ", names),
-                toSort > 0 ? "caution" : "safe", shot.jpeg, marks);
+                toSort > 0 ? "caution" : "safe", shot.jpeg, marks, story);
             _busy = false;
         }
 

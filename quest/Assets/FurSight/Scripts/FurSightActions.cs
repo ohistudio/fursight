@@ -155,7 +155,8 @@ namespace FurSight
                 string asked = (string.IsNullOrEmpty(q) ? "" : "You asked: " + q) + How(res["steps"]);
                 _last = VerdictCard.Verdict(at, title, kind, answer, string.IsNullOrEmpty(asked) ? null : "<color=#9A98A6>" + asked.TrimStart('\n') + "</color>");
                 var marks = box != null && box.Length == 4 ? new System.Collections.Generic.List<HubClient.Mark> { new HubClient.Mark { b = box, v = kind, t = title } } : null;
-                HubClient.Diary("ask", string.IsNullOrEmpty(q) ? title : q, answer, kind == "answer" ? null : kind, _askShot.jpeg, marks);
+                var story = new JObject { ["caption"] = new JObject { ["title"] = string.IsNullOrEmpty(q) ? title : "\u201C" + q + "\u201D", ["line"] = answer, ["v"] = kind == "answer" ? "answer" : kind } };
+                HubClient.Diary("ask", string.IsNullOrEmpty(q) ? title : q, answer, kind == "answer" ? null : kind, _askShot.jpeg, marks, story);
                 // his sticker on the answer: from the pet cam picture where it found him, else from what you're
                 // looking at (if he's in it; SAM finds nothing otherwise and there's no sticker)
                 var snap = res["snapshot"] as JObject;
