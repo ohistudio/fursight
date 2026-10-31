@@ -139,6 +139,9 @@ async function build() {
       : `<div class="list rise">${top.map(([t, n], i) => `<div><b>${i + 1}</b>${esc(t)}${n > 1 ? ` <span style="opacity:.8">×${n}</span>` : ""}</div>`).join("")}</div>`}` });
   }
 
+  const poos = week.filter((e) => e.kind === "droppings");
+  if (poos.length) S.push({ bg: COLOURS[6], html: `<div class="k rise">Poo patrol</div><h1 class="rise">Litter tray checks</h1><div class="big rise" data-count="${poos.length}">0</div><p class="rise">${poos.every((e) => e.verdict === "safe") ? "Every one looked healthy. A happy gut." : "One or two to keep an eye on; the diary has the details."}</p>` });
+
   const groomed = week.filter((e) => e.kind === "routine-done"), cared = week.filter((e) => e.kind === "care").length;
   if (groomed.length || cared) {
     const g = {}; for (const e of groomed) g[e.title] = (g[e.title] || 0) + 1;

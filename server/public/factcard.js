@@ -5,6 +5,7 @@
 //
 //   await FSFactCard.make({ pet, entries, recap: { title, highlights, streak }, img })  -> { png, layout }
 //     img(path) turns a hub path into a URL the canvas can load (with the device key)
+//   FSFactCard.layout({ pet, entries, recap }) -> the card's content (no drawing), for the server and the Quest
 //   FSFactCard.html(layout, img) -> the same card, live: stickers sway, numbers count up, highlights rise.
 //     The PNG is for sharing and keeping; the app shows this. layout is small enough to keep on the diary entry.
 (function (root) {
@@ -20,21 +21,35 @@
   }
   function rounded(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
+  // the shared modules: on the page they're globals, on the server (the Quest's card) they're required
+  const A = () => root.FSActivity || require("./activity.js"), T = () => root.FSTray || require("./tray.js");
+
   // the numbers worth a tile, best first
   function facts(entries, recap) {
-    const a = root.FSActivity.summary(entries), tray = root.FSTray.summary(entries), out = [];
+    const FSActivity = A(), a = FSActivity.summary(entries), tray = T().summary(entries), out = [];
     const ws = tray.week.filter((d) => d.weight_g);
     if (ws.length) {
       const last = ws[ws.length - 1].weight_g, change = ws.length > 1 ? last - ws[0].weight_g : 0;
       out.push({ big: (last / 1000).toFixed(2) + " kg", label: ws.length > 1 ? (Math.abs(change) <= 20 ? "weight, steady" : `weight, ${change > 0 ? "+" : ""}${change} g`) : "weight" });
     }
     if (a.has) out.push({ big: String(a.week.flops), label: a.week.flops === 1 ? "flop" : "flops" });
-    if (a.has && a.week.loaf > 0) out.push({ big: root.FSActivity.time(a.week.loaf), label: "loafing" });
+    if (a.has && a.week.loaf > 0) out.push({ big: FSActivity.time(a.week.loaf), label: "loafing" });
     if (recap.streak) out.push({ big: String(recap.streak), label: recap.streak === 1 ? "day of full care" : "days of full care" });
     const visits = tray.week.filter((d) => d.visits).map((d) => d.visits);
     if (visits.length) out.push({ big: (visits.reduce((x, y) => x + y, 0) / visits.length).toFixed(0), label: "tray visits a day" });
-    if (a.has && a.week.active > 0) out.push({ big: root.FSActivity.time(a.week.active), label: "on the move" });
+    if (a.has && a.week.active > 0) out.push({ big: FSActivity.time(a.week.active), label: "on the move" });
     return { tiles: out.slice(0, 4), simulated: tray.simulated || a.simulated };
+  }
+
+  // the card's content without drawing it: what the live card (html) and the Quest draw from, and what the diary keeps
+  function layout({ pet, entries, recap }) {
+    const since = Date.now() - 7 * 864e5, week = entries.filter((e) => e.at >= since);
+    const from = new Date(since).toLocaleDateString(undefined, { day: "numeric", month: "short" }), to = new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    const nicks = String(pet.nicknames || "").split(/[,;\n]/).map((x) => x.trim()).filter(Boolean).slice(0, 3);
+    const sub = `${from} to ${to}${nicks.length ? "  ·  aka " + nicks.join(", ") : ""}`;
+    const sts = week.filter((e) => e.has_image && e.kind !== "recap" && (e.png || (e.extra && e.extra.sticker))).slice(0, 3);
+    const { tiles, simulated } = facts(entries, recap);
+    return { name: pet.name, sub, title: recap.title || `${pet.name}'s week`, tiles, highlights: (recap.highlights || []).slice(0, 3), stickers: sts.map((e) => e.id), photo: !sts.length && pet.has_photo ? pet.id : null, simulated };
   }
 
   async function make({ pet, entries, recap, img }) {
@@ -87,8 +102,7 @@
     for (const line of wrap(g, recap.title || `${pet.name}'s week`, W - 200).slice(0, 2)) { g.fillText(line, 100, y); y += 66; }
 
     // four tiles
-    const { tiles, simulated } = facts(entries, recap);
-    const layout = { name: pet.name, sub, title: recap.title || `${pet.name}'s week`, tiles, highlights: (recap.highlights || []).slice(0, 3), stickers: sts.map((e) => e.id), photo: !sts.length && pet.has_photo ? pet.id : null, simulated };
+    const L = layout({ pet, entries, recap }), { tiles, simulated } = L;
     const tw = (W - 200 - 24) / 2, th = 118;
     y += 6;
     tiles.forEach((t, i) => {
@@ -111,7 +125,7 @@
     // footer
     g.fillStyle = "#6B6977"; g.font = "800 24px Nunito, sans-serif";
     g.fillText(`FurSight · spoil them, worry less${simulated ? " · includes simulated data" : ""}`, 100, cy + ch - 40);
-    return { png: c.toDataURL("image/png"), layout };
+    return { png: c.toDataURL("image/png"), layout: L };
   }
 
   // ---------------------------------------------------------------- the live card (same layout, in HTML)
@@ -177,5 +191,6 @@
     }
   }
 
-  root.FSFactCard = { make, html, play, facts };
-})(window);
+  const api = { make, html, play, facts, layout };
+  if (typeof module !== "undefined" && module.exports) module.exports = api; else root.FSFactCard = api;
+})(typeof window !== "undefined" ? window : globalThis);

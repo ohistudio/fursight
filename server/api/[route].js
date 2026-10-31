@@ -20,6 +20,7 @@ const routes = {
   sticker: require("../routes/sticker"),
   today: require("../routes/today"),
   understand: require("../routes/understand"),
+  wrapped: require("../routes/wrapped"),
 };
 
 module.exports = (req, res) => {

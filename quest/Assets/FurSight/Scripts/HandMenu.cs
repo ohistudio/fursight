@@ -39,6 +39,7 @@ namespace FurSight
                 if (kb != null && kb.fKey.wasPressedThisFrame) act.TakePhoto();
                 if (kb != null && kb.pKey.wasPressedThisFrame) PooCheck.Begin();
                 if (kb != null && kb.tKey.wasPressedThisFrame) Todos.Show();
+                if (kb != null && kb.wKey.wasPressedThisFrame) WeekStory.Open();
                 if (kb != null && kb.cKey.wasPressedThisFrame) CamWindow.Toggle();
             }
             Palm();
@@ -98,10 +99,10 @@ namespace FurSight
             _panel.position = at;
             _panel.localScale = Vector3.one * (onPalm ? PalmScale : 1f);
             Face(_panel);
-            // two rows of four, on the palm or floating
+            // three rows of three, on the palm or floating
             float gap = 0.104f, rowGap = 0.13f;
-            int cols = 4, rows = 2;
-            float w = gap * cols + 0.02f, h = H + rowGap;
+            int cols = 3, rows = 3;
+            float w = gap * cols + 0.02f, h = H + rowGap * (rows - 1);
             var tile = new GameObject("Tile").transform;
             tile.SetParent(_panel, false);
             Shapes.MakeSlab("Lip", tile, Shapes.RoundedRectRing(w, h, 0.03f), Thick, Theme.CardLip, Theme.CardLip, new Vector3(0f, -0.007f, 0.003f));
@@ -118,6 +119,7 @@ namespace FurSight
             Button(tile, At(), "Photo", Theme.Sky, Theme.SkyLip, CameraIcon, () => PhotoFrame.Begin(), 0.18f);
             Button(tile, At(), "Pet cam", Theme.Sun, Theme.SunLip, ScreenIcon, CamWindow.Toggle, 0.21f);
             Button(tile, At(), "To-dos", Theme.Fern, Theme.FernLip, ListIcon, Todos.Show, 0.24f);
+            Button(tile, At(), "His week", Theme.Grape, Theme.GrapeLip, StarIcon, WeekStory.Open, 0.27f);
             if (VerdictCard.Count > 0) CloseAllPill(tile, -h / 2f - 0.045f, 0.25f);
             Status(tile, h / 2f + 0.03f);
             FurSightApi.Warm();   // check again now, so the status is fresh
@@ -278,6 +280,15 @@ namespace FurSight
             Shapes.MakeSlab("A", p, Shapes.CircleRing(0.0062f), 0.002f, Color.white, Theme.CardLip, new Vector3(-0.0068f, -0.0055f, 0f));
             Shapes.MakeSlab("B", p, Shapes.CircleRing(0.0062f), 0.002f, Color.white, Theme.CardLip, new Vector3(0.0068f, -0.0055f, 0f));
             Shapes.MakeSlab("C", p, Shapes.CircleRing(0.0062f), 0.002f, Color.white, Theme.CardLip, new Vector3(0f, 0.0062f, 0f));
+        }
+
+        // a sparkle: his week, wrapped
+        static void StarIcon(Transform p, Color col)
+        {
+            Shapes.MakeSlab("Long", p, Shapes.RoundedRectRing(0.005f, 0.026f, 0.0025f), 0.002f, Color.white, Theme.CardLip, new Vector3(-0.002f, 0f, 0f));
+            Shapes.MakeSlab("Wide", p, Shapes.RoundedRectRing(0.026f, 0.005f, 0.0025f), 0.002f, Color.white, Theme.CardLip, new Vector3(-0.002f, 0f, 0f));
+            Shapes.MakeSlab("Small A", p, Shapes.RoundedRectRing(0.0035f, 0.011f, 0.0017f), 0.002f, Color.white, Theme.CardLip, new Vector3(0.0105f, 0.0095f, 0f));
+            Shapes.MakeSlab("Small B", p, Shapes.RoundedRectRing(0.011f, 0.0035f, 0.0017f), 0.002f, Color.white, Theme.CardLip, new Vector3(0.0105f, 0.0095f, 0f));
         }
 
         // three ticked lines: today's to-dos

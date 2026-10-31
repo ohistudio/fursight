@@ -165,6 +165,21 @@ namespace FurSight
             if (r.result != UnityWebRequest.Result.Success) Debug.LogWarning("[FurSight] diary: " + r.error + " " + r.downloadHandler?.text);
         }
 
+        // a diary entry's picture (a photo, or a cut-out sticker with see-through edges), or null
+        public static async Task<Texture2D> DiaryImage(string id)
+        {
+            if (!Linked || Instance == null || string.IsNullOrEmpty(id)) return null;
+            using var req = UnityWebRequestTexture.GetTexture(Instance.hub.TrimEnd('/') + "/hub/diary/" + id + "/image", true);
+            req.SetRequestHeader("Authorization", "Bearer " + Token);
+            req.timeout = 20;
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+            if (req.result != UnityWebRequest.Result.Success) { Debug.LogWarning($"[FurSight] image {id}: {req.error}"); return null; }
+            var tex = DownloadHandlerTexture.GetContent(req);
+            if (tex != null) tex.wrapMode = TextureWrapMode.Clamp;
+            return tex;
+        }
+
         UnityWebRequest Send(string method, string path, object body, bool auth)
         {
             var req = new UnityWebRequest(hub.TrimEnd('/') + path, method) { downloadHandler = new DownloadHandlerBuffer(), timeout = 15 };

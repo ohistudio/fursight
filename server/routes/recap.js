@@ -3,10 +3,13 @@
 // is saved to the diary, so the phone, glasses and Quest all see it.
 //
 //   POST /api/recap  {}   (household device key)
+//   POST /api/recap  { draft: true }  -> the words only (the web app draws the card)
+//   POST /api/recap  { save: true }   -> the words and the fact card's layout, saved to the diary (the Quest draws it)
 //   -> { title, summary, highlights: [...], streak, image: "data:image/jpeg;base64,...", entry, ms }
 const { spark, imageEdit } = require("../lib/meta");
 const { handler, household, bad } = require("../lib/http");
 const { context, petPhoto, recent, addDiary } = require("../lib/hub");
+const FSFactCard = require("../public/factcard.js");
 
 const SCHEMA = {
   type: "object",
@@ -57,6 +60,11 @@ module.exports = handler(async (body, req) => {
   const note = `${data.summary}${data.highlights.length ? " " + data.highlights.map((h) => "• " + h).join(" ") : ""}${data.watch ? " Watch: " + data.watch : ""}${s ? ` Care streak: ${s} day${s > 1 ? "s" : ""}.` : ""}`;
   // {draft: true}: the words only. The web app draws the fact card (his sticker and the week's numbers) and
   // keeps it in the diary itself, so there's no AI illustration to wait for.
+  if (body.save) {
+    const layout = FSFactCard.layout({ pet: ctx.pet, entries, recap: { title: data.title, highlights: data.highlights, streak: s } });
+    const entry = await addDiary(home.token, { kind: "recap", title: data.title, note, pet: ctx.pet.name, extra: { highlights: data.highlights, watch: data.watch, streak: s, card: "facts", layout } });
+    return { title: data.title, summary: data.summary, highlights: data.highlights, watch: data.watch, streak: s, note, layout, entry: entry && entry.id, ms: Date.now() - t0 };
+  }
   if (body.draft) return { title: data.title, summary: data.summary, highlights: data.highlights, watch: data.watch, streak: s, note, ms: Date.now() - t0 };
   // the card: the pet's own photo, redrawn as a bold flat illustration (text is added by the apps, not drawn)
   const photo = await petPhoto(home.token, ctx.pet.id);
