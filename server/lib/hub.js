@@ -57,9 +57,15 @@ async function uploads(token, kinds = UPLOADS, limit = 60) {
   return out.slice(0, limit);
 }
 
+// a diary entry's picture as a data URL, or null
+async function diaryImage(token, id) {
+  const r = await fetch(`${HUB}/hub/diary/${id}/image`, { headers: { authorization: "Bearer " + token } }).catch(() => null);
+  return r && r.ok ? `data:${r.headers.get("content-type") || "image/jpeg"};base64,` + Buffer.from(await r.arrayBuffer()).toString("base64") : null;
+}
+
 async function addDiary(token, entry) {
   const r = await fetch(HUB + "/hub/diary", { method: "POST", headers: { authorization: "Bearer " + token, "content-type": "application/json" }, body: JSON.stringify(entry) });
   return r.ok ? r.json() : null;
 }
 
-module.exports = { context, camFrame, camView, petPhoto, recent, uploads, addDiary };
+module.exports = { context, camFrame, camView, petPhoto, recent, uploads, addDiary, diaryImage };

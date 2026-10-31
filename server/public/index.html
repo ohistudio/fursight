@@ -32,6 +32,7 @@
   .btn.sky { background: var(--sky); box-shadow: 0 5px 0 var(--sky-lip); } .btn.sky:active { box-shadow: 0 1px 0 var(--sky-lip); }
   /* text stays readable: ink on the bright fills, white only on a deeper grape */
   .btn.grape { background: var(--grape-lip); color: #fff; box-shadow: 0 5px 0 #5B35A8; } .btn.grape:active { box-shadow: 0 1px 0 #5B35A8; }
+  .btn.sun { background: var(--sun); color: var(--ink); box-shadow: 0 5px 0 var(--sun-lip); } .btn.sun:active { box-shadow: 0 1px 0 var(--sun-lip); }
   .btn.ghost { background: var(--card); color: var(--ink); border: 2px solid var(--line); box-shadow: 0 4px 0 var(--line); }
   .btn.ghost:active { box-shadow: 0 0 0 var(--line); }
   .btn.small { min-height: 42px; width: auto; font-size: 15px; padding: 8px 14px; border-radius: 13px; }
@@ -112,6 +113,7 @@
   .foodcam { position: fixed; inset: 0; z-index: 70; background: #14131A; display: grid; grid-template-rows: 1fr auto; padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); gap: 14px; }
   .fc-frame { position: relative; border-radius: 22px; overflow: hidden; background: #000; min-height: 0; }
   .fc-frame video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pdots { display: flex; gap: 8px; } .pdot { display: grid; justify-items: center; gap: 2px; font: 800 12px Nunito, sans-serif; color: var(--muted); } .pdot i { width: 14px; height: 14px; border-radius: 50%; display: block; }
   .fc-aim { position: absolute; left: 50%; top: 50%; width: 46%; aspect-ratio: 1; transform: translate(-50%, -50%); border: 3px solid rgba(255,255,255,.85); border-radius: 28px; box-shadow: 0 0 0 999px rgba(20,19,26,.25); }
   .fc-frame p { position: absolute; left: 0; right: 0; bottom: 14px; margin: 0; text-align: center; color: #fff; font: 900 16px Nunito, sans-serif; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
   .fc-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
@@ -478,12 +480,13 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="pooNow"></div><input id="pooPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="pooOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("foodPhoto").onchange = async (e) => e.target.files[0] && foodCheck(await shrink(e.target.files[0]));
   document.getElementById("foodLive").onclick = foodCamera;
+  document.getElementById("pooPhoto").onchange = async (e) => e.target.files[0] && pooCheck(await shrink(e.target.files[0]));
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
   document.getElementById("upload").onclick = () => uploadPage();
   for (const b of document.querySelectorAll("[data-show]")) b.onclick = () => { diaryShow = b.dataset.show; today(); };
@@ -511,6 +514,7 @@ async function today() {
       ${ready.map((ev) => `<div class="row" style="gap:10px"><span class="chip" style="background:var(--fern);color:#fff;border:0;flex:none">OK again</span><b style="flex:1;min-width:0">${esc(cap(ev.extra.fed))}</b><span class="when">since ${esc(dayName(ev.extra.date))}</span></div>`).join("")}
       ${waiting.slice(0, 5).map((ev) => `<div class="row" style="gap:10px"><span class="chip" style="background:var(--sun);color:var(--ink);border:0;flex:none">Not yet</span><b style="flex:1;min-width:0">${esc(cap(ev.extra.fed))}</b><span class="when">OK ${esc(dayName(ev.extra.date))}</span></div>`).join("")}</div>`;
   }
+  if (!kinds) pooCard(all);
   // hay and bowls today, from the pet cam's checks
   const lv = !kinds && FSLevels.summary(all);
   if (lv && lv.has) {
@@ -1483,16 +1487,18 @@ const VWORD = { safe: "Safe", caution: "Small treat only", toxic: "Don't" };
 
 // Like the iPhone app: a live camera you hold the food up to, then Check. The frame goes to foodCheck, which boxes
 // the food on it. No camera (a laptop without one, or permission refused): choose a photo instead.
-async function foodCamera() {
-  const pick = () => document.getElementById("foodPhoto").click();
+async function foodCamera() { liveCamera("Hold the food up in the middle", "Check this food", "foodPhoto", "foodOut", foodCheck); }
+// the full-screen viewfinder: hint over the picture, the round shutter sends one 768 px frame to onPhoto
+async function liveCamera(hint, label, inputId, outId, onPhoto) {
+  const pick = () => document.getElementById(inputId).click();
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return pick();
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false }); }
   catch (e) { toast("No camera, so choose a photo"); return pick(); }
   const sheet = document.createElement("div");
   sheet.className = "foodcam";
-  sheet.innerHTML = `<div class="fc-frame"><video playsinline autoplay muted></video><div class="fc-aim"></div><p>Hold the food up in the middle</p></div>
-    <div class="fc-row"><button class="btn ghost small" id="fcPick">Choose a photo</button><button class="fc-shutter" id="fcGo" aria-label="Check this food"></button><button class="btn ghost small" id="fcClose">Cancel</button></div>`;
+  sheet.innerHTML = `<div class="fc-frame"><video playsinline autoplay muted></video><div class="fc-aim"></div><p>${esc(hint)}</p></div>
+    <div class="fc-row"><button class="btn ghost small" id="fcPick">Choose a photo</button><button class="fc-shutter" id="fcGo" aria-label="${esc(label)}"></button><button class="btn ghost small" id="fcClose">Cancel</button></div>`;
   document.body.appendChild(sheet);
   const v = sheet.querySelector("video"); v.srcObject = stream;
   const close = () => { stream.getTracks().forEach((t) => t.stop()); sheet.remove(); };
@@ -1505,8 +1511,8 @@ async function foodCamera() {
     c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
     const photo = c.toDataURL("image/jpeg", 0.85);
     close();
-    foodCheck(photo);
-    document.getElementById("foodOut")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    onPhoto(photo);
+    document.getElementById(outId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 }
 async function foodCheck(photo) {
@@ -1537,6 +1543,51 @@ async function foodCheck(photo) {
       } catch (e) { $f.disabled = false; $f.textContent = `We fed ${name} this`; toast(e.message); }
     };
     hub("/diary", { method: "POST", body: JSON.stringify({ kind: "food", title: cap(held.food), note: held.reason || "", verdict: v, image: photo, pet: name, extra: { marks } }) }).catch(() => {});
+  } catch (e) { $o.innerHTML = `<div class="card stack pop"><h3>Couldn't check</h3><p class="muted">${esc(e.message)}</p></div>`; }
+}
+
+// Poo check: once a day, a photo of the litter tray. SAM counts and rings the droppings, Muse Spark judges size and
+// shape side by side with the last check's photo. The card is the reminder: due until today's check is done, with
+// the last week's checks as dots underneath.
+const POO = { normal: ["safe", "Looks healthy", "✓"], watch: ["caution", "Keep an eye on it", "!"], vet: ["vet", "See a vet today", "✕"] };
+const TREND = { first: "First check", better: "Better than last check", same: "Same as last check", worse: "Worse than last check" };
+function pooCard(all) {
+  const $p = document.getElementById("pooNow");
+  if (!$p) return;
+  const checks = all.filter((e) => e.kind === "droppings").sort((a, b) => b.at - a.at);
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const last = checks[0], done = last && last.at >= start.getTime();
+  const t = (x) => new Date(x).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const when = !last ? "No checks yet" : done ? `Done at ${t(last.at)}` : `Last one ${new Date(last.at).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}`;
+  const lv = last && ((last.extra && last.extra.verdict) || { safe: "normal", caution: "watch", vet: "vet" }[last.verdict]);
+  const dots = checks.slice(0, 7).reverse().map((e) => { const k = (e.extra && e.extra.verdict) || { safe: "normal", caution: "watch", vet: "vet" }[e.verdict] || "normal";
+    return `<div class="pdot" title="${esc(new Date(e.at).toLocaleDateString())}: ${esc(POO[k] ? POO[k][1] : k)}"><i class="v-${POO[k] ? POO[k][0] : "safe"}"></i><span>${e.extra && Number.isFinite(e.extra.count) ? e.extra.count : ""}</span></div>`; }).join("");
+  $p.innerHTML = `<div class="card stack pop" style="${done ? "" : "border-color:var(--sun)"}">
+    <div class="row" style="justify-content:space-between;gap:10px"><h3 style="margin:0">Poo check</h3>${done ? `<span class="chip" style="flex:none;background:var(--fern);color:#fff;border:0">Done today</span>` : `<span class="chip" style="flex:none;background:var(--sun);color:var(--ink);border:0">Due today</span>`}</div>
+    <p class="muted" style="margin:0">${done ? `${esc(when)}${lv && POO[lv] ? ": " + POO[lv][1].toLowerCase() : ""}.` : `A photo of ${esc(p0name())}'s litter tray, once a day. Fewer, smaller or misshapen droppings are an early sign of gut trouble. ${esc(when)}.`}</p>
+    ${dots ? `<div class="pdots">${dots}</div>` : ""}
+    <button class="btn ${done ? "ghost" : "sun"}" id="pooGo">${done ? "Check again" : "Take a photo of the tray"}</button></div>`;
+  document.getElementById("pooGo").onclick = () => liveCamera("Get the whole litter tray in", "Check his droppings", "pooPhoto", "pooOut", pooCheck);
+}
+async function pooCheck(photo) {
+  const $o = document.getElementById("pooOut"), name = me.pets[0].name;
+  if (!$o) return;
+  $o.innerHTML = `<div class="card center stack pop">${bean("thinking", 80)}<p class="muted">Counting and comparing with the last check…</p></div>`;
+  try {
+    const r = await api("/api/droppings", { image: photo });
+    const [v, word, icon] = POO[r.verdict] || POO.watch;
+    const marks = (r.boxes || []).map((b) => ({ b: [b.x0, b.y0, b.x1, b.y1].map((n) => Math.round(n * 1000)), v }));
+    const pic = await drawMarks(photo, marks);
+    const prev = (r.previous || [])[0];
+    $o.innerHTML = `<div class="card stack pop"><img src="${pic}" alt="Litter tray, ${r.count} droppings ringed" style="width:100%;border-radius:14px;cursor:zoom-in" id="pooPic">
+      <div class="row" style="gap:12px;align-items:center"><div class="badge v-${v}" style="flex:none;display:grid;place-items:center;color:#fff;font:900 22px Nunito,sans-serif">${icon}</div><div style="min-width:0"><h2 style="margin:0">${r.count} found</h2><div class="vword t-${v}">${word}</div></div></div>
+      <p class="muted" style="margin:0">${esc(r.summary || "")}</p>
+      <div class="row" style="gap:10px;align-items:flex-start"><span class="chip" style="flex:none;${r.trend === "worse" ? "background:var(--sun);color:var(--ink);border:0" : r.trend === "better" ? "background:var(--fern);color:#fff;border:0" : ""}">${TREND[r.trend] || TREND.first}</span><span style="min-width:0">${esc(r.compare || "")}${prev && Number.isFinite(prev.count) ? ` <span class="muted">(last time ${prev.count})</span>` : ""}</span></div>
+      <p class="muted" style="margin:0;font-size:13px">It notices; the vet decides. No droppings for 12 hours is a vet call.</p></div>`;
+    document.getElementById("pooPic").onclick = () => enlarge(pic, false);
+    await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "droppings", title: "Droppings check", note: `${r.count} found. ${r.summary || ""} ${r.compare || ""}`.trim(), verdict: v, image: photo, pet: name,
+      extra: { count: r.count, verdict: r.verdict, trend: r.trend, size_spread: r.size_spread, marks } }) }).catch(() => {});
+    hub("/diary?limit=120").then((d) => pooCard(d.entries)).catch(() => {});
   } catch (e) { $o.innerHTML = `<div class="card stack pop"><h3>Couldn't check</h3><p class="muted">${esc(e.message)}</p></div>`; }
 }
 
