@@ -387,7 +387,7 @@ namespace FurSight
                 }
             }
             // no cut-outs of him this week: the FurSight bean holds his place, happy
-            if (!(L["stickers"] is JArray st2) || st2.Count == 0) Bean.Make(parent, new Vector3(0f, top - 430f * k, z - 0.01f), 300f * k, "safe");
+            if (!(L["stickers"] is JArray st2) || st2.Count == 0) Bean.Make(parent, new Vector3(0f, top - 600f * k, z - 0.01f), 280f * k, "safe");
 
             // the white card
             float cy = top - 690f * k, ch = h - 690f * k - 50f * k, cw = w - 100f * k;
