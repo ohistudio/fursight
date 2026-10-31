@@ -332,10 +332,11 @@ struct CameraPreview: UIViewRepresentable {
 // ---------------------------------------------------------------- a photo instead (and the simulator, which has no camera)
 
 struct CameraPicker: UIViewControllerRepresentable {
+    var source: UIImagePickerController.SourceType = .photoLibrary   // .camera to take one
     var done: (UIImage?) -> Void
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let p = UIImagePickerController()
-        p.sourceType = .photoLibrary
+        p.sourceType = UIImagePickerController.isSourceTypeAvailable(source) ? source : .photoLibrary
         p.delegate = context.coordinator
         return p
     }

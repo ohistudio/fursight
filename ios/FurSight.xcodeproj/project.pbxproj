@@ -18,6 +18,7 @@
 		4662C64B40BB6EB85C581A4B /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB47E5313091B76D55BDF20E /* StatsView.swift */; };
 		473C4730A141CE0E35B42D8A /* FurSightNotify.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		564322E743440BD7978BF8EA /* GlassesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E905EFA893EE992AA0824B /* GlassesManager.swift */; };
+		5A9A1F4AC09A2E7155DEBBCD /* PooCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B6A4B45BD7862507E1D52C3 /* PooCheck.swift */; };
 		78226A09A3AB8769BB034FB6 /* API.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EC624E3422B5793BFD23B28 /* API.swift */; };
 		8222348CBFA39D7C19274830 /* FoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C14919DCBC6166FE1262413 /* FoodView.swift */; };
 		8BA610F768EBE0E285F52132 /* FurSightDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C714A0A8553DE9D552C5569E /* FurSightDisplay.swift */; };
@@ -68,6 +69,7 @@
 		7A953BD38AAD02233683A511 /* WearablesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearablesViewModel.swift; sourceTree = "<group>"; };
 		847362D05B546CE9AB660E15 /* Nunito-900.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-900.ttf"; sourceTree = "<group>"; };
 		8583F6F10EB8ECBC0C1DE059 /* Nunito-800.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-800.ttf"; sourceTree = "<group>"; };
+		8B6A4B45BD7862507E1D52C3 /* PooCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PooCheck.swift; sourceTree = "<group>"; };
 		8DB276B33FE899A7FCA7D4D5 /* FurSightNotify.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = FurSightNotify.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E3C6C9F2507B2258BFF1BFB /* DeviceSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSessionManager.swift; sourceTree = "<group>"; };
 		9D732289DF18D3692759629C /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 				BF4146ABF5CF12DFE8A1DE53 /* FurSightApp.swift */,
 				F830D04ED96D187E6937789B /* Info.plist */,
 				F19D8F5344D2E39D85A054F5 /* LogView.swift */,
+				8B6A4B45BD7862507E1D52C3 /* PooCheck.swift */,
 				BB47E5313091B76D55BDF20E /* StatsView.swift */,
 				E2196AD68290A9ADF9BC341E /* Theme.swift */,
 				AE70F44C1F5C4BD30FF105FF /* TodayView.swift */,
@@ -285,6 +288,7 @@
 				564322E743440BD7978BF8EA /* GlassesManager.swift in Sources */,
 				2D7EC8635A47D016D23AFD79 /* GlassesView.swift in Sources */,
 				E45CA93CADC60F9A9CD1EB09 /* LogView.swift in Sources */,
+				5A9A1F4AC09A2E7155DEBBCD /* PooCheck.swift in Sources */,
 				4662C64B40BB6EB85C581A4B /* StatsView.swift in Sources */,
 				97DF3E8BAB08550B72856DDF /* Theme.swift in Sources */,
 				016CA0A3F04F3F32F685D12E /* TodayView.swift in Sources */,

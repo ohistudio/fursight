@@ -11,6 +11,9 @@ struct WebApp: UIViewRepresentable {
     var url: URL = Config.server
     func makeUIView(context _: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        // the web app's live cameras (food and poo checks) play in the page, under their buttons, not full screen
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
         if let token = API.token {
             let js = "try { localStorage.setItem('fs.token', \(literal(token))); } catch (e) {}"
             config.userContentController.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))

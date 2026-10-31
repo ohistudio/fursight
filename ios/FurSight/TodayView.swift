@@ -22,6 +22,10 @@ struct TodayView: View {
                     }
                     if let error { Text(error).font(.nunito(15, black: false)).foregroundStyle(Color.coral).card() }
                     ForEach(Array(data.arr("alerts").enumerated()), id: \.offset) { _, a in alert(a) }
+                    // the daily poo check: due until today's is done (the to-do comes from /api/today)
+                    if data["todos"] != nil {
+                        PooCard(pet: data.obj("pet")?.str("name") ?? "him", due: data.arr("todos").contains { $0.str("id") == "poo" }) { Task { await load() } }
+                    }
                     if let m = data.obj("moment") { moment(m) }
                     if let t = data.obj("tray") { tray(t) }
                     if let c = data.obj("climate") { room(c) }
@@ -204,7 +208,7 @@ struct TodayView: View {
     }
 
     func load() async {
-        do { data = try await API.server("api/today"); error = nil } catch { if let m = error.shown { self.error = m } }
+        do { data = try await API.server("api/today", ["tz": TimeZone.current.secondsFromGMT() / 60]); error = nil } catch { if let m = error.shown { self.error = m } }
         loading = false
     }
 }
