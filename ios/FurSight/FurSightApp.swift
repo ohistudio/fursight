@@ -63,7 +63,7 @@ struct MainView: View {
         TabView {
             TodayView().tabItem { Label("Today", systemImage: "sun.max.fill") }
             AskView().tabItem { Label("Ask", systemImage: "bubble.left.and.text.bubble.right.fill") }
-            FoodView().tabItem { Label("Food check", systemImage: "camera.fill") }
+            FoodView().tabItem { Label("Check", systemImage: "camera.fill") }
             GlassesView(wearables: WearablesViewModel(wearables: Wearables.shared)).tabItem { Label("Glasses", systemImage: "eyeglasses") }
             WebTab().tabItem { Label("More", systemImage: "square.grid.2x2.fill") }
         }

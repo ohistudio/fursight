@@ -3,9 +3,9 @@
 // chew risk and a fix, like the room check), or him (then it asks what you want to know: his coat, eyes, teeth,
 // ears, body or his droppings, from what it can see). Pick one and the same photo gets a closer look at that.
 //
-//   POST /api/check  { image, pet?, tz? }
+//   POST /api/check  { image, pet?, tz?, as? }   (as: "food" | "room" | "pet" when the owner says what it is)
 //   -> { kind: "food", food: <the /api/food answer> }
-//    | { kind: "object", things: [{ label, risk: high|medium|low|none, why, fix }] }
+//    | { kind: "object", things: [{ label, risk: high|medium|low|good, why, fix, boxes }] }   (the room check's answer)
 //    | { kind: "pet", seen, options: [{ id, label }] }
 //    | { kind: "none", says }
 //   POST /api/check  { image, focus: "coat" }   (a follow-up about him)
@@ -14,6 +14,7 @@ const { spark } = require("../lib/meta");
 const { handler, image, text, household } = require("../lib/http");
 const { context } = require("../lib/hub");
 const food = require("./food");
+const room = require("./room");
 
 const FOCUS = { coat: "His coat", eyes: "His eyes", teeth: "His teeth", ears: "His ears", body: "His body and weight", feet: "His feet", droppings: "His droppings", mood: "How he's feeling" };
 
@@ -21,14 +22,8 @@ const WHAT = { type: "object", properties: {
   kind: { type: "string", enum: ["food", "object", "pet", "none"], description: "food: something edible held or offered (fruit, veg, plants, treats, human food). pet: the pet himself is the main subject. object: anything else he could chew, swallow, get stuck in or pee on (cables, wood, plants in pots, rugs, small things). none: nothing useful" },
   seen: { type: "string", description: "kind pet: what he's doing, in one short warm sentence" },
   options: { type: "array", items: { type: "string", enum: Object.keys(FOCUS) }, description: "kind pet: 2 to 4 things the owner may be asking about that this photo can actually show, most likely first" },
-  things: { type: "array", items: { type: "object", properties: {
-    label: { type: "string", description: "1 to 4 words" },
-    risk: { type: "string", enum: ["high", "medium", "low", "none"] },
-    why: { type: "string", description: "one short sentence on the chew or swallow risk" },
-    fix: { type: "string", description: "one short practical fix, or empty if none needed" },
-  }, required: ["label", "risk", "why", "fix"] }, description: "kind object: up to 3 things in view, the one looked at first" },
   says: { type: "string", description: "kind none: one short sentence on what to point at instead" },
-}, required: ["kind", "seen", "options", "things", "says"] };
+}, required: ["kind", "seen", "options", "says"] };
 
 const LOOK = { type: "object", properties: {
   verdict: { type: "string", enum: ["normal", "watch", "vet"] },
@@ -59,17 +54,30 @@ module.exports = handler(async (body, req) => {
     return { kind: "look", focus, label: FOCUS[focus], ...data };
   }
 
+  // the owner said what it is: food and room skip straight to their check
+  const as = { food: "food", room: "object", object: "object", pet: "pet", him: "pet" }[body.as];
+  if (as === "food") return { kind: "food", food: await call(food, { image: body.image, pet: body.pet || p, tz: body.tz }, req) };
+  if (as === "object") return roomAnswer(await call(room, { image: body.image }, req));
   const { data } = await spark({
-    system: `You are FurSight's Check for ${name}, a pet ${species}. Look at the photo and say what the owner is looking at, then answer for that kind. No em dashes.`,
+    system: `You are FurSight's Check for ${name}, a pet ${species}. Look at the photo and say what the owner is looking at, then answer for that kind.${as === "pet" ? ` The owner says this is ${name}: kind is pet.` : ""} No em dashes.`,
     text: "What is this, and what matters about it?", images: [img], schema: WHAT, name: "Check",
   });
+  if (as === "pet") data.kind = "pet";
   if (data.kind === "food") return { kind: "food", food: await call(food, { image: body.image, pet: body.pet || p, tz: body.tz }, req) };
+  // things he could chew: the room check, so each one comes back outlined (the phone labels them on the photo)
+  if (data.kind === "object") return roomAnswer(await call(room, { image: body.image }, req));
   if (data.kind === "pet") {
     const options = [...new Set((data.options || []).filter((o) => FOCUS[o]))].slice(0, 4);
     return { kind: "pet", seen: data.seen, options: (options.length ? options : ["coat", "eyes", "mood"]).map((id) => ({ id, label: FOCUS[id] })) };
   }
-  // the riskiest first: that's the one the glasses lead with
-  const RANK = { high: 0, medium: 1, low: 2, none: 3 };
-  if (data.kind === "object" && (data.things || []).length) return { kind: "object", things: data.things.sort((a, b) => (RANK[a.risk] ?? 3) - (RANK[b.risk] ?? 3)).slice(0, 3) };
   return { kind: "none", says: data.says || "Point at food, something he might chew, or him." };
 });
+
+// the room check's hazards, riskiest first (the one the glasses lead with), then what's good for him
+const RANK = { high: 0, medium: 1, low: 2 };
+function roomAnswer(r) {
+  const things = (r.hazards || []).slice().sort((a, b) => (RANK[a.risk] ?? 3) - (RANK[b.risk] ?? 3))
+    .map((h) => ({ label: h.label, risk: h.risk, why: h.why, fix: h.fix || "", boxes: h.boxes || [] }))
+    .concat((r.good || []).map((g) => ({ label: g.label, risk: "good", why: g.why, fix: "", boxes: g.boxes || [] })));
+  return things.length ? { kind: "object", things } : { kind: "none", says: "Nothing here he could chew or swallow." };
+}

@@ -41,19 +41,22 @@ enum FoodCheck {
     /// What the Check found: food (the full food check), things he could chew, or him (with what to look at next).
     enum Found {
         case food(Result)
-        case object([[String: Any]])
+        case object([[String: Any]])          // each as the room check gives it: label, risk, why, fix, boxes
         case pet(seen: String, options: [[String: Any]], photo: String)
         case none(String)
     }
 
     /// One frame to /api/check: Muse Spark works out what it is and answers for that. Kept in the diary like the others.
-    static func check(_ img: UIImage) async throws -> Found {
+    /// as: "food", "room" or "pet" when the owner says what it is (the phone's "Check as" row)
+    static func check(_ img: UIImage, as kind: String? = nil) async throws -> Found {
         let small = img.resized(768)
         guard let jpeg = small.jpegData(compressionQuality: 0.72) else { throw URLError(.cannotDecodeContentData) }
         let url = "data:image/jpeg;base64," + jpeg.base64EncodedString()
         await loadPet()
         let p = pet ?? [:]
-        let r = try await API.server("api/check", ["image": url, "pet": ["name": p.str("name"), "species": p.str("species"), "breed": p.str("breed"), "notes": p.str("notes")], "tz": tz])
+        var body: [String: Any] = ["image": url, "pet": ["name": p.str("name"), "species": p.str("species"), "breed": p.str("breed"), "notes": p.str("notes")], "tz": tz]
+        if let kind { body["as"] = kind }
+        let r = try await API.server("api/check", body)
         switch r.str("kind") {
         case "food":
             let f = r.obj("food") ?? [:], items = f.arr("items")
@@ -62,10 +65,16 @@ enum FoodCheck {
             return .food(Result(image: img, items: items, held: held))
         case "object":
             let things = r.arr("things")
-            if let t = things.first {
-                let v = ["high": "toxic", "medium": "caution"][t.str("risk")] ?? "safe"
-                Task { _ = try? await API.hub("/diary", method: "POST", body: ["kind": "room", "title": "Chew risk: " + t.str("label"), "note": t.str("why") + (t.str("fix").isEmpty ? "" : " Fix: " + t.str("fix")), "verdict": v, "image": url]) }
+            // kept in the diary like a room check: every thing ringed and numbered, the story along the bottom
+            let marks: [[String: Any]] = things.enumerated().compactMap { n, t in
+                guard let b = t.arr("boxes").first else { return nil }
+                return ["b": ["x0", "y0", "x1", "y1"].map { Int(b.num($0) * 1000) }, "v": t.str("risk") == "good" ? "safe" : t.str("risk"), "t": t.str("label"), "n": n + 1]
             }
+            let bad = things.filter { $0.str("risk") != "good" }, good = things.count - bad.count
+            let title = "Room check: \(bad.count) to sort" + (good > 0 ? ", \(good) good" : "")
+            let line = bad.first.map { "Fix first: \($0.str("label").lowercased()). \($0.str("fix"))" } ?? "Nothing here for \(petName) to chew or swallow."
+            Task { _ = try? await API.hub("/diary", method: "POST", body: ["kind": "room", "title": title, "note": things.map { $0.str("label") }.joined(separator: ", "), "verdict": bad.isEmpty ? "safe" : "caution", "image": url,
+                                                                           "extra": ["marks": marks, "caption": ["title": title, "line": line, "v": bad.contains { $0.str("risk") == "high" } ? "high" : bad.isEmpty ? "safe" : "medium"]]]) }
             return .object(things)
         case "pet": return .pet(seen: r.str("seen"), options: r.arr("options"), photo: url)
         default: return .none(r.str("says"))

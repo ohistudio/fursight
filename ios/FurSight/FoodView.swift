@@ -2,7 +2,8 @@ import AVFoundation
 import SwiftUI
 import UIKit
 
-// "Can he eat this?" The camera fills the screen; tap anywhere (or the button) and the picture holds still while
+// Check: food, something he could chew, or him. Muse Spark works out which ("Check as" below the answer puts it
+// right in one tap). The camera fills the screen; tap anywhere (or the button) and the picture holds still while
 // FurSight checks it. Each food gets a label pinned on it, like the Quest cards: the verdict badge, what it thinks
 // the food is, and the verdict in its colour. Tap a label for the details: why, how much, when he last had it, and
 // "We fed him this", which puts the day it's OK again on the calendar. The safety list has the last word.
@@ -21,6 +22,11 @@ struct FoodView: View {
     @State private var fed: [String: String] = [:]      // food -> what saving "We fed him this" said
     @State private var feeding: String?
     @State private var picking = false
+    @State private var seen: String?                   // him: what he's doing, and what to look at closer
+    @State private var options: [[String: Any]] = []
+    @State private var look: [String: Any]?
+    @State private var looking = false
+    @State private var photo = ""                      // the checked frame, for a closer look at him
 
     var body: some View {
         GeometryReader { geo in
@@ -51,10 +57,12 @@ struct FoodView: View {
                     if checking { checkingPill }
                     if let error { Text(error).font(.nunito(15)).foregroundStyle(Color.ink).padding(12).background(RoundedRectangle(cornerRadius: 14).fill(.white)) }
                     if still != nil, !checking, items.indices.contains(selected) { details(items[selected]) }
-                    if still != nil, !checking, items.isEmpty, error == nil {
-                        Text("No food seen. Hold it up in front of the camera and try again.").font(.nunito(15)).foregroundStyle(Color.ink)
+                    if still != nil, !checking, let seen { petCard(seen) }
+                    if still != nil, !checking, items.isEmpty, error == nil, seen == nil {
+                        Text("Nothing to check there. Try again, or say what it is below.").font(.nunito(15)).foregroundStyle(Color.ink)
                             .padding(14).frame(maxWidth: .infinity).background(RoundedRectangle(cornerRadius: 16).fill(.white))
                     }
+                    if still != nil, !checking { checkAs }
                     controls
                 }
                 .padding(16)
@@ -79,7 +87,8 @@ struct FoodView: View {
         HStack(spacing: 10) {
             Bean(mood: checking ? "thinking" : mood, size: 52)
             VStack(alignment: .leading, spacing: 0) {
-                Text("Can \(petName) eat this?").font(.nunito(22)).foregroundStyle(Color.ink)
+                Text("Check").font(.nunito(22)).foregroundStyle(Color.ink)
+                Text("Food, a chew risk, or \(petName)").font(.nunito(13)).foregroundStyle(Color.muted)
                 if onGlasses { Label("Glasses camera", systemImage: "eyeglasses").font(.nunito(13)).foregroundStyle(Color.grapeLip) }
             }
             Spacer(minLength: 0)
@@ -91,7 +100,7 @@ struct FoodView: View {
     private var checkingPill: some View {
         HStack(spacing: 10) {
             ProgressView().tint(Color.sky)
-            Text("Checking against \(petName)'s safety list…").font(.nunito(15)).foregroundStyle(Color.ink)
+            Text("Checking…").font(.nunito(15)).foregroundStyle(Color.ink)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
         .background(Capsule().fill(.white))
@@ -126,10 +135,11 @@ struct FoodView: View {
                 VerdictBadge(verdict: v, size: 34)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(i.str("food").capitalized).font(.nunito(21)).foregroundStyle(Color.ink)
-                    Text(word(v)).font(.nunito(15)).foregroundStyle(v == "caution" ? Color.sunLip : v == "safe" ? Color.fernLip : c)
+                    Text(word(i)).font(.nunito(15)).foregroundStyle(v == "caution" ? Color.sunLip : v == "safe" ? Color.fernLip : c)
                 }
             }
             Text(i.str("reason")).font(.nunito(15, black: false)).foregroundStyle(Color.ink)
+            if !i.str("fix").isEmpty { Text("Fix: " + i.str("fix")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if !i.str("label").isEmpty { Label("Label: " + i.str("label"), systemImage: "text.viewfinder").font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if v == "caution", !i.str("portion").isEmpty, i.str("portion") != "none" { Text("How much: " + i.str("portion")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             if v == "toxic", !i.str("instead").isEmpty { Text("Instead: " + i.str("instead")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
@@ -138,7 +148,7 @@ struct FoodView: View {
                 Label(had.str("said"), systemImage: wait ? "calendar.badge.clock" : "clock")
                     .font(.nunito(14)).foregroundStyle(wait ? Color.sunLip : Color.muted)
             }
-            if v != "toxic" {
+            if v != "toxic", i.str("kind") != "thing" {
                 if let done = fed[i.str("food")] {
                     Label(done, systemImage: "checkmark.circle.fill").font(.nunito(14)).foregroundStyle(Color.fernLip)
                 } else {
@@ -178,23 +188,94 @@ struct FoodView: View {
         check(img)
     }
 
-    private func reset() { withAnimation { still = nil; items = []; fed = [:]; error = nil; selected = 0 } }
+    private func reset() { withAnimation { still = nil; items = []; fed = [:]; error = nil; selected = 0; seen = nil; options = []; look = nil } }
 
-    func check(_ img: UIImage) {
-        still = img; items = []; fed = [:]; checking = true; error = nil; selected = 0
+    func check(_ img: UIImage, as kind: String? = nil) {
+        still = img; items = []; fed = [:]; checking = true; error = nil; selected = 0; seen = nil; options = []; look = nil
         Task {
             do {
-                let r = try await FoodCheck.run(img)
+                switch try await FoodCheck.check(img, as: kind) {
+                case .food(let r):
+                    show(r)
+                    if onGlasses { await glasses.showVerdict(r) }   // the lens shows the food being held
+                case .object(let things):
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) { items = things.map(thing); selected = 0 }
+                    UINotificationFeedbackGenerator().notificationOccurred(things.contains { $0.str("risk") == "high" } ? .error : .warning)
+                case .pet(let s, let o, let p):
+                    withAnimation { seen = s; options = o; photo = p }
+                case .none(let says):
+                    error = says
+                }
                 petName = FoodCheck.petName
-                show(r)
-                if onGlasses { await glasses.showVerdict(r) }   // the lens shows the food being held
             } catch { if let m = error.shown { self.error = m } }
             checking = false
         }
     }
 
+    // a thing he could chew, as a label like a food's: its risk in the verdict colours, the fix in the details
+    private func thing(_ t: [String: Any]) -> [String: Any] {
+        let r = t.str("risk"), b = t.arr("boxes").first
+        var i: [String: Any] = ["kind": "thing", "food": t.str("label"), "reason": t.str("why"), "fix": t.str("fix"),
+                                "verdict": ["high": "toxic", "medium": "caution", "good": "safe"][r] ?? "other",
+                                "word": r == "good" ? "Good for him" : "Chew risk: " + r]
+        if let b { i["box"] = ["x0", "y0", "x1", "y1"].map { b.num($0) * 1000 } }
+        return i
+    }
+
+    // him: what he's doing, and buttons for what to look at closer in the same photo
+    private func petCard(_ seen: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let look {
+                let v = ["normal": "safe", "watch": "caution", "vet": "vet"][look.str("verdict")] ?? "caution"
+                HStack(spacing: 10) {
+                    VerdictBadge(verdict: v, size: 34)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(look.str("label")).font(.nunito(21)).foregroundStyle(Color.ink)
+                        Text(["normal": "Looks healthy", "watch": "Keep an eye on it", "vet": "See a vet"][look.str("verdict")] ?? "").font(.nunito(15)).foregroundStyle(Color.verdict(v).0 == .sun ? Color.sunLip : Color.verdict(v).0)
+                    }
+                }
+                Text(look.str("says")).font(.nunito(15, black: false)).foregroundStyle(Color.ink)
+                if !look.str("tip").isEmpty { Text(look.str("tip")).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
+                Text("It notices; your vet decides.").font(.nunito(12, black: false)).foregroundStyle(Color.muted)
+            } else {
+                Text("That's \(petName)").font(.nunito(21)).foregroundStyle(Color.ink)
+                Text(seen).font(.nunito(15, black: false)).foregroundStyle(Color.ink)
+                Text("What do you want to check?").font(.nunito(14)).foregroundStyle(Color.muted)
+                if looking { ProgressView().tint(Color.sky) }
+                else {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                        ForEach(Array(options.enumerated()), id: \.offset) { _, o in
+                            Button(o.str("label")) { Task { await closer(o.str("id")) } }.buttonStyle(ChunkyButton(color: .sky, lip: .skyLip))
+                        }
+                    }
+                }
+            }
+        }
+        .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 20).fill(.white))
+    }
+
+    private func closer(_ focus: String) async {
+        looking = true; defer { looking = false }
+        do { let r = try await FoodCheck.look(photo, focus: focus); withAnimation { look = r } } catch { if let m = error.shown { self.error = m } }
+    }
+
+    // not what it thought? say what it is, and the same photo is checked again as that
+    private var checkAs: some View {
+        HStack(spacing: 8) {
+            Text("Not right? Check as").font(.nunito(13)).foregroundStyle(.white)
+            ForEach([("food", "Food"), ("room", "Room"), ("pet", "Him")], id: \.0) { k, l in
+                Button(l) { if let still { check(still, as: k) } }
+                    .font(.nunito(14)).foregroundStyle(Color.ink).padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(Capsule().fill(.white))
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 6)
+        .background(Capsule().fill(.black.opacity(0.45)))
+    }
+
     private func show(_ r: FoodCheck.Result) {
-        still = r.image; error = nil; fed = [:]
+        still = r.image; error = nil; fed = [:]; seen = nil; look = nil
         withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) { items = r.items; selected = r.held }
         let v = r.items.map { $0.str("verdict") }
         UINotificationFeedbackGenerator().notificationOccurred(v.contains("toxic") ? .error : v.contains("caution") ? .warning : .success)
@@ -211,7 +292,7 @@ struct FoodView: View {
     }
 }
 
-private func word(_ v: String) -> String { ["safe": "Safe", "caution": "Small treat only", "toxic": "Don't"][v] ?? v.capitalized }
+private func word(_ i: [String: Any]) -> String { i.str("word").isEmpty ? (["safe": "Safe", "caution": "Small treat only", "toxic": "Don't"][i.str("verdict")] ?? i.str("verdict").capitalized) : i.str("word") }
 
 // ---------------------------------------------------------------- the label on a food (same look as the Quest card)
 
@@ -225,7 +306,7 @@ private struct FoodTag: View {
                 VerdictBadge(verdict: v, size: 28)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(item.str("food").capitalized).font(.nunito(16)).foregroundStyle(Color.ink).lineLimit(1)
-                    Text(word(v)).font(.nunito(13)).foregroundStyle(v == "caution" ? Color.sunLip : v == "safe" ? Color.fernLip : c).lineLimit(1)
+                    Text(word(item)).font(.nunito(13)).foregroundStyle(v == "caution" ? Color.sunLip : v == "safe" ? Color.fernLip : c).lineLimit(1)
                 }
             }
             .padding(.leading, 8).padding(.trailing, 12).padding(.vertical, 7)

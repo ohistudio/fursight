@@ -68,8 +68,8 @@ enum FurSightDisplay {
   static func object(_ things: [[String: Any]], onAgain: @escaping @Sendable () -> Void) -> FlexBox {
     let t = things.first ?? [:]
     let risk = t.str("risk"), mark = risk == "high" ? "✕" : risk == "medium" ? "!" : "✓"
-    let word = risk == "none" ? "No chew risk" : "Chew risk: " + risk
-    let more = things.count > 1 ? "Also: " + things.dropFirst().map { $0.str("label") + " (" + $0.str("risk") + ")" }.joined(separator: ", ") : ""
+    let word = risk == "good" ? "Good for him" : "Chew risk: " + risk
+    let more = things.count > 1 ? "Also: " + things.dropFirst().map { $0.str("label") + " (" + ($0.str("risk") == "good" ? "good" : $0.str("risk")) + ")" }.joined(separator: ", ") : ""
     return FlexBox(direction: .column, spacing: 12) {
       FlexBox(direction: .column, spacing: 4) {
         Text("\(mark) \(t.str("label").capitalized): \(word)", style: .heading)

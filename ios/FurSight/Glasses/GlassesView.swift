@@ -38,7 +38,7 @@ struct GlassesView: View {
                     // 2. start them
                     VStack(alignment: .leading, spacing: 10) {
                         Text("2. Start the glasses").font(.nunito(18)).foregroundStyle(Color.ink)
-                        Text("The lens shows \"Can \(FoodCheck.petName) eat this?\". Hold the food up, look at it and press it, or use Check this in Food check.")
+                        Text("The lens shows Check. Look at food, something he might chew, or him, and press it, or use Check this on the Check tab.")
                             .font(.nunito(14, black: false)).foregroundStyle(Color.muted)
                         switch glasses.phase {
                         case .idle:
