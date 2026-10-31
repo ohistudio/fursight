@@ -28,11 +28,7 @@ enum FoodCheck {
         let r = try await API.server("api/food", ["image": url, "pet": ["name": p.str("name"), "species": p.str("species"), "breed": p.str("breed"), "notes": p.str("notes")], "tz": tz])
         let items = r.arr("items")
         let held = (r["held"] as? Int).map { min($0, max(0, items.count - 1)) } ?? 0
-        Task {
-            for i in items {
-                _ = try? await API.hub("/diary", method: "POST", body: ["kind": "food", "title": i.str("food").capitalized, "note": i.str("reason"), "verdict": i.str("verdict"), "image": url])
-            }
-        }
+        save(items, url)
         return Result(image: img, items: items, held: held)
     }
 
@@ -61,7 +57,7 @@ enum FoodCheck {
         case "food":
             let f = r.obj("food") ?? [:], items = f.arr("items")
             let held = (f["held"] as? Int).map { min($0, max(0, items.count - 1)) } ?? 0
-            Task { for i in items { _ = try? await API.hub("/diary", method: "POST", body: ["kind": "food", "title": i.str("food").capitalized, "note": i.str("reason"), "verdict": i.str("verdict"), "image": url]) } }
+            save(items, url)
             return .food(Result(image: img, items: items, held: held))
         case "object":
             let things = r.arr("things")
@@ -78,6 +74,22 @@ enum FoodCheck {
             return .object(things)
         case "pet": return .pet(seen: r.str("seen"), options: r.arr("options"), photo: url)
         default: return .none(r.str("says"))
+        }
+    }
+
+    /// Each food into the diary, its photo marked up: every food boxed and labelled, and a strip saying the verdict
+    private static func save(_ items: [[String: Any]], _ url: String) {
+        let marks: [[String: Any]] = items.compactMap { i in
+            guard let b = i["box"] as? [Any], b.count == 4 else { return nil }
+            return ["b": b.map { Int(($0 as? NSNumber)?.doubleValue ?? 0) }, "v": i.str("verdict"), "t": i.str("food").capitalized + ": " + word(i.str("verdict"))]
+        }
+        Task {
+            for i in items {
+                let v = i.str("verdict")
+                let line = v == "caution" && !i.str("portion").isEmpty && i.str("portion") != "none" ? "How much: " + i.str("portion") : i.str("reason")
+                _ = try? await API.hub("/diary", method: "POST", body: ["kind": "food", "title": i.str("food").capitalized, "note": i.str("reason"), "verdict": v, "image": url,
+                                                                       "extra": ["marks": marks, "caption": ["title": i.str("food").capitalized + ": " + word(v), "line": line, "v": v]]])
+            }
         }
     }
 

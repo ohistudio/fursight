@@ -7,6 +7,7 @@ module.exports = [
   { match: ["chocolate", "cocoa"], verdict: "toxic", why: "Theobromine is poisonous to rabbits.", instead: "A sprig of fresh herbs like parsley or coriander." },
   { match: ["avocado", "guacamole"], verdict: "toxic", why: "Avocado contains persin, which can be fatal to rabbits.", instead: "A leaf of romaine lettuce." },
   { match: ["onion", "garlic", "leek", "chive", "shallot", "spring onion", "scallion"], verdict: "toxic", why: "Alliums damage red blood cells.", instead: "Fresh coriander or basil." },
+  { match: ["dressing", "vinaigrette", "mayonnaise", "mayo", "sauce", "gravy", "ketchup", "croutons", "crouton", "dressed", "salted", "seasoned", "oil"], verdict: "toxic", why: "Dressings, sauces, oil and salt upset a rabbit's gut, and often hide onion or garlic.", instead: "The same greens, plain and washed." },
   { match: ["rhubarb"], verdict: "toxic", why: "High in oxalic acid, poisonous to rabbits.", instead: "A few dandelion leaves." },
   { match: ["potato", "chips", "crisps", "fries"], verdict: "toxic", why: "Starchy and the plant parts contain solanine; upsets the gut.", instead: "A small piece of bell pepper." },
   { match: ["tomato leaf", "tomato plant", "tomato stem"], verdict: "toxic", why: "Tomato plant leaves and stems contain solanine.", instead: "A ripe tomato fruit only, as a tiny treat." },
