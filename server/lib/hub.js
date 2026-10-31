@@ -36,7 +36,7 @@ async function camView(channel, view) {
   return r && r.ok ? r.json() : { z: 1, x: 0.5, y: 0.5 };
 }
 
-// the pet's photo as a data URL (for Muse Image), or null
+// the pet's photo as a data URL, or null
 async function petPhoto(token, petId) {
   const r = await fetch(`${HUB}/hub/pets/${petId}/photo`, { headers: { authorization: "Bearer " + token } });
   return r.ok ? "data:image/jpeg;base64," + Buffer.from(await r.arrayBuffer()).toString("base64") : null;

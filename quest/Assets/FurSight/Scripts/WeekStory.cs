@@ -22,7 +22,7 @@ namespace FurSight
         List<JObject> _slides = new List<JObject>();
         int _at;
         float _shownAt;
-        Transform _panel, _content, _bars;
+        Transform _panel, _content, _flow, _bars;
         MeshRenderer _bg;
         readonly List<(TextMeshPro t, int n, string fmt, float from)> _counters = new List<(TextMeshPro, int, string, float)>();
         readonly List<Transform> _bobbers = new List<Transform>();
@@ -41,7 +41,10 @@ namespace FurSight
         {
             var head = Camera.main.transform;
             var fwd = Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized;
-            transform.position = head.position + fwd * 0.75f - Vector3.up * 0.05f;
+            // in the editor the test photo hangs 0.6 m away, so come in front of it (smaller, so it looks the same)
+            float dist = Application.isEditor ? 0.5f : 0.75f;
+            transform.position = head.position + fwd * dist - Vector3.up * 0.05f;
+            transform.localScale = Vector3.one * (dist / 0.75f);
             var waiting = VerdictCard.Checking(transform.position, "Gathering his week from the diary", "His week", Theme.Grape);
             try { _data = await FurSightApi.Post("/api/wrapped", new { }, 30); }
             catch (System.Exception e)
@@ -68,9 +71,6 @@ namespace FurSight
             Shapes.MakeSlab("Lip", _panel, Shapes.RoundedRectRing(W, H, R), Thick, Theme.Hex("#1F1D26"), Theme.Hex("#1F1D26"), new Vector3(0f, -0.01f, 0.004f));
             var bg = Shapes.MakeSlab("Back", _panel, Shapes.RoundedRectRing(W, H, R), Thick, Theme.Grape, Theme.GrapeLip, Vector3.zero);
             _bg = bg.GetComponent<MeshRenderer>();
-            // two soft blobs, like the web page
-            Shapes.Make("Blob A", _panel, Shapes.Circle(0.11f, 40), Color.Lerp(Theme.Grape, Color.white, 0.18f), new Vector3(W / 2f - 0.05f, H / 2f - 0.12f, Front - 0.0005f));
-            Shapes.Make("Blob B", _panel, Shapes.Circle(0.085f, 40), Color.Lerp(Theme.Grape, Color.white, 0.18f), new Vector3(-W / 2f + 0.03f, -H / 2f + 0.14f, Front - 0.0005f));
             _bars = new GameObject("Bars").transform;
             _bars.SetParent(_panel, false);
             _bars.localPosition = new Vector3(0f, H / 2f - 0.022f, Front - 0.001f);
@@ -121,36 +121,42 @@ namespace FurSight
             if (_content != null) Destroy(_content.gameObject);
             _content = new GameObject("Slide " + _at).transform;
             _content.SetParent(_panel, false);
+            _flow = new GameObject("Flow").transform;   // the words and pictures, centred on the card once laid out
+            _flow.SetParent(_content, false);
             var s = _slides[_at];
             var col = Theme.Hex((string)s["colour"] ?? "#9B6CF0");
             _bg.sharedMaterial = Shapes.Flat(col);
             for (int k = 0; k < _bars.childCount; k++)
                 _bars.GetChild(k).Find("FillPivot").localScale = new Vector3(k < _at ? 1f : 0f, 1f, 1f);
 
-            float y = H / 2f - 0.055f, x = -W / 2f + 0.03f, tw = W - 0.06f;
-            bool card = s["card"] != null || s["card_id"] != null;
-            if (s["kicker"] != null) y -= Line((string)s["kicker"], Theme.Black, 12f, new Color(1f, 1f, 1f, 0.85f), x, tw, y, 0.12f, true) + 0.008f;
-            if (card) { y -= 0.008f; CardSlide(s, y); }
+            float top = H / 2f - 0.05f, y = top, x = -W / 2f + 0.035f, tw = W - 0.07f;
+            bool card = s["card"] is JObject;
+            if (s["kicker"] != null) y -= Line((string)s["kicker"], Theme.Black, 17f, new Color(1f, 1f, 1f, 0.85f), x, tw, y, 0.12f, true) + 0.014f;
+            if (card) { CardSlide(s, y); y -= (W - 0.1f) * 1.25f; }
             else
             {
-                if (s["big"] != null && s["title"] != null && ((string)s["kicker"] == "Flop count")) { y -= Big(s["big"], x, tw, y, 0.2f) + 0.004f; y -= Line((string)s["title"], Theme.Black, 26f, Color.white, x, tw, y, 0.26f) + 0.01f; }
+                if (s["big"] != null && (string)s["kicker"] == "Flop count") { y -= Big(s["big"], x, tw, y, 0.2f) + 0.006f; y -= Line((string)s["title"], Theme.Black, 40f, Color.white, x, tw, y, 0.26f) + 0.018f; }
                 else
                 {
-                    if (s["title"] != null) y -= Line((string)s["title"], Theme.Black, 28f, Color.white, x, tw, y, 0.2f) + 0.012f;
-                    if (s["big"] != null) y -= Big(s["big"], x, tw, y, 0.28f) + 0.012f;
+                    if (s["title"] != null) y -= Line((string)s["title"], Theme.Black, 40f, Color.white, x, tw, y, 0.2f) + 0.016f;
+                    if (s["big"] != null) y -= Big(s["big"], x, tw, y, 0.28f) + 0.018f;
                 }
-                if (s["list"] is JArray list) y -= List(list, x, tw, y) + 0.01f;
-                if (s["images"] is JArray imgs && imgs.Count > 0) y -= Images(imgs, y) + 0.012f;
-                if (s["summary"] is JArray sum) y -= Summary(sum, y) + 0.012f;
-                if (s["body"] != null) y -= Line((string)s["body"], Theme.Bold, 17f, Color.white, x, tw, y, 0.34f) + 0.01f;
-                if (s["foot"] != null) Line((string)s["foot"], Theme.Bold, 11f, new Color(1f, 1f, 1f, 0.75f), x, tw, y, 0.46f);
+                if (s["list"] is JArray list) y -= List(list, x, tw, y) + 0.014f;
+                if (s["body"] != null) y -= Line((string)s["body"], Theme.Bold, 24f, Color.white, x, tw, y, 0.34f) + 0.016f;
+                if (s["images"] is JArray imgs && imgs.Count > 0) y -= Images(imgs, y) + 0.016f;
+                if (s["summary"] is JArray sum) y -= Summary(sum, y) + 0.016f;
+                if (s["foot"] != null) y -= Line((string)s["foot"], Theme.Bold, 15f, new Color(1f, 1f, 1f, 0.75f), x, tw, y, 0.46f);
             }
+            // centre the block between the progress bars and the bottom (room kept for the card button)
+            bool button = _at == _slides.Count - 1 && !(_data["has_card"]?.Value<bool>() ?? false);
+            float room = top - (-H / 2f + (button ? 0.1f : 0.035f)), used = top - y;
+            if (used < room) _flow.localPosition = new Vector3(0f, -(room - used) / 2f, 0f);
             // his sticker pops out in front of the card, top right; little ones drift by the bottom corners
             if (s["sticker"] != null && s["sticker"].Type == JTokenType.String) Sticker((string)s["sticker"], new Vector3(W / 2f - 0.07f, H / 2f - 0.13f, -0.07f), 0.15f, -8f, 0.25f);
             if (s["minis"] is JArray minis)
                 for (int k = 0; k < minis.Count && k < 3; k++)
                     Sticker((string)minis[k], new Vector3(k == 1 ? W / 2f - 0.02f : -W / 2f + 0.02f + k * 0.05f, -H / 2f + 0.06f + k * 0.03f, -0.035f - k * 0.01f), 0.065f, k % 2 == 1 ? 9f : -12f, 0.45f + k * 0.15f);
-            if (_at == _slides.Count - 1 && !(_data["has_card"]?.Value<bool>() ?? false)) MakeCardButton();
+            if (button) MakeCardButton();
             StartCoroutine(Juice.Pop(_content, 0f, 0.3f, 1.5f));
             Sfx.Tick(transform.position);
         }
@@ -227,7 +233,7 @@ namespace FurSight
 
         float Line(string s, TMP_FontAsset font, float size, Color col, float x, float w, float y, float delay, bool upper = false)
         {
-            var t = Text(_content, upper ? s.ToUpperInvariant() : s, font, size, col, w, TextAlignmentOptions.TopLeft);
+            var t = Text(_flow, upper ? s.ToUpperInvariant() : s, font, size, col, w, TextAlignmentOptions.TopLeft);
             t.textWrappingMode = TextWrappingModes.Normal;
             float h = t.GetPreferredValues(t.text, w * 100f, 0f).y * 0.01f;
             t.rectTransform.sizeDelta = new Vector2(w * 100f, h * 100f + 1f);
@@ -238,8 +244,8 @@ namespace FurSight
 
         float Big(JToken big, float x, float w, float y, float delay)
         {
-            var t = Text(_content, "0", Theme.Black, 72f, Color.white, w, TextAlignmentOptions.TopLeft);
-            const float h = 0.085f;
+            var t = Text(_flow, "0", Theme.Black, 110f, Color.white, w, TextAlignmentOptions.TopLeft);
+            const float h = 0.12f;
             t.rectTransform.sizeDelta = new Vector2(w * 100f, h * 100f);
             t.transform.localPosition = new Vector3(x + w / 2f, y - h / 2f, Front - 0.0015f);
             _counters.Add((t, (int)big["n"], (string)big["fmt"] ?? "n", Time.time + delay));
@@ -253,13 +259,13 @@ namespace FurSight
             for (int i = 0; i < list.Count && i < 6; i++)
             {
                 var row = list[i];
-                var n = Text(_content, (string)row["n"], Theme.Black, 22f, Color.white, 0.05f, TextAlignmentOptions.MidlineLeft);
-                n.transform.localPosition = new Vector3(x + 0.025f, y - 0.018f, Front - 0.0015f);
-                var t = Text(_content, (string)row["text"], Theme.Black, 19f, Color.white, w - 0.06f, TextAlignmentOptions.MidlineLeft);
-                t.transform.localPosition = new Vector3(x + 0.06f + (w - 0.06f) / 2f, y - 0.018f, Front - 0.0015f);
+                var n = Text(_flow, (string)row["n"], Theme.Black, 32f, Color.white, 0.06f, TextAlignmentOptions.MidlineLeft);
+                n.transform.localPosition = new Vector3(x + 0.03f, y - 0.024f, Front - 0.0015f);
+                var t = Text(_flow, (string)row["text"], Theme.Black, 26f, Color.white, w - 0.07f, TextAlignmentOptions.MidlineLeft);
+                t.transform.localPosition = new Vector3(x + 0.07f + (w - 0.07f) / 2f, y - 0.024f, Front - 0.0015f);
                 StartCoroutine(Juice.Pop(n.transform, 0.25f + i * 0.15f, 0.25f, 2f));
                 StartCoroutine(Juice.Pop(t.transform, 0.28f + i * 0.15f, 0.25f, 1.6f));
-                y -= 0.042f;
+                y -= 0.054f;
             }
             return top - y;
         }
@@ -268,7 +274,7 @@ namespace FurSight
         float Images(JArray imgs, float y)
         {
             int n = Mathf.Min(imgs.Count, 6), cols = n == 1 ? 1 : 3;
-            float cell = n == 1 ? 0.24f : 0.11f, gap = 0.014f;
+            float cell = n == 1 ? 0.26f : n <= 3 ? 0.115f : 0.11f, gap = 0.016f;
             int rows = (n + cols - 1) / cols;
             for (int i = 0; i < n; i++)
             {
@@ -276,7 +282,7 @@ namespace FurSight
                 int c = i % cols, r = i / cols, inRow = Mathf.Min(cols, n - r * cols);
                 float cx = -(inRow - 1) * (cell + gap) / 2f + c * (cell + gap), cy = y - cell / 2f - r * (cell + 0.03f + gap);
                 var f = new GameObject("Image " + i).transform;
-                f.SetParent(_content, false);
+                f.SetParent(_flow, false);
                 f.localPosition = new Vector3(cx, cy, Front);
                 f.localRotation = Quaternion.Euler(0f, 0f, (i % 2 == 0 ? -1f : 1f) * 3f);
                 bool cut = im["sticker"]?.Value<bool>() ?? false;
@@ -288,12 +294,13 @@ namespace FurSight
                 if (!string.IsNullOrEmpty(v))
                 {
                     var (main, lip) = Theme.For(v);
-                    Shapes.MakeSlab("Verdict", f, Shapes.CircleRing(0.013f), 0.004f, main, lip, new Vector3(cell / 2f - 0.004f, cell / 2f - 0.004f, -0.006f));
+                    Shapes.MakeSlab("Ring", f, Shapes.CircleRing(0.016f), 0.004f, Color.white, Theme.CardLip, new Vector3(cell / 2f - 0.004f, cell / 2f - 0.004f, -0.006f));
+                    Shapes.MakeSlab("Verdict", f, Shapes.CircleRing(0.012f), 0.003f, main, lip, new Vector3(cell / 2f - 0.004f, cell / 2f - 0.004f, -0.01f));
                 }
                 string cap = (string)im["caption"];
                 if (!string.IsNullOrEmpty(cap))
                 {
-                    var t = Text(f, cap, Theme.Black, 11f, Color.white, cell + 0.02f, TextAlignmentOptions.Center);
+                    var t = Text(f, cap, Theme.Black, 15f, Color.white, cell + 0.02f, TextAlignmentOptions.Center);
                     t.transform.localPosition = new Vector3(0f, -cell / 2f - 0.016f, -0.006f);
                     t.transform.localRotation = Quaternion.Inverse(f.localRotation);
                 }
@@ -305,18 +312,18 @@ namespace FurSight
         // the week in numbers: white tiles, two to a row
         float Summary(JArray sum, float y)
         {
-            float tw = (W - 0.06f - 0.012f) / 2f, th = 0.07f;
+            float tw = (W - 0.07f - 0.012f) / 2f, th = 0.08f;
             for (int i = 0; i < sum.Count; i++)
             {
-                float cx = -W / 2f + 0.03f + tw / 2f + (i % 2) * (tw + 0.012f), cy = y - th / 2f - (i / 2) * (th + 0.012f);
+                float cx = -W / 2f + 0.035f + tw / 2f + (i % 2) * (tw + 0.012f), cy = y - th / 2f - (i / 2) * (th + 0.012f);
                 var tile = new GameObject("Tile " + i).transform;
-                tile.SetParent(_content, false);
+                tile.SetParent(_flow, false);
                 tile.localPosition = new Vector3(cx, cy, Front);
                 Shapes.MakeSlab("Face", tile, Shapes.RoundedRectRing(tw, th, 0.016f), 0.005f, Theme.Card, Theme.CardLip, Vector3.zero);
-                var b = Text(tile, (string)sum[i]["big"], Theme.Black, 24f, Theme.Ink, tw - 0.03f, TextAlignmentOptions.MidlineLeft);
-                b.transform.localPosition = new Vector3(0f, 0.01f, -0.0065f);
-                var l = Text(tile, (string)sum[i]["label"], Theme.Bold, 12f, Theme.Muted, tw - 0.03f, TextAlignmentOptions.MidlineLeft);
-                l.transform.localPosition = new Vector3(0f, -0.018f, -0.0065f);
+                var b = Text(tile, (string)sum[i]["big"], Theme.Black, 32f, Theme.Ink, tw - 0.03f, TextAlignmentOptions.MidlineLeft);
+                b.transform.localPosition = new Vector3(0f, 0.012f, -0.0065f);
+                var l = Text(tile, (string)sum[i]["label"], Theme.Bold, 16f, Theme.Muted, tw - 0.03f, TextAlignmentOptions.MidlineLeft);
+                l.transform.localPosition = new Vector3(0f, -0.021f, -0.0065f);
                 StartCoroutine(Juice.Pop(tile, 0.2f + i * 0.1f, 0.3f, 2f));
             }
             return ((sum.Count + 1) / 2) * (th + 0.012f);
@@ -339,16 +346,10 @@ namespace FurSight
         void CardSlide(JObject s, float y)
         {
             var holder = new GameObject("Week card").transform;
-            holder.SetParent(_content, false);
-            float cw = W - 0.08f;
-            if (s["card"] is JObject layout) { float ch = DrawCard(holder, layout, cw); holder.localPosition = new Vector3(0f, y - ch / 2f, -0.03f); }
-            else
-            {
-                // an older card, kept only as its picture
-                var q = Quad(holder, cw, cw * 1.25f, false);
-                _ = Fill(q, (string)s["card_id"], cw, cw * 1.25f, false);
-                holder.localPosition = new Vector3(0f, y - cw * 0.625f, -0.03f);
-            }
+            holder.SetParent(_flow, false);
+            float cw = W - 0.1f;
+            float ch = s["card"] is JObject layout ? DrawCard(holder, layout, cw) : 0f;
+            holder.localPosition = new Vector3(0f, y - ch / 2f, -0.03f);
             holder.localRotation = Quaternion.Euler(0f, 0f, -1.5f);
             StartCoroutine(Juice.Pop(holder, 0.15f, 0.4f, 1.8f));
         }
@@ -363,9 +364,9 @@ namespace FurSight
             Shapes.MakeSlab("Card", parent, Shapes.RoundedRectRing(w, h, 0.02f), 0.008f, Theme.Grape, Theme.GrapeLip, Vector3.zero);
             const float z = -0.0085f;
             float left = -w / 2f + 70f * k, top = h / 2f;
-            var name = Text(parent, ((string)L["name"] + "'s week").ToUpperInvariant(), Theme.Black, 1080f * k * 4.6f, Color.white, w - 140f * k, TextAlignmentOptions.MidlineLeft);
+            var name = Text(parent, ((string)L["name"] + "'s week").ToUpperInvariant(), Theme.Black, Pt(46f, k), Color.white, w - 140f * k, TextAlignmentOptions.MidlineLeft);
             name.transform.localPosition = new Vector3(left + (w - 140f * k) / 2f, top - 95f * k, z);
-            var sub = Text(parent, (string)L["sub"] ?? "", Theme.Bold, 1080f * k * 3.1f, new Color(1f, 1f, 1f, 0.85f), w - 140f * k, TextAlignmentOptions.MidlineLeft);
+            var sub = Text(parent, (string)L["sub"] ?? "", Theme.Bold, Pt(32f, k), new Color(1f, 1f, 1f, 0.85f), w - 140f * k, TextAlignmentOptions.MidlineLeft);
             sub.transform.localPosition = new Vector3(left + (w - 140f * k) / 2f, top - 145f * k, z);
             // his stickers, the newest big in the middle
             if (L["stickers"] is JArray sts && host != null)
@@ -385,6 +386,9 @@ namespace FurSight
                     if (host != null) host.StartCoroutine(Juice.Pop(sh, 0.4f + i * 0.12f, 0.35f, 2.4f));
                 }
             }
+            // no cut-outs of him this week: the FurSight bean holds his place, happy
+            if (!(L["stickers"] is JArray st2) || st2.Count == 0) Bean.Make(parent, new Vector3(0f, top - 430f * k, z - 0.01f), 300f * k, "safe");
+
             // the white card
             float cy = top - 690f * k, ch = h - 690f * k - 50f * k, cw = w - 100f * k;
             var white = new GameObject("Facts").transform;
@@ -393,11 +397,11 @@ namespace FurSight
             Shapes.MakeSlab("Lip", white, Shapes.RoundedRectRing(cw, ch, 48f * k), 0.004f, Theme.GrapeLip, Theme.GrapeLip, new Vector3(0f, -12f * k, 0.002f));
             Shapes.MakeSlab("Face", white, Shapes.RoundedRectRing(cw, ch, 48f * k), 0.004f, Theme.Card, Theme.CardLip, Vector3.zero);
             float iw = cw - 100f * k, ix = -cw / 2f + 50f * k, y = ch / 2f - 40f * k;
-            var title = Text(white, (string)L["title"], Theme.Black, 1080f * k * 5.6f, Theme.Ink, iw, TextAlignmentOptions.TopLeft);
+            var title = Text(white, (string)L["title"], Theme.Black, Pt(58f, k), Theme.Ink, iw, TextAlignmentOptions.TopLeft);
             title.textWrappingMode = TextWrappingModes.Normal;
             title.rectTransform.sizeDelta = new Vector2(iw * 100f, 140f * k * 100f);
             title.transform.localPosition = new Vector3(ix + iw / 2f, y - 70f * k, -0.0045f);
-            y -= 150f * k;
+            y -= 120f * k;
             if (L["tiles"] is JArray tiles)
             {
                 float tw = (iw - 24f * k) / 2f, th = 118f * k;
@@ -407,27 +411,30 @@ namespace FurSight
                     tile.SetParent(white, false);
                     tile.localPosition = new Vector3(ix + tw / 2f + (i % 2) * (tw + 24f * k), y - th / 2f - (i / 2) * (th + 20f * k), -0.0045f);
                     Shapes.Make("Bg", tile, Shapes.RoundedRect(tw, th, 28f * k), Theme.Hex("#F3EEFF"), Vector3.zero);
-                    var b = Text(tile, (string)tiles[i]["big"], Theme.Black, 1080f * k * 5f, Theme.Ink, tw - 50f * k, TextAlignmentOptions.MidlineLeft);
+                    var b = Text(tile, (string)tiles[i]["big"], Theme.Black, Pt(52f, k), Theme.Ink, tw - 50f * k, TextAlignmentOptions.MidlineLeft);
                     b.transform.localPosition = new Vector3(0f, 14f * k, -0.001f);
-                    var l = Text(tile, (string)tiles[i]["label"], Theme.Bold, 1080f * k * 2.6f, Theme.Muted, tw - 50f * k, TextAlignmentOptions.MidlineLeft);
+                    var l = Text(tile, (string)tiles[i]["label"], Theme.Bold, Pt(27f, k), Theme.Muted, tw - 50f * k, TextAlignmentOptions.MidlineLeft);
                     l.transform.localPosition = new Vector3(0f, -30f * k, -0.001f);
                 }
-                y -= ((Mathf.Min(tiles.Count, 4) + 1) / 2) * (th + 20f * k) + 20f * k;
+                y -= ((Mathf.Min(tiles.Count, 4) + 1) / 2) * (th + 20f * k) + 10f * k;
             }
             if (L["highlights"] is JArray hs)
                 foreach (var hl in hs)
                 {
-                    if (y < -ch / 2f + 90f * k) break;
+                    if (y < -ch / 2f + 70f * k) break;
                     Shapes.Make("Dot", white, Shapes.Circle(9f * k, 16), Theme.Fern, new Vector3(ix + 12f * k, y - 18f * k, -0.0045f));
-                    var t = Text(white, (string)hl, Theme.Bold, 1080f * k * 2.9f, Theme.Ink, iw - 40f * k, TextAlignmentOptions.MidlineLeft);
+                    var t = Text(white, (string)hl, Theme.Bold, Pt(30f, k), Theme.Ink, iw - 40f * k, TextAlignmentOptions.MidlineLeft);
                     t.transform.localPosition = new Vector3(ix + 40f * k + (iw - 40f * k) / 2f, y - 18f * k, -0.0045f);
-                    y -= 46f * k;
+                    y -= 40f * k;
                 }
             bool sim = L["simulated"]?.Value<bool>() ?? false;
-            var foot = Text(white, "FurSight · spoil them, worry less" + (sim ? " · includes simulated data" : ""), Theme.Bold, 1080f * k * 2.3f, Theme.Muted, iw, TextAlignmentOptions.MidlineLeft);
-            foot.transform.localPosition = new Vector3(ix + iw / 2f, -ch / 2f + 40f * k, -0.0045f);
+            var foot = Text(white, "FurSight · spoil them, worry less" + (sim ? " · includes simulated data" : ""), Theme.Bold, Pt(24f, k), Theme.Muted, iw, TextAlignmentOptions.MidlineLeft);
+            foot.transform.localPosition = new Vector3(ix + iw / 2f, -ch / 2f + 30f * k, -0.0045f);
             return h;
         }
+
+        // the web card's pixel sizes (on a 1080 wide card) as text points here: a point is a millimetre of type
+        static float Pt(float px, float k) => px * k * 1000f;
 
         // no card this week yet: Muse Spark writes it from the diary, the server lays it out, the Quest draws it
         void MakeCardButton()

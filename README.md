@@ -1,6 +1,6 @@
 # FurSight
 
-**Spoil them. Worry less.** Built on the Meta Model API: **Muse Spark**, **SAM 3.1**, **Muse Voice Transcribe** and **Muse Image**, on Ray-Ban Display, Meta Quest and iPhone.
+**Spoil them. Worry less.** Built on the Meta Model API: **Muse Spark**, **SAM 3.1** and **Muse Voice Transcribe**, on Ray-Ban Display, Meta Quest and iPhone.
 
 Watch: [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
 
@@ -16,10 +16,9 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 
 | Model | What it does in FurSight | Where |
 |---|---|---|
-| **Muse Spark** | Food verdicts as JSON (what, how safe, why, where, wait days); poses from the pet cam; hay and bowl levels; spoken notes sorted into the diary and calendar; weekly cards; and the Ask agent, which picks from 17 tools (find him, look through the cams, check his tray, read his calendar...) | [lib/meta.js](server/lib/meta.js) `spark()`, [lib/agent.js](server/lib/agent.js), [routes/food.js](server/routes/food.js), [routes/pose.js](server/routes/pose.js), [routes/levels.js](server/routes/levels.js), [routes/ask.js](server/routes/ask.js) |
-| **SAM 3.1** | Finds him on each pet cam, cuts him out as stickers, measures the hay pile, outlines room hazards | [lib/sam.js](server/lib/sam.js), [routes/sticker.js](server/routes/sticker.js), [routes/room.js](server/routes/room.js) |
+| **Muse Spark** | Food verdicts as JSON (what, how safe, why, where, wait days); poses from the pet cam; hay and bowl levels; room checks; poo checks compared with the last one; vet papers read into his history; spoken notes sorted into the diary and calendar; weekly cards; and the Ask agent, which picks from 17 tools (find him, look through the cams, check his tray, read his calendar...) | [lib/meta.js](server/lib/meta.js) `spark()`, [lib/agent.js](server/lib/agent.js), [routes/food.js](server/routes/food.js), [routes/pose.js](server/routes/pose.js), [routes/levels.js](server/routes/levels.js), [routes/ask.js](server/routes/ask.js) |
+| **SAM 3.1** | Finds him on each pet cam, cuts him out as stickers, measures the hay pile, outlines room hazards, counts droppings | [lib/sam.js](server/lib/sam.js), [routes/sticker.js](server/routes/sticker.js), [routes/room.js](server/routes/room.js) |
 | **Muse Voice Transcribe** | Spoken questions and notes on Quest | [lib/meta.js](server/lib/meta.js) `transcribe()`, [routes/note.js](server/routes/note.js) |
-| **Muse Image** | Redraws a photo of him for the weekly Wrapped poster | [lib/meta.js](server/lib/meta.js) `imageEdit()`, [routes/recap.js](server/routes/recap.js) |
 
 ## What it is
 

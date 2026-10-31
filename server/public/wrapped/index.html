@@ -153,11 +153,9 @@ async function build() {
   if (caught.length >= 2) S.push({ bg: COLOURS[1], html: `<div class="k rise">Caught on cam</div><h1 class="rise">${esc(nick(0))}'s best bits</h1>
     <div class="parade">${caught.map((e, i) => `<figure><img src="${img(`/diary/${e.id}/image`)}" alt="" style="animation-delay:${0.2 + i * 0.15}s,${1 + i * 0.2}s"><figcaption>${esc(new Date(e.at).toLocaleDateString(undefined, { weekday: "short" }))}</figcaption></figure>`).join("")}</div>` });
 
-  // this week's card, if one was made
-  const card = week.find((e) => e.kind === "recap" && e.has_image);
-  if (card) S.push({ bg: COLOURS[5], html: `<div class="k rise">This week's card</div>${card.extra && card.extra.layout
-      ? `<div class="pop" style="width:min(80vw,380px);align-self:center;box-shadow:0 18px 40px rgba(0,0,0,.3);border-radius:22px">${FSFactCard.html(card.extra.layout, img)}</div>`
-      : `<img class="pop" src="${img(`/diary/${card.id}/image`)}" alt="" style="width:min(80vw,380px);align-self:center;border-radius:22px;box-shadow:0 18px 40px rgba(0,0,0,.3)">`}<p class="rise" style="text-align:center;align-self:center;font-size:15px">Screenshot to share</p>` });
+  // this week's card, if one was made: only fact cards (his real stickers and numbers), never an older AI drawing
+  const card = week.find((e) => e.kind === "recap" && e.extra && e.extra.layout);
+  if (card) S.push({ bg: COLOURS[5], html: `<div class="k rise">This week's card</div><div class="pop" style="width:min(80vw,380px);align-self:center;box-shadow:0 18px 40px rgba(0,0,0,.3);border-radius:22px">${FSFactCard.html(card.extra.layout, img)}</div><p class="rise" style="text-align:center;align-self:center;font-size:15px">Screenshot to share</p>` });
 
   const asks = week.filter((e) => e.kind === "ask").length;
   S.push({ bg: COLOURS[0], html: `<div class="summary rise">

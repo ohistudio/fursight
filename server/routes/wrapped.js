@@ -69,8 +69,9 @@ module.exports = handler(async (body, req) => {
   const caught = week.filter((e) => e.has_image && e.kind !== "recap" && (e.png || (e.extra && e.extra.sticker))).slice(0, 6);
   if (caught.length >= 2) S.push({ colour: COLOURS[1], kicker: "Caught on cam", title: `${nick(0)}'s best bits`,
     images: caught.map((e) => ({ id: e.id, caption: new Date(e.at).toLocaleDateString("en-GB", { weekday: "short" }), sticker: true })) });
-  const card = week.find((e) => e.kind === "recap" && (e.has_image || (e.extra && e.extra.layout)));
-  if (card) S.push({ colour: COLOURS[5], kicker: "This week's card", title: card.title, card: (card.extra && card.extra.layout) || null, card_id: card.id });
+  // only fact cards (his real stickers and numbers); an older card that was an AI drawing is left out
+  const card = week.find((e) => e.kind === "recap" && e.extra && e.extra.layout);
+  if (card) S.push({ colour: COLOURS[5], kicker: "This week's card", title: card.title, card: card.extra.layout, card_id: card.id });
   const asks = week.filter((e) => e.kind === "ask").length, summary = [];
   if (a.has) summary.push({ big: FSActivity.time(a.week.loaf), label: "loafing" }, { big: String(a.week.flops), label: "flops" }, { big: FSActivity.time(a.week.active), label: "on the move" });
   if (ws.length) summary.push({ big: kg(ws[ws.length - 1].weight_g) + " kg", label: "weight" });

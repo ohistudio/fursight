@@ -33,7 +33,8 @@ module.exports = handler(async (body, req) => {
     due,
     todos,
     coming: FSCal.upcoming(all, 30).slice(0, 3),
-    recap: pick(all.find((e) => e.kind === "recap" && Date.now() - e.at < 8 * 864e5)),
+    // only fact cards (his real stickers and numbers); an older AI-drawn card is never shown
+    recap: pick(all.find((e) => e.kind === "recap" && e.extra && e.extra.layout && Date.now() - e.at < 8 * 864e5)),
     counts: { checks: today.filter((e) => e.kind === "food").length, questions: today.filter((e) => e.kind === "ask").length },
   };
 });

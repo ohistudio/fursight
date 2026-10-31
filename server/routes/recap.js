@@ -1,14 +1,13 @@
 // The weekly recap: Muse Spark reads the last 7 days of the household diary and writes a short, warm summary
-// (with the care streak), then Muse Image turns the pet's own photo into an illustrated "week card". The card
-// is saved to the diary, so the phone, glasses and Quest all see it.
+// (with the care streak). The week card is a fact card made from his real cut-out stickers and the week's numbers
+// (public/factcard.js), never an AI-generated picture of him. Saved to the diary, so every device sees it.
 //
-//   POST /api/recap  {}   (household device key)
-//   POST /api/recap  { draft: true }  -> the words only (the web app draws the card)
+//   POST /api/recap  { draft: true }  -> the words only (the web app draws the card and saves it)
 //   POST /api/recap  { save: true }   -> the words and the fact card's layout, saved to the diary (the Quest draws it)
-//   -> { title, summary, highlights: [...], streak, image: "data:image/jpeg;base64,...", entry, ms }
-const { spark, imageEdit } = require("../lib/meta");
+//   -> { title, summary, highlights: [...], watch, streak, note, layout?, entry?, ms }
+const { spark } = require("../lib/meta");
 const { handler, household, bad } = require("../lib/http");
-const { context, petPhoto, recent, addDiary } = require("../lib/hub");
+const { context, recent, addDiary } = require("../lib/hub");
 const FSFactCard = require("../public/factcard.js");
 
 const SCHEMA = {
@@ -18,9 +17,8 @@ const SCHEMA = {
     summary: { type: "string", description: "two warm, plain sentences on how the week went" },
     highlights: { type: "array", items: { type: "string" }, description: "3 short highlights, each under 10 words" },
     watch: { type: "string", description: "one thing to keep an eye on next week, or empty" },
-    scene: { type: "string", description: "a short, happy scene for the illustration based on the week (what the pet is doing, where), no text, no words" },
   },
-  required: ["title", "summary", "highlights", "watch", "scene"],
+  required: ["title", "summary", "highlights", "watch"],
 };
 
 // days in a row (ending today, or yesterday if today isn't finished) with every daily care item ticked
@@ -60,18 +58,10 @@ module.exports = handler(async (body, req) => {
   const note = `${data.summary}${data.highlights.length ? " " + data.highlights.map((h) => "• " + h).join(" ") : ""}${data.watch ? " Watch: " + data.watch : ""}${s ? ` Care streak: ${s} day${s > 1 ? "s" : ""}.` : ""}`;
   // {draft: true}: the words only. The web app draws the fact card (his sticker and the week's numbers) and
   // keeps it in the diary itself, so there's no AI illustration to wait for.
-  if (body.save) {
-    const layout = FSFactCard.layout({ pet: ctx.pet, entries, recap: { title: data.title, highlights: data.highlights, streak: s } });
-    const entry = await addDiary(home.token, { kind: "recap", title: data.title, note, pet: ctx.pet.name, extra: { highlights: data.highlights, watch: data.watch, streak: s, card: "facts", layout } });
-    return { title: data.title, summary: data.summary, highlights: data.highlights, watch: data.watch, streak: s, note, layout, entry: entry && entry.id, ms: Date.now() - t0 };
-  }
   if (body.draft) return { title: data.title, summary: data.summary, highlights: data.highlights, watch: data.watch, streak: s, note, ms: Date.now() - t0 };
-  // the card: the pet's own photo, redrawn as a bold flat illustration (text is added by the apps, not drawn)
-  const photo = await petPhoto(home.token, ctx.pet.id);
-  let image = null;
-  if (photo) {
-    image = await imageEdit(`Redraw this exact ${ctx.pet.species} as a bold, friendly flat-colour illustration: clean shapes, soft shading, a bright simple background in fresh greens and sky blue. Keep its real colouring, face and ears. Scene: ${data.scene}. Square poster composition with the animal as the hero. No text, no letters, no words, no logos.`, [photo]).catch((e) => { console.error("[recap] image", e.message); return null; });
-  }
-  const entry = await addDiary(home.token, { kind: "recap", title: data.title, note, image: image || undefined, extra: { highlights: data.highlights, watch: data.watch, streak: s } });
-  return { title: data.title, summary: data.summary, highlights: data.highlights, watch: data.watch, streak: s, image, entry: entry && entry.id, ms: Date.now() - t0 };
+  // otherwise (the Quest, { save: true }): the card's layout, saved to the diary for the app to draw. No picture
+  // is generated: the card is his own stickers and the week's numbers (FSFactCard).
+  const layout = FSFactCard.layout({ pet: ctx.pet, entries, recap: { title: data.title, highlights: data.highlights, streak: s } });
+  const entry = await addDiary(home.token, { kind: "recap", title: data.title, note, pet: ctx.pet.name, extra: { highlights: data.highlights, watch: data.watch, streak: s, card: "facts", layout } });
+  return { title: data.title, summary: data.summary, highlights: data.highlights, watch: data.watch, streak: s, note, layout, entry: entry && entry.id, ms: Date.now() - t0 };
 });
