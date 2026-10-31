@@ -216,7 +216,7 @@ final class GlassesManager {
     await send(FurSightDisplay.home(pet: FoodCheck.petName, onCheck: { [weak self] in Task { @MainActor in self?.check() } }))
   }
 
-  // MARK: - "Can he eat this?"
+  // MARK: - Check: food, a chew risk, or him
 
   /// From the lens button or the phone: check what the glasses camera sees now.
   func check() {
@@ -240,13 +240,37 @@ final class GlassesManager {
     streamTimeoutTask?.cancel(); streamTimeoutTask = nil
     Task { @MainActor in
       do {
-        let r = try await FoodCheck.run(image)
-        lastResult = r
-        phase = .ready
-        await showVerdict(r)
+        let again: @Sendable () -> Void = { [weak self] in Task { @MainActor in self?.check() } }
+        switch try await FoodCheck.check(image) {
+        case .food(let r):
+          lastResult = r
+          phase = .ready
+          await showVerdict(r)
+        case .object(let things):
+          phase = .ready
+          await send(FurSightDisplay.object(things, onAgain: again))
+        case .pet(let seen, let options, let photo):
+          phase = .ready
+          await send(FurSightDisplay.pet(FoodCheck.petName, seen: seen, options: options,
+            onPick: { [weak self] focus in Task { @MainActor in await self?.look(photo, focus) } }, onAgain: again))
+        case .none(let says):
+          phase = .ready
+          await send(FurSightDisplay.message("Not sure what that is", says, onAgain: again))
+        }
       } catch {
         fail(error.localizedDescription)
       }
+    }
+  }
+
+  /// "His coat": the same photo, looked at closely for that
+  private func look(_ photo: String, _ focus: String) async {
+    await send(FurSightDisplay.checking(pet: FoodCheck.petName))
+    do {
+      let r = try await FoodCheck.look(photo, focus: focus)
+      await send(FurSightDisplay.look(r, onAgain: { [weak self] in Task { @MainActor in self?.check() } }))
+    } catch {
+      fail(error.localizedDescription)
     }
   }
 

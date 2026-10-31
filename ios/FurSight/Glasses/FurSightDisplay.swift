@@ -13,12 +13,12 @@ enum FurSightDisplay {
     FlexBox(direction: .column, spacing: 12) {
       FlexBox(direction: .column, spacing: 4) {
         Text("FurSight", style: .heading)
-        Text("Hold the food up and look at it.", style: .body)
+        Text("Look at food, something he might chew, or him.", style: .body)
         Text("It notices, your vet decides.", style: .meta, color: .secondary)
       }
       .padding(24)
       .background(.card)
-      Button(label: "Can \(pet) eat this?", style: .primary, iconName: .eye, onClick: onCheck)
+      Button(label: "Check", style: .primary, iconName: .eye, onClick: onCheck)
     }
   }
 
@@ -26,7 +26,7 @@ enum FurSightDisplay {
     FlexBox(direction: .column, spacing: 8) {
       FlexBox(direction: .column, spacing: 4) {
         Text("Checking…", style: .heading)
-        Text("Against \(pet)'s safety list.", style: .body)
+        Text("Food, a chew risk, or \(pet)?", style: .body)
       }
       .padding(24)
       .background(.card)
@@ -61,6 +61,61 @@ enum FurSightDisplay {
         if v != "toxic" { Button(label: "We fed \(pet) this", style: .primary, iconName: .checkmark, onClick: onFed) }
         Button(label: "Check something else", style: v == "toxic" ? .primary : .secondary, onClick: onAgain)
       }
+    }
+  }
+
+  /// Something he could chew: the risk, why, and the fix.
+  static func object(_ things: [[String: Any]], onAgain: @escaping @Sendable () -> Void) -> FlexBox {
+    let t = things.first ?? [:]
+    let risk = t.str("risk"), mark = risk == "high" ? "✕" : risk == "medium" ? "!" : "✓"
+    let word = risk == "none" ? "No chew risk" : "Chew risk: " + risk
+    let more = things.count > 1 ? "Also: " + things.dropFirst().map { $0.str("label") + " (" + $0.str("risk") + ")" }.joined(separator: ", ") : ""
+    return FlexBox(direction: .column, spacing: 12) {
+      FlexBox(direction: .column, spacing: 4) {
+        Text("\(mark) \(t.str("label").capitalized): \(word)", style: .heading)
+        Text(t.str("why"), style: .body)
+        if !t.str("fix").isEmpty { Text("Fix: " + t.str("fix"), style: .body, color: .secondary) }
+        if !more.isEmpty { Text(more, style: .meta, color: .secondary) }
+      }
+      .padding(24)
+      .background(.card)
+      Button(label: "Check something else", style: .primary, onClick: onAgain)
+    }
+  }
+
+  /// Him: what he's doing, then what to look at more closely.
+  static func pet(_ name: String, seen: String, options: [[String: Any]], onPick: @escaping @Sendable (String) -> Void, onAgain: @escaping @Sendable () -> Void) -> FlexBox {
+    FlexBox(direction: .column, spacing: 12) {
+      FlexBox(direction: .column, spacing: 4) {
+        Text("That's \(name)", style: .heading)
+        Text(seen, style: .body)
+        Text("What do you want to check?", style: .meta, color: .secondary)
+      }
+      .padding(24)
+      .background(.card)
+      FlexBox(direction: .column, spacing: 8) {
+        if options.count > 0 { Button(label: options[0].str("label"), style: .primary, onClick: { onPick(options[0].str("id")) }) }
+        if options.count > 1 { Button(label: options[1].str("label"), style: .primary, onClick: { onPick(options[1].str("id")) }) }
+        if options.count > 2 { Button(label: options[2].str("label"), style: .primary, onClick: { onPick(options[2].str("id")) }) }
+        Button(label: "Check something else", style: .secondary, onClick: onAgain)
+      }
+    }
+  }
+
+  /// A closer look at him: his coat, eyes...
+  static func look(_ r: [String: Any], onAgain: @escaping @Sendable () -> Void) -> FlexBox {
+    let v = r.str("verdict"), mark = v == "normal" ? "✓" : v == "vet" ? "✕" : "!"
+    let word = ["normal": "looks healthy", "watch": "keep an eye on it", "vet": "see a vet"][v] ?? ""
+    return FlexBox(direction: .column, spacing: 12) {
+      FlexBox(direction: .column, spacing: 4) {
+        Text("\(mark) \(r.str("label")): \(word)", style: .heading)
+        Text(r.str("says"), style: .body)
+        if !r.str("tip").isEmpty { Text(r.str("tip"), style: .body, color: .secondary) }
+        Text("It notices, your vet decides.", style: .meta, color: .secondary)
+      }
+      .padding(24)
+      .background(.card)
+      Button(label: "Check something else", style: .primary, onClick: onAgain)
     }
   }
 

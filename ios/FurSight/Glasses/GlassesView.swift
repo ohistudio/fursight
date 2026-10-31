@@ -51,7 +51,7 @@ struct GlassesView: View {
                                 Image(uiImage: f).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 14)).frame(maxHeight: 260)
                             }
                             Text("Camera: \(glasses.streamStateLabel) · Display: \(glasses.displayStatus)").font(.nunito(13, black: false)).foregroundStyle(Color.muted)
-                            Button("Can \(FoodCheck.petName) eat this?") { glasses.check() }.buttonStyle(ChunkyButton()).disabled(glasses.phase == .checking)
+                            Button("Check") { glasses.check() }.buttonStyle(ChunkyButton()).disabled(glasses.phase == .checking)
                             Button("Stop glasses") { glasses.stop() }.buttonStyle(ChunkyButton(color: .white, lip: .line))
                         }
                         if glasses.requiresDATAppUpdate {
