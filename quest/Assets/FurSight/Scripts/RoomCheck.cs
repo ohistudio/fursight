@@ -17,6 +17,7 @@ namespace FurSight
         public float cardGap = 0.45f;          // seconds between cards appearing
 
         bool _busy;
+        readonly List<Vector3> _found = new List<Vector3>();   // where this check pinned each hazard
         VerdictCard _checking;
         readonly List<VerdictCard> _cards = new List<VerdictCard>();
 
@@ -90,6 +91,7 @@ namespace FurSight
                 yield break;
             }
             var placed = new List<Vector3>();
+            _found.Clear();
             var used = new List<Vector2>();
             var marks = new List<HubClient.Mark>();
             var names = new List<string>();
@@ -116,6 +118,8 @@ namespace FurSight
                 StartCoroutine(Juice.Buzz(0.15f, 0.04f));
                 yield return new WaitForSeconds(cardGap);
             }
+            // the room remembers: anything from last time that's in view but gone now is sorted
+            Remembered.Compare(shot, _found);
             int toSort = shown - goodShown;
             string first = hazards.Count > 0 ? (string)hazards[0]["label"] : null, fix = hazards.Count > 0 ? (string)hazards[0]["fix"] : null;
             var story = new Newtonsoft.Json.Linq.JObject { ["caption"] = new Newtonsoft.Json.Linq.JObject {
@@ -152,6 +156,8 @@ namespace FurSight
             card.KeepOpen();
             _cards.Add(card);
             Sfx.Pin(point);
+            // a hazard is kept where it is (a spatial anchor), to ask about next time
+            if (markVerdict != "safe") { Remembered.Remember(point, (string)h["label"], markVerdict, (string)h["why"], (string)h["fix"]); _found.Add(point); }
             Ripple.On(shot, box, ripple);
             return card;
         }

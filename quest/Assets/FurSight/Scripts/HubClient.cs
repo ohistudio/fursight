@@ -41,6 +41,9 @@ namespace FurSight
                 if (card != null) card.Dismiss();
             }
             if (Me != null) { yield return new WaitForSeconds(0.4f); Todos.Show(); }
+            // the room remembers: last time's hazards, back on the real things ("still there?")
+            yield return new WaitForSeconds(1.5f);
+            _ = Remembered.Restore();
         }
 
         float _held;
