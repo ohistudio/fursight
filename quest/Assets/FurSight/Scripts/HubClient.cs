@@ -36,7 +36,7 @@ namespace FurSight
             {
                 var head = Camera.main.transform;
                 var card = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked",
-                    $"Looking after {pet.petName} together.", "<color=#9A98A6>To link another household, hold the left thumbstick for 3 seconds" + (Application.isEditor ? " (U)" : "") + ".</color>");
+                    $"Looking after {pet.petName} together.", "<color=#9A98A6>To link another household, hold the left thumbstick for 3 seconds" + (Application.isEditor ? " (U)" : "") + ".</color>").TagAlong();
                 yield return new WaitForSeconds(4f);
                 if (card != null) card.Dismiss();
             }
@@ -70,7 +70,7 @@ namespace FurSight
             string code = (string)s["code"], nonce = (string)s["nonce"];
             var head = Camera.main.transform;
             _codeCard = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Link to FurSight", "none",
-                $"In the FurSight app on your phone, open Devices, tap Link a device and enter\n<size=180%><color=#2B2A33>{string.Join(" ", code.ToCharArray())}</color></size>", null);
+                $"In the FurSight app on your phone, open Devices, tap Link a device and enter\n<size=180%><color=#2B2A33>{string.Join(" ", code.ToCharArray())}</color></size>", null).TagAlong();
             _codeCard.KeepOpen();
             while (true)
             {
@@ -87,7 +87,7 @@ namespace FurSight
                 _codeCard.Dismiss();
                 yield return Refresh();
                 var pet = PetProfile.Current;
-                var linked = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked", pet != null ? $"Looking after {pet.petName} together." : "This Quest is part of your household now.", null);
+                var linked = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked", pet != null ? $"Looking after {pet.petName} together." : "This Quest is part of your household now.", null).TagAlong();
                 yield return new WaitForSeconds(4f);
                 if (linked != null) linked.Dismiss();
                 Todos.Show();

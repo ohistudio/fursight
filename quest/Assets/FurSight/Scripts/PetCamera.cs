@@ -263,12 +263,13 @@ namespace FurSight
                     dots.Add((dot, (v - new Vector2(0.5f, 0.5f)).magnitude * 0.5f));
                 }
             if (dots.Count == 0) { Destroy(root.gameObject); yield break; }
-            for (float t = 0f; t < 1.6f; t += Time.deltaTime)
+            // they stay a while (about 4 s), so you can see what the depth camera measured, then shrink away
+            for (float t = 0f; t < 4.6f; t += Time.deltaTime)
             {
                 foreach (var (dt, delay) in dots)
                 {
                     float k = t - delay, d = Vector3.Distance(head, dt.position);
-                    float s = k <= 0f ? 0f : k < 0.15f ? k / 0.15f : k < 0.7f ? 1f : Mathf.Max(0f, 1f - (k - 0.7f) / 0.4f);
+                    float s = k <= 0f ? 0f : k < 0.15f ? k / 0.15f : k < 3.6f ? 1f : Mathf.Max(0f, 1f - (k - 3.6f) / 0.6f);
                     dt.localScale = Vector3.one * s * Mathf.Clamp(d, 0.4f, 3f);   // the same size to the eye, near or far
                 }
                 yield return null;

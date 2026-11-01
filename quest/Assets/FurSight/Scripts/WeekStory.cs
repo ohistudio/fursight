@@ -17,6 +17,8 @@ namespace FurSight
     {
         const float W = 0.42f, H = 0.56f, R = 0.04f, Thick = 0.012f, Front = -Thick, Dwell = 6.5f;
         static WeekStory _open;
+        public static bool IsOpen => _open != null;
+        public static void CloseIfOpen() { if (_open != null) _open.Close(); }   // Close all on the hand menu
 
         JObject _data;
         List<JObject> _slides = new List<JObject>();
@@ -149,7 +151,7 @@ namespace FurSight
             }
             // centre the block between the progress bars and the bottom (room kept for the card button)
             bool button = _at == _slides.Count - 1 && !(_data["has_card"]?.Value<bool>() ?? false);
-            float room = top - (-H / 2f + (button ? 0.1f : 0.035f)), used = top - y;
+            float room = top - (-H / 2f + 0.035f), used = top - y;
             if (used < room) _flow.localPosition = new Vector3(0f, -(room - used) / 2f, 0f);
             // his sticker pops out in front of the card, top right; little ones drift by the bottom corners
             if (s["sticker"] != null && s["sticker"].Type == JTokenType.String) Sticker((string)s["sticker"], new Vector3(W / 2f - 0.07f, H / 2f - 0.13f, -0.07f), 0.15f, -8f, 0.25f);
@@ -193,7 +195,7 @@ namespace FurSight
 
         // swipe a hand across the card like a phone story: right to left for the next slide, left to right to go
         // back. The hand's path is followed in the card's own space: in front of it (within 30 cm) and over it,
-        // and it has to travel 12 cm sideways within a third of a second, quicker than reaching for a button.
+        // and it has to travel 22 cm sideways within a third of a second, a deliberate sweep, not reaching for a button.
         readonly Queue<(float t, float x)>[] _path = { new Queue<(float, float)>(), new Queue<(float, float)>() };
         float _swipedAt = -9f;
         void Swipe()
@@ -204,13 +206,13 @@ namespace FurSight
                 var path = _path[i];
                 if (!hand.tracked) { path.Clear(); continue; }
                 var p = _panel.InverseTransformPoint(hand.palm);
-                bool over = Mathf.Abs(p.y) < H / 2f + 0.05f && Mathf.Abs(p.x) < W / 2f + 0.15f && p.z < 0.02f && p.z > -0.3f;
+                bool over = Mathf.Abs(p.y) < H / 2f && Mathf.Abs(p.x) < W / 2f + 0.12f && p.z < 0f && p.z > -0.2f;
                 if (!over) { path.Clear(); continue; }
                 path.Enqueue((Time.time, p.x));
                 while (path.Count > 0 && Time.time - path.Peek().t > 0.33f) path.Dequeue();
-                if (Time.time - _swipedAt < 0.6f || path.Count < 3) continue;
+                if (Time.time - _swipedAt < 0.9f || path.Count < 5) continue;
                 float dx = p.x - path.Peek().x;
-                if (Mathf.Abs(dx) < 0.12f) continue;
+                if (Mathf.Abs(dx) < 0.22f) continue;
                 _swipedAt = Time.time;
                 path.Clear();
                 StartCoroutine(Juice.Buzz(0.15f, 0.03f));
@@ -442,7 +444,7 @@ namespace FurSight
             var b = new GameObject("Make card").transform;
             b.SetParent(_content, false);
             const float pw = 0.3f, ph = 0.05f;
-            b.localPosition = new Vector3(0f, -H / 2f + 0.06f, 0f);
+            b.localPosition = new Vector3(0f, -H / 2f - 0.105f, 0f);   // under Back, Next and Close, clear of the card
             Shapes.MakeSlab("Lip", b, Shapes.RoundedRectRing(pw, ph, ph / 2f), Thick, Theme.Hex("#141319"), Theme.Hex("#141319"), new Vector3(0f, -0.005f, 0.003f));
             Shapes.MakeSlab("Face", b, Shapes.RoundedRectRing(pw, ph, ph / 2f), Thick, Theme.Card, Theme.CardLip, Vector3.zero);
             var t = Text(b, "Make this week's card", Theme.Black, 17f, Theme.Ink, pw - 0.03f, TextAlignmentOptions.Center);

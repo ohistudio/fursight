@@ -34,7 +34,7 @@ namespace FurSight
             string pet = PetProfile.Current != null ? PetProfile.Current.petName : "him";
             if (left.Count == 0)
             {
-                _card = VerdictCard.Verdict(at, "All done today", "safe", $"Nothing left to do for {pet} today.", null, true, "No to-dos");
+                _card = VerdictCard.Verdict(at, "All done today", "safe", $"Nothing left to do for {pet} today.", null, true, "No to-dos").TagAlong();
                 return;
             }
             var lines = new StringBuilder();
@@ -51,6 +51,7 @@ namespace FurSight
             _card = VerdictCard.Verdict(at, "Today's to-dos", "none", lines.ToString(), null, true,
                 left.Count == 1 ? $"1 thing for {pet}" : $"{left.Count} things for {pet}");
             _card.KeepOpen();
+            _card.TagAlong();
             if (poo) _card.AddAction("Poo check now", Theme.Fern, Theme.FernLip, () => { _card.Dismiss(); PooCheck.Begin(); });
             Sfx.Pin(at);
         }

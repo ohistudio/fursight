@@ -41,14 +41,17 @@ namespace FurSight
             _ = Check();
         }
 
-        async Task Check()
+        // a photo already taken (Room check under a photo): straight to the check, no countdown
+        public void CheckShot(Snapshot shot) { if (!_busy) _ = Check(shot); }
+
+        async Task Check(Snapshot given = null)
         {
             var cam = PetCamera.Instance;
             if (cam == null || !cam.Ready) { Debug.LogWarning("[FurSight] camera not ready"); return; }
             _busy = true;
-            var shot = cam.Take();
+            var shot = given ?? cam.Take();
             var head = Camera.main.transform;
-            Sfx.Snap(head.position + head.forward * 0.3f);
+            if (given == null) Sfx.Snap(head.position + head.forward * 0.3f);
             StartCoroutine(Juice.Buzz(0.2f, 0.04f));
             Clear();
             _checking = VerdictCard.Checking(head.position + head.forward * checkingDistance - Vector3.up * 0.15f,
@@ -135,12 +138,16 @@ namespace FurSight
             marks.Add(new HubClient.Mark { b = box, v = markVerdict, t = (string)h["label"], n = shown });
             names.Add($"{shown} {h["label"]}");
             var point = Place(shot, box);
-            // far cards are bigger so they read the same as one at arm's length
-            float scale = Mathf.Clamp(Vector3.Distance(head.position, point) / 0.7f, 1f, 3.2f);
-            // two things close together: lift the later card clear of the first
-            foreach (var p in placed) if (Vector3.Distance(p, point) < 0.22f * scale) point += Vector3.up * 0.2f * scale;
-            placed.Add(point);
-            var card = VerdictCard.Verdict(point, (string)h["label"], verdict, (string)h["why"], extra, false, word);
+            // far cards are a little bigger so they still read, but not so big they tower over the thing
+            float scale = Mathf.Clamp(Vector3.Distance(head.position, point) / 0.8f, 1f, 2f);
+            // the label stands on the thing: its dot is where the depth hit, so the card's foot is on the object.
+            // Two things close together: the later card steps sideways (not up into the air) until it's clear
+            var side = Vector3.ProjectOnPlane(head.right, Vector3.up).normalized;
+            var at = point;
+            for (int k = 1; k < 6 && placed.Exists(q => Vector3.Distance(q, at) < 0.24f * scale); k++)
+                at = point + side * 0.26f * scale * (k % 2 == 1 ? (k + 1) / 2 : -(k / 2));
+            placed.Add(at);
+            var card = VerdictCard.Verdict(at, (string)h["label"], verdict, (string)h["why"], extra, false, word);
             card.transform.localScale = Vector3.one * 0.72f * scale;
             card.KeepOpen();
             _cards.Add(card);

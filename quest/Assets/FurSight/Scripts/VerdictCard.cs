@@ -182,6 +182,27 @@ namespace FurSight
             StartCoroutine(Juice.Pop(_action, 0.55f, 0.25f, 2.2f));
         }
 
+        // more buttons side by side in a row under the card (or under the first button): "Ask about it", "Room check
+        // here". Each presses once.
+        int _extras;
+        public void AddButton(string label, Color col, Color lip, System.Action onPress)
+        {
+            if (_card == null) return;
+            const float bw = 0.135f, gap = 0.012f;
+            var b = new GameObject(label).transform;
+            b.SetParent(_card, false);
+            float below = -_h / 2f - Lip - ActH / 2f - 0.014f - (_action != null ? ActH + 0.016f : 0f);
+            b.localPosition = new Vector3(_extras % 2 == 0 ? -(bw + gap) / 2f : (bw + gap) / 2f, below - (_extras / 2) * (ActH + 0.016f), 0f);
+            _extras++;
+            Shapes.MakeSlab("Lip", b, Shapes.RoundedRectRing(bw, ActH, ActH / 2f), Thick, lip, lip, new Vector3(0f, -0.005f, 0.003f));
+            Shapes.MakeSlab("Face", b, Shapes.RoundedRectRing(bw, ActH, ActH / 2f), Thick, col, lip, Vector3.zero);
+            var t = Text(b, label, Theme.Black, 15f, col == Theme.Sun || col == Theme.Card ? Theme.Ink : Color.white, new Vector2(-bw / 2f + 0.01f, 0f), bw - 0.02f, 0.03f, 9f);
+            t.alignment = TextAlignmentOptions.Center;
+            bool pressed = false;
+            CardButton.Add(b.gameObject, 0.04f, () => { if (pressed) return; pressed = true; KeepOpen(); onPress(); });
+            StartCoroutine(Juice.Pop(b, 0.5f + _extras * 0.06f, 0.25f, 2.2f));
+        }
+
         void Pill(Color col, Color lip)
         {
             Shapes.MakeSlab("Lip", _action, Shapes.RoundedRectRing(ActW, ActH, ActH / 2f), Thick, lip, lip, new Vector3(0f, -0.005f, 0.003f));
@@ -227,6 +248,7 @@ namespace FurSight
             c._bean = Bean.Make(c._card, new Vector3(-w / 2f + 0.032f, h / 2f + 0.001f, Front / 2f), 0.045f, "thinking");
             c.StartCoroutine(Juice.Pop(c._card, 0f, 0.28f));
             c.StartCoroutine(Juice.Pop(c._bean.transform, 0.12f, 0.3f, 2.4f));
+            c.TagAlong();   // a status: it comes with you
             return c;
         }
 
@@ -287,8 +309,8 @@ namespace FurSight
         static readonly System.Collections.Generic.List<VerdictCard> _all = new System.Collections.Generic.List<VerdictCard>();
         void OnEnable() => _all.Add(this);
         void OnDisable() => _all.Remove(this);
-        public static int Count => _all.Count;
-        public static void CloseAll() { foreach (var c in _all.ToArray()) if (c != null) c.Dismiss(); }
+        public static int Count => _all.Count + (WeekStory.IsOpen ? 1 : 0);
+        public static void CloseAll() { foreach (var c in _all.ToArray()) if (c != null) c.Dismiss(); WeekStory.CloseIfOpen(); }
 
         // his sticker, stuck on the card's top right corner at a jaunty angle; it pops on and bobs gently
         static Material _stickerMat;
@@ -383,8 +405,34 @@ namespace FurSight
             if (away.sqrMagnitude > 1e-4f) transform.rotation = Quaternion.LookRotation(away, Vector3.up);
         }
 
+        // a notification (checking, a countdown, Linked, today's to-dos): it stays where it is while you glance
+        // about, and glides back in front of you once you've looked well away or walked off, like a tag-along
+        float _tagDist = -1f; Vector3 _tagOffset;
+        bool _tagMoving;
+        public VerdictCard TagAlong()
+        {
+            var head = Camera.main.transform;
+            _tagDist = Mathf.Clamp(Vector3.Distance(head.position, transform.position), 0.45f, 0.9f);
+            _tagOffset = Vector3.up * (transform.position.y - head.position.y);
+            return this;
+        }
+
+        void TagFollow()
+        {
+            var head = Camera.main.transform;
+            var fwd = Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized;
+            var want = head.position + fwd * _tagDist + _tagOffset;
+            var to = transform.position - head.position; to.y = 0f;
+            float off = Vector3.Angle(fwd, to), far = Mathf.Abs(to.magnitude - _tagDist);
+            if (off > 28f || far > 0.35f) _tagMoving = true;
+            if (!_tagMoving) return;
+            transform.position = Vector3.Lerp(transform.position, want, 1f - Mathf.Exp(-5f * Time.deltaTime));
+            if (Vector3.Distance(transform.position, want) < 0.02f) _tagMoving = false;
+        }
+
         void LateUpdate()
         {
+            if (_tagDist > 0f && !_leaving && _follow == null) TagFollow();
             if (_follow != null && !_leaving)
             {
                 var p = _follow();

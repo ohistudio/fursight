@@ -100,13 +100,16 @@ namespace FurSight
         public bool Listening => _mic.Recording;
         bool _noting;   // the mic is taking a note, not a question
 
-        public void Ask()
+        // about: a photo already taken (Ask about it, under a photo); otherwise what you're looking at now
+        public void Ask() => Ask(null);
+        public void Ask(Snapshot about)
         {
             if (_mic.Recording) { _mic.Stop(); return; }   // pressing Ask again finishes the question
             if (Busy || !Ready()) return;
             Busy = true; _noting = false;
-            _askShot = PetCamera.Instance.Take();          // what you're looking at, for context
+            _askShot = about ?? PetCamera.Instance.Take();  // what you're looking at, for context
             Sfx.Snap(InFront());
+            if (about != null) _last = null;               // the photo's card stays up while you ask about it
             Clear();
             _status = VerdictCard.Checking(InFront(0.12f), "Ask about what you're looking at", "Listening", Theme.Grape);
             _status.Level = () => _mic.Level;
@@ -282,11 +285,19 @@ namespace FurSight
                 if (_status != null) _status.Dismiss();
                 _last = VerdictCard.Verdict(cardAt, "Photo saved", "saved", "Couldn't write a note just now; the picture is in the diary.", null);
             }
+            Busy = false;   // free for Ask about it while his sticker is still being looked for
             _last.AddPhoto(pic);
             // him cut out, if he's in it (no sticker when he isn't)
-            try { var tex = await sticker; if (tex != null && _last != null) _last.AddSticker(tex); }
+            Texture2D him = null;
+            try { him = await sticker; if (him != null && _last != null) _last.AddSticker(him); }
             catch (System.Exception e) { Debug.LogWarning("[FurSight] sticker: " + e.Message); }
-            finally { Busy = false; }
+            // what next with this photo: ask about it out loud, or (when it isn't him) check the room in it
+            var card = _last;
+            if (card != null)
+            {
+                card.AddButton("Ask about it", Theme.Grape, Theme.GrapeLip, () => Ask(shot));
+                if (him == null) card.AddButton("Room check", Theme.Coral, Theme.CoralLip, () => (GetComponent<RoomCheck>() ?? gameObject.AddComponent<RoomCheck>()).CheckShot(shot));
+            }
         }
 
         bool Ready()
