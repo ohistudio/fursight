@@ -94,6 +94,7 @@
   .vids .row { display: grid; gap: 2%; justify-content: center; }
   .vids .row[style*="(1,"] { grid-template-columns: min(100%, 72vh * 16 / 9 * .82) !important; }
   .vid { position: relative; overflow: hidden; }
+  .vid img.still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
   .vid video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
   .vid { aspect-ratio: 16 / 9; background: #FFFFFF; border-radius: 28px; box-shadow: 0 8px 0 rgba(43,42,51,.10); display: grid; place-content: center; text-align: center; padding: 4%; }
   .vid b { font-size: clamp(18px, 3.4vw, 64px); font-weight: 900; color: #D9D4E4; letter-spacing: .02em; }
@@ -288,7 +289,7 @@ async function story(r) {
   const shots = [
     ["His three pet cams", [["Cage cam", "Eating in his cage"], ["Litter cam", "On the litter tray"], ["Free-roam cam", "Roaming the room"]], 6000, "Three pet cams: his cage, his litter tray, and the room he roams."],
     ["The free-roam cam finds him", [["Free-roam cam", "Wide view of the room; FurSight finds him and zooms in, then pan and zoom with the cam controls"]], 6000, "When he roams, the cam finds him with SAM 3.1 and zooms in."],
-    ["On the FurSight Tray", [["Litter cam", "He hops on; his weight and the visit appear (the scale is simulated in this build)"]], 6000, "He hops on the tray: weighed, and the visit logged."],
+    ["On the FurSight Tray", [["Litter cam", "He hops on; his weight and the visit appear (the scale is simulated in this build)"], ["The FurSight Tray", "A concept render: a litter tray with a scale and a camera looking down", "/kit/tray.jpg"]], 6000, "He hops on the tray: weighed, and the visit logged."],
     ["Hay, food and water", [["Hay rack", "Through the day: SAM 3.1 measures it, 100% in the morning to 20% by evening"], ["Food bowl", "Pellets going down, the label updating"], ["Water", "Water level, the label updating"]], 6000, "SAM 3.1 measures his hay, pellets and water through the day. Less hay is the first sign."],
     ["Food check, wherever you are", [["Ray-Ban Display", "Hold up a strawberry; the verdict on the glasses"], ["Phone", "The app's Check: a photo of the food, the verdict with its label", "6-phone-food-check-8s.mp4"]], 8000, "Hold a treat up to your glasses or your phone. Can he have it?"],
     null,
@@ -297,7 +298,8 @@ async function story(r) {
     ["Meta Quest: room check", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"]], 11000, "On Quest, check the room. Muse Spark finds each hazard, and the headset's depth pins it on the real thing."],
     ["Meta Quest: the room remembers", [["Meta Quest", "Next launch: 'From last time, did you fix these?', a Still there? card on each hazard; move the deodorant out of reach, press Sorted it", "2-quest-room-remembers-7s.mp4"]], 7000, "Each hazard is saved as a spatial anchor. Next time, FurSight remembers where it was and asks if you fixed it."],
     ["Meta Quest: food in hand", [["Meta Quest", "Sports drink: hold it up, the verdict on your hand", "3a-quest-food-sports-drink-6s.mp4"], ["Meta Quest", "Chicken breast: hold it up, the verdict on your hand", "3b-quest-food-chicken-6s.mp4"]], 6000, "On Quest, hold food up, and the answer sits right on your hand."],
-    ["Meta Quest: ask, snap, watch", [["Meta Quest", "Ask a question out loud with the mic; the spoken answer card"], ["Meta Quest", "Pinch to take a photo of Xiaosi; the polaroid and his sticker"], ["Meta Quest", "His pet cams in a window, finding him"]], 6000, "Ask out loud, snap a photo of him, or watch his cams. Your hands stay in front of it all, with depth occlusion."],
+    ["Meta Quest: ask out loud", [["Meta Quest", "Ask a question out loud with the mic; Muse Spark's answer on a card (keep the sound)", null, true]], 7000, "Ask out loud. FurSight hears you, and Muse Spark answers about him."],
+    ["Meta Quest: snap and watch", [["Meta Quest", "Pinch to take a photo of Xiaosi; the polaroid and his sticker"], ["Meta Quest", "His pet cams in a window, finding him"]], 6000, "Snap a photo of him, or watch his cams. Your hands stay in front of it all, with depth occlusion."],
     ["Meta Quest: the poo check", [["Meta Quest", "Today's to-dos pop up; press Poo check now, look at a few of his droppings: a dot on each one, and the card compares with last time"]], 6000, "Today's to-dos pop up. The poo check puts a dot on every dropping, and compares with last time."],
     ["Meta Quest: his week", [["Meta Quest", "Open His week; swipe through Wrapped with your hand, stickers popping out, then his week card", "4-quest-his-week-9s.mp4"]], 9000, "And his week, wrapped. Swipe through it with your hand."],
     ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops"]], 6000, "When he flops, you get a sticker."],
@@ -312,7 +314,7 @@ async function story(r) {
     n++;
     const [what, boxes, ms, line] = sh;
     extra(`<div class="vids"><h2>${what}<span class="shot">Shot ${n} of ${total}</span><span class="secs">${Math.round(ms / 1000)} s</span></h2>
-      <div class="row" style="grid-template-columns:repeat(${boxes.length},1fr)">${boxes.map(([l, f, clip]) => `<div class="vid"><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div>${clip ? `<video src="clips/${clip}" muted autoplay playsinline onerror="this.remove()"></video>` : ""}</div>`).join("")}</div></div>`);
+      <div class="row" style="grid-template-columns:repeat(${boxes.length},1fr)">${boxes.map(([l, f, clip, sound]) => `<div class="vid"><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div>${!clip ? "" : /\.(jpe?g|png|webp)$/i.test(clip) ? `<img class="still" src="${clip.startsWith("/") ? clip : "clips/" + clip}" alt="" onerror="this.remove()">` : `<video src="${clip.startsWith("/") ? clip : "clips/" + clip}" ${sound ? "" : "muted"} autoplay playsinline onerror="this.remove()"></video>`}</div>`).join("")}</div></div>`);
     await wait(300, r); await caption(line, ms - 520, r);
   }
   $("capText").classList.remove("on");
@@ -342,13 +344,14 @@ async function story(r) {
     <div class="credit">Images: Meta, VRX. FurSight on these is an idea, not built yet.</div></div>`);
   await wait(300, r); await caption("And next: Meta VR Glasses, and Muse Charm on your keychain.", 3600, r);
   $("capText").classList.remove("on"); sfx("whoosh", .6);
-  extra(`<div class="models"><h2>And every kind of pet</h2>
+  extra(`<div class="models" style="grid-template-columns:repeat(5,1fr);width:92%"><h2>Coming next: every kind of pet, and toddlers</h2>
     <div class="model" style="border-top-color:#3DBB6E"><b>Reptiles</b><p>Basking and cool-side temperature, UV lamp hours, humidity, shedding and feeding days</p></div>
     <div class="model" style="border-top-color:var(--sky,#2EA8F5)"><b>Amphibians</b><p>Water temperature and humidity, misting, which live food is safe</p></div>
     <div class="model" style="border-top-color:#FFB23F"><b>Cats and dogs</b><p>Free-roam cams that find them, food and plant checks, litter and walks</p></div>
     <div class="model"><b>Small pets</b><p>Guinea pigs, hamsters, birds: hay, cage and the same early warnings</p></div>
-    <div class="foot">Same kit and models, a care plan for each species</div></div>`);
-  await wait(300, r); await caption("And beyond rabbits: reptiles and their heat, amphibians, cats and dogs.", 4200, r);
+    <div class="model" style="border-top-color:#FF4D5E"><b>Toddlers</b><p>Room checks for what they could swallow, pull down or climb; foods that are a choking risk</p></div>
+    <div class="foot">Not built yet: the same kit and models, with a care plan for each</div></div>`);
+  await wait(300, r); await caption("Next, beyond rabbits: reptiles, amphibians, cats and dogs. And toddlers, who also chew cables.", 4600, r);
   $("capText").classList.remove("on");
   extra(""); await wait(500, r);
   music(false); sfx("end", .7);
@@ -395,9 +398,9 @@ async function manyJobs(r) {
     ["Room check", "Muse Spark lists what he'd chew, and what's good for him; SAM 3.1 rings each one", ["Muse Spark", "SAM 3.1"], "Quest or web room check, the rings appearing", "room-check.jpg"],
     ["Poo check", "Muse Spark judges shape, size and colour next to the last check's photo", ["Muse Spark", "SAM 3.1"], "Today's droppings beside last time's", "poo-check.jpg"],
     ["Ask, the agent", "Muse Spark picks its tools: switches cams, finds him, reads the diary and the safety list", ["Muse Spark", "SAM 3.1"], "An Ask answer with its steps: pet cam, find, diary"],
-    ["Vet papers", "Muse Spark reads an uploaded vet PDF into his history", ["Muse Spark"], "Upload a vet PDF; it lands as a record in the diary"],
+    ["Vet papers", "Muse Spark reads a photo or PDF of a vet letter into his history: the date, what was done, medicines, follow-ups", ["Muse Spark"], "Upload a vet PDF; it lands as a record in the diary", "8-web-vet-papers.mp4"],
   ];
-  extra(`<div class="many"><h2>One model, many jobs</h2>${jobs.map(([t, d, m, f, pic], i) => `<div class="job" id="j${i}"><div class="vid"><div><b>VID HERE</b><small>${f}</small></div>${pic ? `<div class="scan"><img class="base" src="clips/${pic}" alt="" onerror="this.parentNode.remove()"><img class="top" src="clips/${pic}" alt=""><i></i></div>` : ""}</div>
+  extra(`<div class="many"><h2>One model, many jobs</h2>${jobs.map(([t, d, m, f, pic], i) => `<div class="job" id="j${i}"><div class="vid"><div><b>VID HERE</b><small>${f}</small></div>${pic && /\.mp4$/.test(pic) ? `<video src="clips/${pic}" muted autoplay playsinline onerror="this.remove()"></video>` : pic ? `<div class="scan"><img class="base" src="clips/${pic}" alt="" onerror="this.parentNode.remove()"><img class="top" src="clips/${pic}" alt=""><i></i></div>` : ""}</div>
     <div class="jt"><b>${t}</b>${m.map((x) => `<span class="chip ${x === "SAM 3.1" ? "sam" : ""}">${x}</span>`).join("")}</div><p>${d}</p></div>`).join("")}</div>`);
   await wait(300, r);
   caption("And it does much more: rooms, poo checks, the Ask agent, vet papers.", 3600, r).catch(() => {});
