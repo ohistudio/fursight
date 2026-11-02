@@ -4,11 +4,11 @@ One pet, one household, every device. Start on the web (it makes the household),
 
 ## Web app (start here)
 
-[fursight-seven.vercel.app](https://fursight-seven.vercel.app), on a computer or phone browser. No key, no login.
+[fursight-seven.vercel.app](https://fursight-seven.vercel.app), on a computer or phone browser. No key, no login. **On an iPhone, use this in Safari**: it does everything the iPhone app does (food check, room check, poo check, Ask, the diary) without installing anything.
 
 1. Press **Try it with a demo rabbit** for two weeks of a demo rabbit's life, a simulated pet cam and a simulated litter tray scale. Or press **Add your pet** and take a photo of yours: FurSight works out the species and breed and writes a care plan you can edit.
 2. The tabs along the bottom:
-   - **Today**: alerts, what he's been doing, his week wrapped, the diary. Add a note, photos, videos or vet papers.
+   - **Today**: **Can he eat this?** (food check), **Check the room for dangers**, the poo check, his week wrapped and the diary. Add a note, photos, videos or vet papers.
    - **Care**: tick off daily care (hay, water, greens, a health check); the streak counts days with everything done.
    - **Calendar**: vet visits, vaccinations, birthdays, grooming that's due.
    - **Stats**: his week in charts (weight, tray visits, activity, hay).
@@ -37,7 +37,7 @@ The app runs in passthrough mixed reality and uses hand tracking (controllers wo
 
 ## iPhone app
 
-Built from source with Xcode for now (see the Quickstart); it isn't on the App Store.
+Built from source with Xcode for now (see the Quickstart); it isn't on the App Store. **No Mac? Use the web app in Safari on your iPhone instead**: same checks, same household.
 
 1. Open it. It shows a 4-letter code: type it into the web app's **Devices** tab.
 2. The tabs:

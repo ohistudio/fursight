@@ -20,7 +20,7 @@ Watch: **[the film](https://fursight-seven.vercel.app/film/)** · [the intro](ht
 - **Video:** [the film](https://fursight-seven.vercel.app/film/)
 - **Install on Quest:** [FurSight-Quest.apk](https://github.com/ohistudio/fursight/releases/latest) (sideload, then link it to the demo rabbit with a code)
 - **How to use it on each device:** [docs/how-to-use.md](docs/how-to-use.md) (web, Quest, iPhone, Ray-Ban Display glasses app and web app)
-- **Try it with no key or login:** [fursight-seven.vercel.app](https://fursight-seven.vercel.app), press **Try it with a demo rabbit**. To run your own: [Quickstart](#quickstart).
+- **Try it with no key or login:** [fursight-seven.vercel.app](https://fursight-seven.vercel.app), press **Try it with a demo rabbit** (on an iPhone, open it in Safari: food, room and poo checks all work there). To run your own: [Quickstart](#quickstart).
 - **Proof:** [food safety benchmark](docs/benchmark.md), 135 foods, zero toxic foods called safe; tests and benchmark run in CI on every push.
 
 ## What it does, on every device
