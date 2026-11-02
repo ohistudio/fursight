@@ -480,12 +480,14 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><div id="pooNow"></div><input id="pooPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="pooOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><button class="btn sun" id="roomLive">Check the room for dangers</button><input id="roomPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="roomOut"></div><div id="pooNow"></div><input id="pooPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="pooOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("foodPhoto").onchange = async (e) => e.target.files[0] && foodCheck(await shrink(e.target.files[0]));
   document.getElementById("foodLive").onclick = foodCamera;
+  document.getElementById("roomLive").onclick = () => liveCamera(`Point at the room where ${me.pets[0].name} plays`, "Check this room", "roomPhoto", "roomOut", (img) => roomCheck({ image: img }));
+  document.getElementById("roomPhoto").onchange = async (e) => e.target.files[0] && roomCheck({ image: await shrink(e.target.files[0]) });
   document.getElementById("pooPhoto").onchange = async (e) => e.target.files[0] && pooCheck(await shrink(e.target.files[0]));
   document.getElementById("recap").onclick = (e) => makeRecap(e.target);
   document.getElementById("upload").onclick = () => uploadPage();
@@ -539,7 +541,7 @@ async function today() {
     const d = new Date(e.at), day = d.toDateString() === new Date().toDateString() ? "Today" : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short", ...(Date.now() - e.at > 300 * 864e5 ? { year: "numeric" } : {}) });
     const v = ["safe", "caution", "toxic", "vet"].includes(e.verdict) ? e.verdict : "other";
     const word = e.extra && e.extra.uploaded && UPKIND[e.kind] ? UPKIND[e.kind] + ({ caution: " · keep an eye on", vet: " · see a vet" }[e.verdict] || "")
-      : { safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet today" }[e.verdict] || { photo: "Photo", video: "Video", record: "Vet record", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
+      : vword(e, { vet: "See a vet today" }) || { photo: "Photo", video: "Video", record: "Vet record", ask: "Question", food: "Food check", cam: "Pet cam", care: "Daily care", note: "Note", "routine-done": "Groomed", droppings: "Droppings check", moment: "Moment", log: "You added", warning: "Heads up", room: "Room check" }[e.kind] || cap(e.kind);
     const icon = v === "safe" ? "✓" : v === "toxic" ? "✕" : v === "other" ? "•" : "!";
     const head = day !== last ? `<div class="day">${day}</div>` : ""; last = day;
     // a fact card shows live (stickers sway, numbers count up); tap it for the picture to save or share
@@ -1063,7 +1065,7 @@ async function calendar() {
     cells += `<button class="day ${k === today ? "today" : ""} ${k === calDay ? "sel" : ""}" data-day="${k}">${d}<span>${dots.map((c) => `<i style="background:var(--${c})"></i>`).join("")}</span></button>`;
   }
   const sel = FSCal.day(calDay), dayEvs = evs.filter((ev) => FSCal.on(ev, calDay)), dayDiary = byDay.get(calDay) || [];
-  const word = (e) => ({ safe: "Safe", caution: "Small treat only", toxic: "Don't", vet: "See a vet" }[e.verdict] || { care: "Care", ask: "Question", food: "Food check", photo: "Photo", recap: "Week card" }[e.kind] || cap(e.kind));
+  const word = (e) => (vword(e) || { care: "Care", ask: "Question", food: "Food check", photo: "Photo", recap: "Week card" }[e.kind] || cap(e.kind));
   const up = FSCal.upcoming(entries, 60).slice(0, 6);
   const nice = (k) => FSCal.day(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
   document.getElementById("cal").innerHTML = `<div class="stack">
@@ -1509,6 +1511,11 @@ async function markUp(im) {
 // species safety list has the last word), the foods boxed on the picture, the verdict, how much, when he last had
 // it, and "We fed him this" to put the next OK day on the calendar. Saved to the diary with its marks.
 const VWORD = { safe: "Safe", caution: "Small treat only", toxic: "Don't" };
+// a diary entry's verdict in words: treat words only for food; a room or droppings check says what it means for that
+const vword = (e, over = {}) => !e.verdict ? "" : e.kind === "food" ? ({ ...VWORD, vet: "See a vet", ...over })[e.verdict] || ""
+  : ({ room: { safe: "Room check · all clear", caution: "Room check · things to sort", toxic: "Room check · danger" },
+       droppings: { safe: "Droppings · look healthy", caution: "Droppings · keep an eye on", vet: "Droppings · see a vet" } }[e.kind] || {})[e.verdict]
+  || ({ safe: "All good", caution: "Keep an eye on", toxic: "Careful", vet: "See a vet", ...over })[e.verdict] || "";
 const cap1 = (x) => (x ? String(x)[0].toUpperCase() + String(x).slice(1) : "");
 
 // Like the iPhone app: a live camera you hold the food up to, then Check. The frame goes to foodCheck, which boxes

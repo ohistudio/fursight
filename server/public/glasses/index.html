@@ -199,7 +199,14 @@ async function load() {
 
 const VERDICT = { safe: ["safe", "✓", "Safe"], caution: ["caution", "!", "Small treat only"], toxic: ["toxic", "✕", "Don't"], vet: ["vet", "!", "See a vet today"] };
 const kindWord = { photo: "Photo", ask: "Question", food: "Food check", cam: "Pet cam" };
-function v(e) { return VERDICT[e.verdict] || ["other", "•", kindWord[e.kind] || "Note"]; }
+// treat words only for food; a room or droppings check (or a question) says what it means for that
+const OTHER = { room: { safe: "All clear", caution: "Things to sort", toxic: "Danger" }, droppings: { safe: "Look healthy", caution: "Keep an eye on", vet: "See a vet" } };
+function v(e) {
+  const x = VERDICT[e.verdict];
+  if (!x) return ["other", "•", kindWord[e.kind] || "Note"];
+  if (e.kind === "food") return x;
+  return [x[0], x[1], (OTHER[e.kind] || {})[e.verdict] || { safe: "All good", caution: "Keep an eye on", toxic: "Careful", vet: "See a vet today" }[e.verdict]];
+}
 const time = (t) => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 function render() {
