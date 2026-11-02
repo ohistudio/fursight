@@ -8,6 +8,19 @@
 
 Watch: **[the film](https://fursight-seven.vercel.app/film/)** · [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
 
+## Meta Global AI Hackathon 2026
+
+- **Track:** Indie Developer · **Problem statement:** Build for Your World
+- **Built from scratch during the hackathon** (26 Oct to 4 Nov 2026): every line in this repo, first commit 27 Oct.
+- **Meta models at runtime, all through the Meta Model API:**
+  - **Muse Spark 1.3**, the agent: picks its own tools to answer (pet cams, find him, zoom, diary, litter tray, hay level, vet records, calendar) and checks every food verdict against the safety list before it answers.
+  - **SAM 3.1**, the finder: outlines each hazard in a room check so Quest can pin a label on the real object, finds him across the pet cams, rings his droppings, and cuts out his stickers.
+  - **Muse Voice Transcribe**, the ears: questions asked out loud on Quest and the phone.
+- **Bonus categories:** Best Agentic Use-Case · Best Creative Build
+- **Video:** [the film](https://fursight-seven.vercel.app/film/)
+- **Try it with no key or login:** [fursight-seven.vercel.app](https://fursight-seven.vercel.app), press **Try it with a demo rabbit**. To run your own: [Quickstart](#quickstart).
+- **Proof:** [food safety benchmark](docs/benchmark.md), 135 foods, zero toxic foods called safe; tests and benchmark run in CI on every push.
+
 ## What it does, on every device
 
 - **Food check.** Hold food up to your glasses, Quest or phone: safe, a small treat or never, how much, and what instead. It reads labels and judges food as served (that salad dressing counts).
