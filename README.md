@@ -1,8 +1,21 @@
 # FurSight
 
-**Spoil them. Worry less.** Built on the Meta Model API: **Muse Spark**, **SAM 3.1** and **Muse Voice Transcribe**, on Ray-Ban Display, Meta Quest and iPhone.
+**Spoil them. Worry less.** One pet care assistant on Meta Quest, your phone, smart glasses (Meta Ray-Ban Display) and the web. **Muse Spark** is the agent, **SAM 3.1** is the finder, and **Muse Voice Transcribe** hears you, all through the Meta Model API.
+
+![FurSight on Quest, Ray-Ban Display and iPhone: a room check, the room remembering, a food check on the glasses, a meal check on the phone, his week](docs/demo.gif)
+
+*Room check on Quest, the room remembering it next time, a food check on the glasses, a meal check on the phone, his week on Quest.*
 
 Watch: [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
+
+## What it does, on every device
+
+- **Food check.** Hold food up to your glasses, Quest or phone: safe, a small treat or never, how much, and what instead. It reads labels and judges food as served (that salad dressing counts).
+- **Room check.** Look round a room: every hazard he could chew, swallow or cut himself on is pinned on the real thing, the good things too. On Quest each hazard is saved as a **spatial anchor**: next time you open FurSight in that room, it asks if you fixed them.
+- **Ask, wherever you are.** At the bowling alley or the traffic lights, ask your glasses how he is, or watch his pet cam. Muse Spark answers from his cams, his tray and his diary.
+- **Three pet cams** watch him while you're not on your devices: SAM 3.1 finds him, Muse Spark notes how he rests, flops and eats his hay, and a flop sends you his sticker.
+- **Poo check, vet papers, his week.** A photo of a few droppings is compared with the last check; a vet letter is read into his history; his week comes back as a Wrapped story and a card made of his real stickers.
+- **Snap to make your own stickers** on Quest, with your real hands over every card through Meta's depth occlusion.
 
 ## Build for Your World
 
@@ -17,7 +30,7 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 | Model | What it does in FurSight | Where |
 |---|---|---|
 | **Muse Spark** | Food verdicts as JSON (what, how safe, why, where, wait days); poses from the pet cam; hay and bowl levels; room checks; poo checks compared with the last one; vet papers read into his history; spoken notes sorted into the diary and calendar; weekly cards; and the Ask agent, which picks from 17 tools (find him, look through the cams, check his tray, read his calendar...) | [lib/meta.js](server/lib/meta.js) `spark()`, [lib/agent.js](server/lib/agent.js), [routes/food.js](server/routes/food.js), [routes/pose.js](server/routes/pose.js), [routes/levels.js](server/routes/levels.js), [routes/ask.js](server/routes/ask.js) |
-| **SAM 3.1** | Finds him on each pet cam, cuts him out as stickers, measures the hay pile, outlines room hazards, counts droppings | [lib/sam.js](server/lib/sam.js), [routes/sticker.js](server/routes/sticker.js), [routes/room.js](server/routes/room.js) |
+| **SAM 3.1** | Finds him on each pet cam, cuts him out as stickers, measures the hay pile, outlines room hazards, rings his droppings for the poo check | [lib/sam.js](server/lib/sam.js), [routes/sticker.js](server/routes/sticker.js), [routes/room.js](server/routes/room.js) |
 | **Muse Voice Transcribe** | Spoken questions and notes on Quest | [lib/meta.js](server/lib/meta.js) `transcribe()`, [routes/note.js](server/routes/note.js) |
 
 ## What it is
