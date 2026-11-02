@@ -420,26 +420,26 @@ async function museCall(r) {
     <div class="step" id="c1"><span class="tag" id="c1tag">1 · Sent</span><img id="c1img" src="clips/coffee-sent.jpg" alt="A coffee cup" onerror="this.onerror=null;this.src='sent.jpg'"><p id="c1p">One photo from the phone</p></div>
     <div class="arrow" id="a1">→</div>
     <div class="step" id="c2"><span class="tag">2 · Muse Spark</span><ul>
-      <li>What food is it? Is it held?</li><li>Safe, a treat, or never?</li><li>How much, and what instead?</li><li>Days until the next one</li><li>A box round it in the picture</li></ul>
+      <li>What food is it? Is it held?</li><li>Safe, a treat, or never?</li><li>How much, and what instead?</li><li>What's on the label?</li><li>A box round it in the picture</li></ul>
       <p>Checked against the rabbit safety list, which always wins. Through the Meta Model API.</p></div>
     <div class="arrow" id="a2">→</div>
     <div class="step" id="c3"><span class="tag">3 · Back in 3 s</span><pre id="json"></pre></div>
     <div class="out" id="c4" style="--v:#FF4D5E;--vl:#D93545"><i>✕</i><span>Coffee: don't</span><small>caffeine · water and hay instead</small></div></div>`);
   await wait(300, r);
-  caption("Here's one Muse Spark call: the picture sent, what it's asked, and what comes back.", 4200, r).catch(() => {});
+  caption("One check: the picture sent, what Muse Spark is asked, and what comes back.", 3200, r).catch(() => {});
   const on = (id) => $(id) && $(id).classList.add("on"), op = (id) => $(id) && ($(id).style.opacity = 1);
-  on("c1"); sfx("click", .5); await wait(900, r); op("a1"); on("c2"); sfx("click", .5);
-  for (const li of document.querySelectorAll(".call li")) { await wait(380, r); li.classList.add("on"); }
-  await wait(700, r); op("a2"); on("c3"); sfx("ping", .4);
+  on("c1"); sfx("click", .5); await wait(500, r); op("a1"); on("c2"); sfx("click", .5);
+  for (const li of document.querySelectorAll(".call li")) { await wait(220, r); li.classList.add("on"); }
+  await wait(300, r); op("a2"); on("c3"); sfx("ping", .4);
   const lines = J.split("\n"), pre = $("json");
-  for (let k = 1; k <= lines.length; k++) { pre.innerHTML = lines.slice(0, k).join("\n"); await wait(200, r); }
+  for (let k = 1; k <= lines.length; k++) { pre.innerHTML = lines.slice(0, k).join("\n"); await wait(100, r); }
   // SAM 3.1 on the same picture: the cup's exact outline (its real mask, "cup")
-  await wait(400, r);
+  await wait(250, r);
   const im = $("c1img"); if (im && im.src.includes("coffee-sent")) { im.style.transition = "opacity .35s"; im.style.opacity = 0; await wait(350, r); im.src = "clips/coffee-sam.jpg"; im.style.opacity = 1;
     $("c1tag").textContent = "4 · SAM 3.1"; $("c1p").textContent = "Outlines the exact cup, in 2 s"; sfx("ping", .4); }
-  caption("Muse Spark says what it is. SAM 3.1 outlines exactly where.", 2600, r).catch(() => {});
-  await wait(2600, r); on("c4"); sfx("chime", .55);
-  await caption("Then it's a card on the food, on your glasses, Quest or phone.", 3000, r);
+  caption("Muse Spark says what it is. SAM 3.1 outlines exactly where.", 1900, r).catch(() => {});
+  await wait(1900, r); on("c4"); sfx("chime", .55);
+  await caption("Then it's a card on the food, on your glasses, Quest or phone.", 2200, r);
 }
 
 // One model, many jobs: four more things Muse Spark and SAM 3.1 do, a VID HERE each, popping in one by one
