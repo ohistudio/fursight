@@ -43,6 +43,10 @@
   .on .scan i { animation: scanLine 1.6s .35s ease-in-out forwards; }
   @keyframes scanReveal { to { clip-path: inset(0 0 0 0); } }
   @keyframes scanLine { 0% { top: 0; opacity: 1; } 95% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+  #floaters { position: absolute; inset: 0; pointer-events: none; }
+  #floaters img { position: absolute; width: 10%; filter: drop-shadow(0 8px 10px rgba(43,42,51,.22)); opacity: 0; transform: scale(.4) rotate(var(--r)); transition: opacity .4s, transform .5s cubic-bezier(.34,1.56,.64,1); }
+  #floaters.on img { opacity: 1; transform: scale(1) rotate(var(--r)); animation: bob 3.2s ease-in-out infinite; animation-delay: var(--d); }
+  @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
   #extra { position: absolute; inset: 0; padding-bottom: 12%; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
   #extra.on { opacity: 1; }
   .kitrow { position: absolute; inset: 3% 3% 17% 3%; display: flex; gap: 2.5%; align-items: center; justify-content: center; }
@@ -136,7 +140,7 @@
 </style>
 </head>
 <body>
-<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="pip"></div><div id="extra"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
+<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="pip"></div><div id="extra"></div><div id="floaters"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
 <div id="hint"><b id="tc">0:00</b> · R or click to replay · M mutes</div>
 <script>
 // The FurSight film (about 3:00): the intro's story, white "VID HERE" boxes where the real footage goes, one
@@ -161,6 +165,15 @@ const extra = (html) => { $("extra").innerHTML = html || $("extra").innerHTML; $
 const caption = async (text, ms, r, dark = false) => {
   const c = $("capText"); c.classList.remove("on"); await wait(220, r);
   c.textContent = text; c.classList.toggle("dark", dark); c.classList.add("on"); await wait(ms, r);
+};
+// his real stickers (cut-outs of Xiaosi from the demo clip) floating round the edges, while the film talks stickers
+const floaters = (on) => {
+  const el = $("floaters");
+  if (!on) { el.classList.remove("on"); return; }
+  const spots = [[3, 9, -10, 0], [87, 7, 9, .5], [2, 66, 7, 1], [88, 64, -8, 1.5]];
+  const files = ["xiaosi-sticker.png", "xiaosi-sticker-2.png", "xiaosi-sticker-3.png", "xiaosi-sticker-4.png"];
+  el.innerHTML = spots.map(([x, y, r, d], i) => `<img src="/demo/${files[i]}" alt="" style="left:${x}%;top:${y}%;--r:${r}deg;--d:${d}s;transition-delay:${i * .12}s">`).join("");
+  void el.offsetWidth; el.classList.add("on");
 };
 // the real thing, small and to the side while the story says it (a clip from film/clips; hidden if it's missing)
 const pip = (clip, from = 0) => {
@@ -226,7 +239,7 @@ const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 
 // ---------------------------------------------------------------- the story
 async function story(r) {
   for (const id of ["cablering", "avoglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardAvo", "cardHay", "cardTray", "cardBerry", "berry", "berryq", "cardAsk", "cardAway", "cardWeek", "devices", "traykg"]) show(id, false);
-  $("dim").style.opacity = 0; card(""); extra(""); pip(null); $("capText").classList.remove("on");
+  $("dim").style.opacity = 0; card(""); extra(""); pip(null); floaters(false); $("capText").classList.remove("on");
   Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 }); draw();
 
   PACE = 0.65;
@@ -299,10 +312,10 @@ async function story(r) {
     ["Meta Quest: the room remembers", [["Meta Quest", "Next launch: 'From last time, did you fix these?', a Still there? card on each hazard; move the deodorant out of reach, press Sorted it", "2-quest-room-remembers-7s.mp4"]], 7000, "Each hazard is saved as a spatial anchor. Next time, FurSight remembers where it was and asks if you fixed it."],
     ["Meta Quest: food in hand", [["Meta Quest", "Sports drink: hold it up, the verdict on your hand", "3a-quest-food-sports-drink-6s.mp4"], ["Meta Quest", "Chicken breast: hold it up, the verdict on your hand", "3b-quest-food-chicken-6s.mp4"]], 6000, "On Quest, hold food up, and the answer sits right on your hand."],
     ["Meta Quest: ask out loud", [["Meta Quest", "Ask a question out loud with the mic; Muse Spark's answer on a card (keep the sound)", null, true]], 7000, "Ask out loud. FurSight hears you, and Muse Spark answers about him."],
-    ["Meta Quest: snap and watch", [["Meta Quest", "Pinch to take a photo of Xiaosi; the polaroid and his sticker"], ["Meta Quest", "His pet cams in a window, finding him"]], 6000, "Snap a photo of him, or watch his cams. Your hands stay in front of it all, with depth occlusion."],
+    ["Meta Quest: snap and watch", [["Meta Quest", "Pinch to take a photo of Xiaosi; the polaroid and his sticker"], ["Meta Quest", "His pet cams in a window, finding him"]], 6000, "Snap a photo of him, or watch his cams. Your hands stay in front of it all, with depth occlusion.", null, true],
     ["Meta Quest: the poo check", [["Meta Quest", "Today's to-dos pop up; press Poo check now, look at a few of his droppings: a dot on each one, and the card compares with last time"]], 6000, "Today's to-dos pop up. The poo check puts a dot on every dropping, and compares with last time."],
     ["Meta Quest: his week", [["Meta Quest", "Open His week; swipe through Wrapped with your hand, stickers popping out, then his week card", "4-quest-his-week-9s.mp4"]], 9000, "And his week, wrapped. Swipe through it with your hand."],
-    ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops", "9-phone-flop-alert.mp4"]], 7000, "Scrolling Instagram? When he flops, you get his sticker."],
+    ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops", "9-phone-flop-alert.mp4"]], 7000, "Scrolling Instagram? When he flops, you get his sticker.", null, true],
     ["The app: diary and stats", [["Web app", "Scroll the diary (marked-up check photos), then weight, tray visits, hay, his week", "7-web-diary-stats-6s.mp4"]], 6000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
   ];
   const total = shots.filter((x) => Array.isArray(x)).length;
@@ -312,11 +325,13 @@ async function story(r) {
     if (!sh) { await museCall(r); continue; }
     if (sh === "many") { await manyJobs(r); continue; }
     n++;
-    const [what, boxes, ms, line, cols] = sh;
+    const [what, boxes, ms, line, cols, stickers] = sh;
     extra(`<div class="vids"><h2>${what}<span class="shot">Shot ${n} of ${total}</span><span class="secs">${Math.round(ms / 1000)} s</span></h2>
       <div class="row" style="grid-template-columns:${cols || `repeat(${boxes.length},1fr)`};align-items:center">${boxes.map(([l, f, clip, sound, tall]) => `<div class="vid" ${tall ? 'style="aspect-ratio:9/16"' : ""}><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div>${!clip ? "" : /\.(jpe?g|png|webp)$/i.test(clip) ? `<img class="still" src="${clip.startsWith("/") ? clip : "clips/" + clip}" alt="" onerror="this.remove()">` : `<video src="${clip.startsWith("/") ? clip : "clips/" + clip}" ${sound ? "" : "muted"} autoplay playsinline onerror="this.remove()"></video>`}</div>`).join("")}</div></div>`);
+    floaters(!!stickers);
     await wait(300, r); await caption(line, ms - 520, r);
   }
+  floaters(false);
   $("capText").classList.remove("on");
 
   // the models
