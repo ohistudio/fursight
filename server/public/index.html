@@ -1551,8 +1551,8 @@ async function foodCheck(photo) {
     if (!items.length) { $o.innerHTML = `<div class="card stack pop"><h3>No food seen</h3><p class="muted">Hold it up close, in good light, and try again.</p></div>`; return; }
     const held = items[r.held] || items[0];
     const marks = items.map((it) => ({ b: it.box, v: it.verdict, t: cap(it.food) + ": " + (VWORD[it.verdict] || it.verdict) }));
-    const v = held.verdict, cap = { title: `${cap1(held.food)}: ${VWORD[v] || v}`, line: v === "caution" && held.portion && held.portion !== "none" ? `How much: ${held.portion}` : held.reason || "", v };
-    const pic = await drawMarks(photo, marks, cap);
+    const v = held.verdict, strip = { title: `${cap1(held.food)}: ${VWORD[v] || v}`, line: v === "caution" && held.portion && held.portion !== "none" ? `How much: ${held.portion}` : held.reason || "", v };
+    const pic = await drawMarks(photo, marks, strip);
     const fed = held.fed && held.fed.said ? `<p style="margin:0;color:${held.fed.wait_left > 0 ? "var(--sun-lip)" : "var(--muted)"}">${esc(held.fed.said)}</p>` : "";
     const more = v === "caution" && held.portion && held.portion !== "none" ? `<p style="margin:0"><b>How much:</b> ${esc(held.portion)}</p>` : v === "toxic" && held.instead ? `<p style="margin:0"><b>Instead:</b> ${esc(held.instead)}</p>` : "";
     const others = items.filter((it) => it !== held).map((it) => `<div class="hz"><i class="v-${it.verdict}"></i><div><b>${esc(cap(it.food))}</b> <span class="t-${it.verdict}">${VWORD[it.verdict] || ""}</span><br><span class="muted">${esc(it.reason || "")}</span></div></div>`).join("");
@@ -1569,7 +1569,7 @@ async function foodCheck(photo) {
         $f.textContent = f.next ? "OK again " + new Date(f.next + "T12:00").toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) : "Marked";
       } catch (e) { $f.disabled = false; $f.textContent = `We fed ${name} this`; toast(e.message); }
     };
-    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "food", title: cap(held.food), note: held.reason || "", verdict: v, image: photo, pet: name, extra: { marks, caption: cap } }) }).catch(() => {});
+    hub("/diary", { method: "POST", body: JSON.stringify({ kind: "food", title: cap(held.food), note: held.reason || "", verdict: v, image: photo, pet: name, extra: { marks, caption: strip } }) }).catch(() => {});
   } catch (e) { $o.innerHTML = `<div class="card stack pop"><h3>Couldn't check</h3><p class="muted">${esc(e.message)}</p></div>`; }
 }
 
