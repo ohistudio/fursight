@@ -19,6 +19,8 @@ One pet, one household, every device. Start on the web (it makes the household),
 
 The app runs in passthrough mixed reality and uses hand tracking (controllers work too).
 
+**Install:** download **FurSight-Quest.apk** from the [latest release](https://github.com/ohistudio/fursight/releases/latest) and sideload it (Developer Mode on, then Meta Quest Developer Hub, SideQuest or `adb install`). It's under Library > Unknown Sources.
+
 1. Open FurSight. The first time, it shows a 4-letter code: type it into the web app's **Devices** tab.
 2. **Turn your left palm towards your face** to open the menu. Press a button by poking it with a finger, or point and pinch. With controllers: X or Y opens the menu, the trigger presses.
 3. The buttons:
