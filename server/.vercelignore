@@ -1,1 +1,2 @@
-public/film/clips
+# deploy everything in public, film clips included (they are kept out of git, not out of the site)
+*.log
