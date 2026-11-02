@@ -214,7 +214,7 @@ struct TodayView: View {
     }
 }
 
-// For filming the sticker alert: hold his name on Today for a second and a flop notification arrives 4 s later,
+// For filming the sticker alert: hold his name on Today for a second and a flop notification arrives 10 s later,
 // with his sticker (the demo clip's cut-out of Xiaosi), the way the hub's push looks. Time to go to the home screen.
 import UserNotifications
 enum DemoNotification {
@@ -228,7 +228,7 @@ enum DemoNotification {
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent("flop-\(UUID().uuidString).png")
                 if (try? data.write(to: url)) != nil, let a = try? UNNotificationAttachment(identifier: "sticker", url: url) { c.attachments = [a] }
             }
-            let req = UNNotificationRequest(identifier: "demo-flop-\(UUID().uuidString)", content: c, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 4, repeats: false))
+            let req = UNNotificationRequest(identifier: "demo-flop-\(UUID().uuidString)", content: c, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 10, repeats: false))
             try? await UNUserNotificationCenter.current().add(req)
         }
     }
