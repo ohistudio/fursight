@@ -23,25 +23,46 @@ namespace FurSight
         CardButton _poked;   // the button the fingertip is in (pressed once on the way in)
         bool _pokeDone;
 
-        // where the hands are, for the UI shaders (FurSightHands.hlsl): only a real hand hides a card, never the room
-        static readonly Vector4[] _handPts = new Vector4[4];
+        // where the hands are, for the UI shaders (FurSightHands.hlsl): only a real hand hides a card, never the room.
+        // Four points a hand (palm, index, thumb and middle tips); holding a controller, the controller and just
+        // ahead of it stand in for the hand round it
+        static readonly Vector4[] _handPts = new Vector4[8];
         static readonly int HandsId = Shader.PropertyToID("_FSHands");
-        static void SendHands()
+        void SendHands()
         {
+            System.Array.Clear(_handPts, 0, _handPts.Length);
             for (int h = 0; h < 2; h++)
             {
                 var hand = Hands.Get(h);
-                _handPts[h * 2] = hand.tracked ? new Vector4(hand.palm.x, hand.palm.y, hand.palm.z, 0.12f) : Vector4.zero;
-                _handPts[h * 2 + 1] = hand.tracked ? new Vector4(hand.indexTip.x, hand.indexTip.y, hand.indexTip.z, 0.05f) : Vector4.zero;
+                int o = h * 4;
+                if (hand.tracked)
+                {
+                    _handPts[o] = P(hand.palm, 0.11f); _handPts[o + 1] = P(hand.indexTip, 0.045f);
+                    _handPts[o + 2] = P(hand.thumbTip, 0.045f); _handPts[o + 3] = P(hand.middleTip, 0.05f);
+                    continue;
+                }
+                var c = h == Hands.Right ? OVRInput.Controller.RTouch : OVRInput.Controller.LTouch;
+                if (_tracking == null || !OVRInput.IsControllerConnected(c)) continue;
+                var pos = _tracking.TransformPoint(OVRInput.GetLocalControllerPosition(c));
+                var rot = _tracking.rotation * OVRInput.GetLocalControllerRotation(c);
+                _handPts[o] = P(pos, 0.11f); _handPts[o + 1] = P(pos + rot * Vector3.forward * 0.07f, 0.07f);
             }
             Shader.SetGlobalVectorArray(HandsId, _handPts);
+        }
+        static Vector4 P(Vector3 p, float r) => new Vector4(p.x, p.y, p.z, r);
+
+        /// a real hand (or controller) is within reach of this point: cards hold still while you reach for them
+        public static bool HandNear(Vector3 p, float within = 0.3f)
+        {
+            foreach (var v in _handPts) if (v.w > 0f && Vector3.Distance(new Vector3(v.x, v.y, v.z), p) < within) return true;
+            return false;
         }
 
         void Update()
         {
             Consumed = false;
-            SendHands();
             if (_tracking == null) { var rig = FindFirstObjectByType<OVRCameraRig>(); if (rig != null) _tracking = rig.trackingSpace; }
+            SendHands();
 
             CardButton hovered = null;
             bool pressed = false;
@@ -49,7 +70,7 @@ namespace FurSight
             foreach (var (ray, press, controller) in Pointers())
             {
                 var b = Target(ray, controller);
-                if (controller) Beam(beam++, ray, b);
+                if (controller || b != null) Beam(beam++, ray, b);   // a hand's ray shows only when it's on a button
                 if (b == null) continue;
                 if (hovered == null) { hovered = b; if (press) pressed = true; }
             }
@@ -130,9 +151,16 @@ namespace FurSight
         // within 7 degrees (the beam bends to it, so small buttons are easy to hit from across the room)
         CardButton Target(Ray ray, bool controller)
         {
-            if (Physics.Raycast(ray, out var hit, 3f) && _buttons.TryGetValue(hit.collider, out var b)) return b;
-            if (!controller) return null;
-            CardButton best = null; float bestAngle = 7f;
+            // straight on a button's face (its whole pill, not just the middle)
+            CardButton best = null; float bestD = 3f;
+            foreach (var c in _buttons.Values)
+            {
+                if (c == null || !c.Collider.enabled || !c.gameObject.activeInHierarchy) continue;
+                if (c.Hit(ray, out float d) && d < bestD) { bestD = d; best = c; }
+            }
+            if (best != null) return best;
+            // otherwise the nearest within a few degrees (the beam bends to it)
+            float bestAngle = controller ? 7f : 5f;
             foreach (var c in _buttons.Values)
             {
                 if (c == null || !c.Collider.enabled || !c.gameObject.activeInHierarchy) continue;
@@ -239,9 +267,57 @@ namespace FurSight
 
         public void Hover(bool on) { if (this != null) transform.localScale = _scale * (on ? 1.25f : 1f); }
 
-        // is a point (a fingertip) inside the button's press zone?
-        public bool Contains(Vector3 p) => Collider != null && Collider.enabled && Collider.gameObject.activeInHierarchy &&
-            Vector3.Distance(Collider.bounds.center, p) < ((SphereCollider)Collider).radius * Mathf.Max(transform.lossyScale.x, 1e-4f);
+        // the button's face, in its own space: what's drawn (a pill, a coin)
+        Bounds _face; bool _faced;
+        Bounds Face()
+        {
+            if (_faced) return _face;
+            var r = ((SphereCollider)Collider).radius;
+            Bounds b = default; bool any = false;
+            foreach (var mf in GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null) continue;
+                var mb = mf.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    var corner = mb.center + Vector3.Scale(mb.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                    var c = transform.InverseTransformPoint(mf.transform.TransformPoint(corner));
+                    if (any) b.Encapsulate(c); else { b = new Bounds(c, Vector3.zero); any = true; }
+                }
+            }
+            if (!any) b = new Bounds(Vector3.zero, new Vector3(r * 2f, r * 2f, 0.01f));   // nothing drawn yet: its hit radius
+            if (Ready && any) { _face = b; _faced = true; }   // once it's popped in and built
+            return b;
+        }
+
+        // is a point (a fingertip) in the press zone: over the face (with a centimetre to spare), from just in front
+        // of it to a few centimetres behind (the finger goes through)
+        public bool Contains(Vector3 p)
+        {
+            if (Collider == null || !Collider.enabled || !Collider.gameObject.activeInHierarchy) return false;
+            var f = Face();
+            float s = Mathf.Max(transform.lossyScale.x, 1e-4f), m = 0.012f / s;
+            var l = transform.InverseTransformPoint(p);
+            return Mathf.Abs(l.x - f.center.x) < f.extents.x + m && Mathf.Abs(l.y - f.center.y) < f.extents.y + m
+                && l.z > f.min.z - 0.012f / s && l.z < f.max.z + 0.05f / s;
+        }
+
+        // does a ray land on the face (with a little to spare)? d: how far along
+        public bool Hit(Ray ray, out float d)
+        {
+            d = 0f;
+            var f = Face();
+            var o = transform.InverseTransformPoint(ray.origin);
+            var dir = transform.InverseTransformDirection(ray.direction);
+            if (Mathf.Abs(dir.z) < 1e-4f) return false;
+            float t = (f.min.z - o.z) / dir.z;
+            if (t <= 0f) return false;
+            var at = o + dir * t;
+            float s = Mathf.Max(transform.lossyScale.x, 1e-4f), m = 0.008f / s;
+            if (Mathf.Abs(at.x - f.center.x) > f.extents.x + m || Mathf.Abs(at.y - f.center.y) > f.extents.y + m) return false;
+            d = Vector3.Distance(ray.origin, transform.TransformPoint(at));
+            return true;
+        }
         float _readyAt;
         public bool Ready => Time.time >= _readyAt;
         public void Press() { Sfx.Press(transform.position); OnPress?.Invoke(); }

@@ -432,7 +432,7 @@ namespace FurSight
 
         void LateUpdate()
         {
-            if (_tagDist > 0f && !_leaving && _follow == null) TagFollow();
+            if (_tagDist > 0f && !_leaving && _follow == null && !CardInput.HandNear(transform.position, 0.35f)) TagFollow();   // still while you reach for it
             if (_follow != null && !_leaving)
             {
                 var p = _follow();

@@ -15,7 +15,7 @@ namespace FurSight
         public struct Hand
         {
             public bool tracked;
-            public Vector3 palm, normal, indexTip;
+            public Vector3 palm, normal, indexTip, thumbTip, middleTip;
             public bool pinching;          // thumb and index together (with hysteresis)
             public float pinchStrength;    // 0 open to 1 tips together
             public Vector3 pinchPoint;     // between the two tips
@@ -52,7 +52,7 @@ namespace FurSight
             {
                 var sk = s_meta[i];
                 if (sk == null || !sk.isActiveAndEnabled || !sk.IsInitialized || !sk.IsDataValid) continue;
-                Transform palm = null, tip = null, wrist = null, indexK = null, littleK = null, thumb = null;
+                Transform palm = null, tip = null, wrist = null, indexK = null, littleK = null, thumb = null, middle = null;
                 foreach (var b in sk.Bones)
                     switch (b.Id)
                     {
@@ -62,6 +62,7 @@ namespace FurSight
                         case OVRSkeleton.BoneId.XRHand_IndexProximal: indexK = b.Transform; break;
                         case OVRSkeleton.BoneId.XRHand_LittleProximal: littleK = b.Transform; break;
                         case OVRSkeleton.BoneId.XRHand_ThumbTip: thumb = b.Transform; break;
+                        case OVRSkeleton.BoneId.XRHand_MiddleTip: middle = b.Transform; break;
                     }
                 if (palm == null || wrist == null || indexK == null || littleK == null) continue;
                 Vector3 across = Vector3.Cross(indexK.position - wrist.position, littleK.position - wrist.position).normalized;
@@ -76,6 +77,8 @@ namespace FurSight
                     palm = palm.position,
                     normal = i == Right ? -across : across,
                     indexTip = tipPos,
+                    thumbTip = thumb != null ? thumb.position : tipPos,
+                    middleTip = middle != null ? middle.position : palm.position,
                     pinching = pinch,
                     pinchStrength = strength,
                     pinchPoint = thumb != null ? (thumb.position + tipPos) * 0.5f : tipPos,

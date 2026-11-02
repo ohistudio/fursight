@@ -7,7 +7,7 @@
 // and the frag to run UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX first, so each eye reads its own depth.
 #include "Packages/com.meta.xr.sdk.core/Shaders/EnvironmentDepth/URP/EnvironmentOcclusionURP.hlsl"
 
-float4 _FSHands[4];   // xyz a point on a hand, w its radius (0 = not tracked)
+float4 _FSHands[8];   // xyz a point on a hand, w its radius (0 = not tracked)
 
 // 1 = draw, 0 = a hand is in front. A tracked hand point lies along this pixel's line of sight, nearer than the
 // UI: then the environment depth gives the hand's real outline (so it's your fingers, not a round blob).
@@ -19,7 +19,7 @@ half FSHandOcclusion(float3 positionWS)
     float far = length(ray);
     float3 dir = ray / max(far, 1e-4);
     half hand = 0.0;
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 8; i++)
     {
         if (_FSHands[i].w <= 0.0) continue;
         float3 h = _FSHands[i].xyz - eye;
