@@ -229,7 +229,7 @@ async function story(r) {
   $("dim").style.opacity = 0; card(""); extra(""); pip(null); $("capText").classList.remove("on");
   Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 }); draw();
 
-  PACE = 0.68;
+  PACE = 0.65;
   // open close up on him, then pull back to the room
   closeUp(true); music(true); sfx("title", .6);
   await breathe(1400, r);
@@ -287,7 +287,7 @@ async function story(r) {
   // the real thing: placeholders for the footage, in order. Each: a title, the boxes (one per clip, side by
   // side: [label, what to film]), seconds, and the caption over it. null = the Muse Spark call.
   const shots = [
-    ["His three pet cams", [["Cage cam", "Eating in his cage", "cam-cage.mp4"], ["Litter cam", "On the litter tray", "cam-top.mp4"], ["Free-roam cam", "Roaming the room"]], 6000, "Three pet cams: his cage, his litter tray, and the room he roams."],
+    ["His three pet cams", [["Cage cam", "Eating in his cage", "cam-cage-wide.mp4"], ["Litter cam", "On the litter tray", "cam-top-wide.mp4"], ["Free-roam cam", "Roaming the room"]], 6000, "Three pet cams: his cage, his litter tray, and the room he roams."],
     ["The free-roam cam finds him", [["Free-roam cam", "Wide view of the room; FurSight finds him and zooms in, then pan and zoom with the cam controls"]], 6000, "When he roams, the cam finds him with SAM 3.1 and zooms in."],
     ["On the FurSight Tray", [["Litter cam", "He hops on; his weight and the visit appear (the scale is simulated in this build)"], ["The FurSight Tray", "A concept render: a litter tray with a scale and a camera looking down", "/kit/tray.jpg"]], 6000, "He hops on the tray: weighed, and the visit logged."],
     ["Hay, food and water", [["Hay rack", "Through the day: SAM 3.1 measures it, 100% in the morning to 20% by evening"], ["Food bowl", "Pellets going down, the label updating"], ["Water", "Water level, the label updating"]], 6000, "SAM 3.1 measures his hay, pellets and water through the day. Less hay is the first sign."],
@@ -295,7 +295,7 @@ async function story(r) {
     null,
     "many",
     ["Wherever you are", [["Ray-Ban Display", "Mid-game at the bowling alley: \"How is he?\", answered on the glasses", "rb-ask-bowling.mp4"], ["Ray-Ban Display", "At the traffic lights: his pet cam, live on the glasses", "rb-cam-traffic.mp4"], ["Meta Quest", "Watching his pet cam stream in a window"]], 7000, "Wherever you are, whatever you're doing, check how he is: on your glasses, your phone or your Quest."],
-    ["Room check, on every device", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"], ["Phone", "The app's Check on the desk: numbered hazards, a card for each", "10-phone-room-check.mp4"], ["Ray-Ban Display", "Hazard check on the glasses: what he could chew, right in view"]], 11000, "Check the room on Quest, phone or glasses. Muse Spark finds each hazard, and on Quest the headset's depth pins it on the real thing."],
+    ["Room check, on every device", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"], ["Phone", "The app's Check on the desk: numbered hazards, a card for each", "10-phone-room-check-tall.mp4", false, true], ["Ray-Ban Display", "Hazard check on the glasses: what he could chew, right in view"]], 11000, "Check the room on Quest, phone or glasses. Muse Spark finds each hazard, and on Quest the headset's depth pins it on the real thing.", "2fr .62fr 1fr"],
     ["Meta Quest: the room remembers", [["Meta Quest", "Next launch: 'From last time, did you fix these?', a Still there? card on each hazard; move the deodorant out of reach, press Sorted it", "2-quest-room-remembers-7s.mp4"]], 7000, "Each hazard is saved as a spatial anchor. Next time, FurSight remembers where it was and asks if you fixed it."],
     ["Meta Quest: food in hand", [["Meta Quest", "Sports drink: hold it up, the verdict on your hand", "3a-quest-food-sports-drink-6s.mp4"], ["Meta Quest", "Chicken breast: hold it up, the verdict on your hand", "3b-quest-food-chicken-6s.mp4"]], 6000, "On Quest, hold food up, and the answer sits right on your hand."],
     ["Meta Quest: ask out loud", [["Meta Quest", "Ask a question out loud with the mic; Muse Spark's answer on a card (keep the sound)", null, true]], 7000, "Ask out loud. FurSight hears you, and Muse Spark answers about him."],
@@ -312,9 +312,9 @@ async function story(r) {
     if (!sh) { await museCall(r); continue; }
     if (sh === "many") { await manyJobs(r); continue; }
     n++;
-    const [what, boxes, ms, line] = sh;
+    const [what, boxes, ms, line, cols] = sh;
     extra(`<div class="vids"><h2>${what}<span class="shot">Shot ${n} of ${total}</span><span class="secs">${Math.round(ms / 1000)} s</span></h2>
-      <div class="row" style="grid-template-columns:repeat(${boxes.length},1fr)">${boxes.map(([l, f, clip, sound]) => `<div class="vid"><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div>${!clip ? "" : /\.(jpe?g|png|webp)$/i.test(clip) ? `<img class="still" src="${clip.startsWith("/") ? clip : "clips/" + clip}" alt="" onerror="this.remove()">` : `<video src="${clip.startsWith("/") ? clip : "clips/" + clip}" ${sound ? "" : "muted"} autoplay playsinline onerror="this.remove()"></video>`}</div>`).join("")}</div></div>`);
+      <div class="row" style="grid-template-columns:${cols || `repeat(${boxes.length},1fr)`};align-items:center">${boxes.map(([l, f, clip, sound, tall]) => `<div class="vid" ${tall ? 'style="aspect-ratio:9/16"' : ""}><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div>${!clip ? "" : /\.(jpe?g|png|webp)$/i.test(clip) ? `<img class="still" src="${clip.startsWith("/") ? clip : "clips/" + clip}" alt="" onerror="this.remove()">` : `<video src="${clip.startsWith("/") ? clip : "clips/" + clip}" ${sound ? "" : "muted"} autoplay playsinline onerror="this.remove()"></video>`}</div>`).join("")}</div></div>`);
     await wait(300, r); await caption(line, ms - 520, r);
   }
   $("capText").classList.remove("on");
@@ -333,11 +333,7 @@ async function story(r) {
   await Promise.all([breathe(2600, r), caption("Treat them. Without the worry.", 2600, r)]);
   $("capText").classList.remove("on");
 
-  // the kit, and what it would cost as a product
   sfx("whoosh", .6);
-  extra(`<div class="kitrow"><img class="kit" src="/kit/kit.svg" alt=""><figure><img src="/kit/tray.jpg" alt=""><figcaption>The FurSight Tray, a concept render</figcaption></figure></div>`);
-  await wait(400, r); await caption("The kit: two cams and the FurSight Tray. Set it up once.", 3600, r);
-  $("capText").classList.remove("on"); sfx("whoosh", .6);
   extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:54%"><h2>Where it could go next</h2>
     <div class="dev soon"><div class="pic"><img class="stk" src="/meta/vr-glasses.png" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
     <div class="dev soon"><div class="pic"><img class="stk" src="/meta/muse-charm.png" alt="Muse Charm" style="animation-delay:-1.2s"></div><b>Muse Charm</b><p>His sticker on its screen; ask Muse how he is</p></div>
