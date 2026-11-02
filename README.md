@@ -6,7 +6,7 @@
 
 *Room check on Quest, the room remembering it next time, a food check on the glasses, a meal check on the phone, his week on Quest.*
 
-Watch: [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
+Watch: **[the film](https://fursight-seven.vercel.app/film/)** · [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
 
 ## What it does, on every device
 
