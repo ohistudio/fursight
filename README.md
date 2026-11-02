@@ -33,6 +33,30 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 | **SAM 3.1** | Finds him on each pet cam, cuts him out as stickers, measures the hay pile, outlines room hazards, rings his droppings for the poo check | [lib/sam.js](server/lib/sam.js), [routes/sticker.js](server/routes/sticker.js), [routes/room.js](server/routes/room.js) |
 | **Muse Voice Transcribe** | Spoken questions and notes on Quest | [lib/meta.js](server/lib/meta.js) `transcribe()`, [routes/note.js](server/routes/note.js) |
 
+## Food safety benchmark
+
+Muse Spark's food verdict always passes through a rabbit safety list (RWAF and House Rabbit Society guidance) that can make it stricter, never softer. Tested on the worst case, the model wrongly saying "safe" to everything, over 135 foods:
+
+| | Result |
+|---|---|
+| Toxic foods (82) | **82 of 82 caught as toxic** |
+| Treat-only foods (27) | **27 of 27 kept off "safe"** |
+| Safe foods (26) | **0 blocked as toxic** |
+
+**Zero toxic foods called safe.** Details and how the first run found 14 gaps (now fixed): [docs/benchmark.md](docs/benchmark.md). It runs on every push (`cd server && npm test`).
+
+## Run it yourself
+
+No kit or rabbit needed to look around: open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
+
+1. **Server** (the API, the web app at `/`, the glasses web app at `/glasses/`): `cd server`, copy `.env.example` to `.env.local` and fill in `MODEL_API_KEY` (from dev.meta.ai), `FURSIGHT_APP_TOKEN` (any long random string) and `HUB_KEY`. Then `node dev.js` serves it on http://localhost:3030. Deploy with `npx vercel --prod`.
+2. **Hub and pet cam relay** (a Cloudflare Worker: households, devices, the diary, live cam frames): `cd cam && npm install`, put the same `HUB_KEY` in `cam/.dev.vars`, then `npm run dev` (local, port 8788) or `npm run deploy` with `npx wrangler secret put HUB_KEY`.
+3. **iPhone** (Today, Ask, Check, the Ray-Ban Display app through the Wearables Device Access Toolkit): `cd ios && xcodegen generate`, open `FurSight.xcodeproj`, set your team and run on a phone. It links to your household with a 4-letter code (web app, Devices tab).
+4. **Meta Quest 3**: open `quest/` in Unity 6000.3.17f1, create `Assets/FurSight/Resources/fursight_local.json` with `{"server": "<your server URL>", "token": "<FURSIGHT_APP_TOKEN>"}`, then build for Android. On launch it shows a code to link it.
+5. **Ray-Ban Display**: the glasses web app at `/glasses/`, or the iPhone app's Glasses tab (Meta AI app, developer mode).
+6. **Pet cams**: any webcam or old phone; open the web app's Pet cam tab and choose **Use this device as a pet cam**.
+7. **Tests**: `cd server && npm test`.
+
 ## What it is
 
 A rabbit care kit and app: pet cams watch how he rests, flops and eats his hay, a smart litter tray weighs him and what he leaves, and the app turns it into a diary, alerts and a weekly card. Hold up food and ask if he can have it. Ask what he's doing right now. Look round the room and see what he'll chew.

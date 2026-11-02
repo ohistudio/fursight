@@ -7,10 +7,12 @@ function lookup(species, food) {
   if (!list) return null;
   const name = " " + String(food || "").toLowerCase().replace(/[^a-z ]/g, " ") + " ";
   let hit = null;
+  // whole word, singular or plural ("berry" also matches "berries"), so "pineapple" doesn't count as "apple"
+  const has = (word) => new RegExp(`\\b${word.replace(/y$/, "(?:y|ie)")}s?\\b`).test(name);
   for (const rule of list) {
+    if (rule.except && rule.except.some(has)) continue;   // e.g. carrot tops aren't the sugary root
     for (const word of rule.match) {
-      // whole-word match so "pineapple" doesn't count as "apple"... unless the longer word is listed too
-      if (new RegExp(`\\b${word}s?\\b`).test(name) && (!hit || RANK[rule.verdict] > RANK[hit.verdict])) hit = { ...rule, word };
+      if (has(word) && (!hit || RANK[rule.verdict] > RANK[hit.verdict])) hit = { ...rule, word };
     }
   }
   return hit;
