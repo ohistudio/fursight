@@ -57,6 +57,8 @@ No kit or rabbit needed to look around: open [fursight-seven.vercel.app](https:/
 6. **Pet cams**: any webcam or old phone; open the web app's Pet cam tab and choose **Use this device as a pet cam**.
 7. **Tests and benchmark**: `npm test` (tests in [`tests/`](tests/)) and `npm run bench` (rebuilds [docs/benchmark.md](docs/benchmark.md) from [`eval/`](eval/)).
 
+Or run the server in Docker: `docker build -t fursight .` then `docker run -p 3030:3030 -e MODEL_API_KEY=... -e FURSIGHT_APP_TOKEN=... -e HUB_KEY=... fursight`.
+
 ## What it is
 
 A rabbit care kit and app: pet cams watch how he rests, flops and eats his hay, a smart litter tray weighs him and what he leaves, and the app turns it into a diary, alerts and a weekly card. Hold up food and ask if he can have it. Ask what he's doing right now. Look round the room and see what he'll chew.

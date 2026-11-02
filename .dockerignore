@@ -1,0 +1,11 @@
+**/node_modules
+**/.env*
+!**/.env.example
+**/.vercel
+quest
+ios
+training
+ml
+hardware
+cam
+server/public/film/clips
