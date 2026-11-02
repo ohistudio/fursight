@@ -47,6 +47,11 @@
   #floaters img { position: absolute; width: 10%; filter: drop-shadow(0 8px 10px rgba(43,42,51,.22)); opacity: 0; transform: scale(.4) rotate(var(--r)); transition: opacity .4s, transform .5s cubic-bezier(.34,1.56,.64,1); }
   #floaters.on img { opacity: 1; transform: scale(1) rotate(var(--r)); animation: bob 3.2s ease-in-out infinite; animation-delay: var(--d); }
   @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+  #cold { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #cold.on { opacity: 1; }
+  #cold video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+  #cold video.on { opacity: 1; }
+  #cold .dev { position: absolute; left: 3%; bottom: 5%; font: 900 clamp(12px, 1.6vw, 28px) Nunito, sans-serif; color: #FFFFFF; background: rgba(43,42,51,.72); padding: .35em .9em; border-radius: 99px; }
   #extra { position: absolute; inset: 0; padding-bottom: 12%; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
   #extra.on { opacity: 1; }
   .kitrow { position: absolute; inset: 3% 3% 17% 3%; display: flex; gap: 2.5%; align-items: center; justify-content: center; }
@@ -140,7 +145,7 @@
 </style>
 </head>
 <body>
-<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="pip"></div><div id="extra"></div><div id="floaters"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
+<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="pip"></div><div id="extra"></div><div id="floaters"></div><div id="cold"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
 <div id="hint"><b id="tc">0:00</b> · R or click to replay · M mutes</div>
 <script>
 // The FurSight film (about 3:00): the intro's story, white "VID HERE" boxes where the real footage goes, one
@@ -237,16 +242,46 @@ const pose = (p, face = 1) => { bun.pose = p; bun.face = face; draw(); };
 const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 1.08 - (k - .7) / .3 * .08; });
 
 // ---------------------------------------------------------------- the story
+// the cold open: the best real moments first, a quick cut each, before the story (each: clip, from, seconds, device)
+const COLD = [["3a-quest-food-sports-drink-6s.mp4", 3.0, 1.9, "Meta Quest"], ["1-quest-room-check-11s.mp4", 3.9, 2.0, "Meta Quest"],
+  ["11-phone-salad-check.mp4", 3.9, 1.9, "Phone"], ["rb-food-sunflower.mp4", 3.9, 2.0, "Ray-Ban Display"]];
+// loaded as the page opens, so they're ready when it plays
+function coldLoad() {
+  const el = $("cold");
+  if (el.querySelector("video")) return;
+  el.innerHTML = COLD.map(([f, from]) => `<video src="clips/${f}#t=${from}" muted playsinline preload="auto"></video>`).join("") + `<div class="dev" id="coldDev"></div>`;
+}
+async function coldOpen(r) {
+  const el = $("cold");
+  coldLoad();
+  const vids = [...el.querySelectorAll("video")];
+  // only when the clips are there (they live on this Mac, not on the site)
+  const ready = (v) => v.readyState >= 2 ? Promise.resolve(true) : new Promise((res) => { v.addEventListener("loadeddata", () => res(true), { once: true }); v.addEventListener("error", () => res(false), { once: true }); });
+  const ok = await Promise.race([Promise.all(vids.map(ready)), wait(6000, r).then(() => [false])]);
+  if (!ok.every(Boolean)) { el.innerHTML = ""; return; }
+  el.classList.add("on");
+  for (let i = 0; i < COLD.length; i++) {
+    const v = vids[i]; v.currentTime = COLD[i][1]; v.play().catch(() => {});
+    vids.forEach((x, k) => x.classList.toggle("on", k === i)); $("coldDev").textContent = COLD[i][3];
+    sfx("whoosh", .35);
+    await wait(COLD[i][2] * 1000, r);
+  }
+  el.classList.remove("on"); await wait(250, r); el.innerHTML = "";
+}
+addEventListener("load", coldLoad);
+
 async function story(r) {
   for (const id of ["cablering", "avoglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardAvo", "cardHay", "cardTray", "cardBerry", "berry", "berryq", "cardAsk", "cardAway", "cardWeek", "devices", "traykg"]) show(id, false);
-  $("dim").style.opacity = 0; card(""); extra(""); pip(null); floaters(false); $("capText").classList.remove("on");
+  $("dim").style.opacity = 0; card(""); extra(""); pip(null); floaters(false); $("cold").classList.remove("on"); $("capText").classList.remove("on");
   Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 }); draw();
 
-  PACE = 0.65;
+  PACE = 1;
+  await coldOpen(r);
+  PACE = 0.6;
   // open close up on him, then pull back to the room
   closeUp(true); music(true); sfx("title", .6);
-  await breathe(1400, r);
-  card(`<div class="plate"><h1>FurSight</h1><p>a story about Xiaosi</p></div>`); await breathe(2600, r); card("");
+  await breathe(600, r);
+  card(`<div class="plate"><h1>FurSight</h1><p>a story about Xiaosi</p></div>`); await breathe(2400, r); card("");
   closeUp(false); sfx("whoosh", .4); await breathe(2000, r);
   await Promise.all([breathe(1800, r), caption("Meet Xiaosi.", 1800, r)]);
   pose("alert");
