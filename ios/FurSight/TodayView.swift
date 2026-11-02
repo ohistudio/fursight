@@ -77,6 +77,7 @@ struct TodayView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)).uppercased()).font(.nunito(13)).foregroundStyle(Color.muted).kerning(0.8)
                 Text(pet?.str("name") ?? "FurSight").font(.nunito(34))
+                    .onLongPressGesture(minimumDuration: 1.2) { DemoNotification.flop(pet?.str("name") ?? "Xiaosi") }   // for filming
                 if let n = pet?.str("nicknames"), !n.isEmpty { Text(n).font(.nunito(14, black: false)).foregroundStyle(Color.muted) }
             }
             Spacer()
@@ -210,5 +211,25 @@ struct TodayView: View {
     func load() async {
         do { data = try await API.server("api/today", ["tz": TimeZone.current.secondsFromGMT() / 60]); error = nil } catch { if let m = error.shown { self.error = m } }
         loading = false
+    }
+}
+
+// For filming the sticker alert: hold his name on Today for a second and a flop notification arrives 4 s later,
+// with his sticker (the demo clip's cut-out of Xiaosi), the way the hub's push looks. Time to go to the home screen.
+import UserNotifications
+enum DemoNotification {
+    static func flop(_ name: String) {
+        Task {
+            let c = UNMutableNotificationContent()
+            c.title = "\(name) has flopped"
+            c.body = "Pet cam: a big flop by the hay. He feels completely safe."
+            c.sound = .default
+            if let (data, _) = try? await URLSession.shared.data(from: Config.server.appendingPathComponent("demo/xiaosi-sticker.png")) {
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent("flop-\(UUID().uuidString).png")
+                if (try? data.write(to: url)) != nil, let a = try? UNNotificationAttachment(identifier: "sticker", url: url) { c.attachments = [a] }
+            }
+            let req = UNNotificationRequest(identifier: "demo-flop", content: c, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 4, repeats: false))
+            try? await UNUserNotificationCenter.current().add(req)
+        }
     }
 }
