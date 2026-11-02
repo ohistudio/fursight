@@ -103,6 +103,7 @@
   .vids .row { display: grid; gap: 2%; justify-content: center; }
   .vids .row[style*="(1,"] { grid-template-columns: min(100%, 72vh * 16 / 9 * .82) !important; }
   .vid { position: relative; overflow: hidden; }
+  .vid .chip2 { position: absolute; left: 3%; bottom: 4%; z-index: 2; font: 900 clamp(9px, 1vw, 17px) Nunito, sans-serif; color: #FFFFFF; background: rgba(43,42,51,.72); padding: .3em .8em; border-radius: 99px; white-space: nowrap; }
   .vid img.still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
   .vid video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
   .vid { aspect-ratio: 16 / 9; background: #FFFFFF; border-radius: 28px; box-shadow: 0 8px 0 rgba(43,42,51,.10); display: grid; place-content: center; text-align: center; padding: 4%; }
@@ -244,7 +245,7 @@ const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 
 // ---------------------------------------------------------------- the story
 // the cold open: the best real moments first, a quick cut each, before the story (each: clip, from, seconds, device)
 const COLD = [["3a-quest-food-sports-drink-6s.mp4", 3.0, 1.9, "Meta Quest"], ["1-quest-room-check-11s.mp4", 3.9, 2.0, "Meta Quest"],
-  ["11-phone-salad-check.mp4", 3.9, 1.9, "Phone"], ["rb-food-sunflower.mp4", 3.9, 1.9, "Ray-Ban Display"], ["rb-cam-traffic.mp4", 2.6, 1.8, "Ray-Ban Display"]];
+  ["11-phone-salad-check.mp4", 3.9, 1.9, "Phone"], ["rb-food-sunflower.mp4", 3.9, 1.9, "Ray-Ban Display · DAT app"], ["rb-cam-traffic.mp4", 2.6, 1.8, "Ray-Ban Display · web app"]];
 // loaded as the page opens, so they're ready when it plays
 function coldLoad() {
   const el = $("cold");
@@ -339,10 +340,10 @@ async function story(r) {
     ["The free-roam cam finds him", [["Free-roam cam", "Wide view of the room; FurSight finds him and zooms in, then pan and zoom with the cam controls"]], 6000, "When he roams, the cam finds him with SAM 3.1 and zooms in."],
     ["On the FurSight Tray", [["Litter cam", "He hops on; his weight and the visit appear (the scale is simulated in this build)"], ["The FurSight Tray", "A concept render: a litter tray with a scale and a camera looking down", "/kit/tray.jpg"]], 6000, "He hops on the tray: weighed, and the visit logged."],
     ["Hay, food and water", [["Hay rack", "Through the day: SAM 3.1 measures it, 100% in the morning to 20% by evening"], ["Food bowl", "Pellets going down, the label updating"], ["Water", "Water level, the label updating"]], 6000, "SAM 3.1 measures his hay, pellets and water through the day. Less hay is the first sign."],
-    ["Food check, wherever you are", [["Ray-Ban Display", "Out on a walk: a sunflower, and the verdict on the glasses", "rb-food-sunflower.mp4"], ["Phone", "The app's Check on a meal: kimchi, pickles and salad, each with its verdict", "11-phone-salad-check.mp4"]], 6000, "Hold food up to your glasses, or point your phone at a whole plate. Can he have it?"],
+    ["Food check, wherever you are", [["Ray-Ban Display · DAT app", "Out on a walk: a sunflower, and the verdict on the glasses", "rb-food-sunflower.mp4"], ["Phone", "The app's Check on a meal: kimchi, pickles and salad, each with its verdict", "11-phone-salad-check.mp4"]], 6000, "Hold food up to your glasses, or point your phone at a whole plate. Can he have it?"],
     null,
     "many",
-    ["Wherever you are", [["Ray-Ban Display", "Mid-game at the bowling alley: \"How is he?\", answered on the glasses", "rb-ask-bowling.mp4"], ["Ray-Ban Display", "At the traffic lights: his pet cam, live on the glasses", "rb-cam-traffic.mp4"], ["Meta Quest", "In a café: his pet cam live in a window on Quest"]], 7000, "Wherever you are, whatever you're doing, check how he is: on your glasses or your Quest."],
+    ["Wherever you are", [["Ray-Ban Display · web app", "Mid-game at the bowling alley: \"How is he?\", answered on the glasses", "rb-ask-bowling.mp4"], ["Ray-Ban Display · web app", "At the traffic lights: his pet cam, live on the glasses", "rb-cam-traffic.mp4"], ["Meta Quest", "In a café: his pet cam live in a window on Quest"]], 7000, "Wherever you are, whatever you're doing, check how he is: on your glasses or your Quest."],
     ["Room check, on every device", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"], ["Phone", "The app's Check on the desk: numbered hazards, a card for each", "10-phone-room-check-tall.mp4", false, true], ["Ray-Ban Display", "Hazard check on the glasses: what he could chew, right in view"]], 11000, "Check the room on Quest, phone or glasses. Muse Spark finds each hazard, and on Quest the headset's depth pins it on the real thing.", "2fr .62fr 1fr"],
     ["Meta Quest: the room remembers", [["Meta Quest", "Next launch: 'From last time, did you fix these?', a Still there? card on each hazard; move the deodorant out of reach, press Sorted it", "2-quest-room-remembers-7s.mp4"]], 7000, "Each hazard is saved as a spatial anchor. Next time, FurSight remembers where it was and asks if you fixed it."],
     ["Meta Quest: food in hand", [["Meta Quest", "Sports drink: hold it up, the verdict on your hand", "3a-quest-food-sports-drink-6s.mp4"], ["Meta Quest", "Chicken breast: hold it up, the verdict on your hand", "3b-quest-food-chicken-6s.mp4"]], 6000, "On Quest, hold food up, and the answer sits right on your hand."],
@@ -362,7 +363,7 @@ async function story(r) {
     n++;
     const [what, boxes, ms, line, cols, stickers] = sh;
     extra(`<div class="vids"><h2>${what}<span class="shot">Shot ${n} of ${total}</span><span class="secs">${Math.round(ms / 1000)} s</span></h2>
-      <div class="row" style="grid-template-columns:${cols || `repeat(${boxes.length},1fr)`};align-items:center">${boxes.map(([l, f, clip, sound, tall]) => `<div class="vid" ${tall ? 'style="aspect-ratio:9/16"' : ""}><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div>${!clip ? "" : /\.(jpe?g|png|webp)$/i.test(clip) ? `<img class="still" src="${clip.startsWith("/") ? clip : "clips/" + clip}" alt="" onerror="this.remove()">` : `<video src="${clip.startsWith("/") ? clip : "clips/" + clip}" ${sound ? "" : "muted"} autoplay playsinline onerror="this.remove()"></video>`}</div>`).join("")}</div></div>`);
+      <div class="row" style="grid-template-columns:${cols || `repeat(${boxes.length},1fr)`};align-items:center">${boxes.map(([l, f, clip, sound, tall]) => `<div class="vid" ${tall ? 'style="aspect-ratio:9/16"' : ""}><div><b>VID HERE</b><p>${l}</p><small>${f}</small></div>${!clip ? "" : /\.(jpe?g|png|webp)$/i.test(clip) ? `<img class="still" src="${clip.startsWith("/") ? clip : "clips/" + clip}" alt="" onerror="this.remove()">` : `<video src="${clip.startsWith("/") ? clip : "clips/" + clip}" ${sound ? "" : "muted"} autoplay playsinline onerror="this.remove()"></video>`}${clip ? `<span class="chip2">${l}</span>` : ""}</div>`).join("")}</div></div>`);
     floaters(!!stickers);
     await wait(300, r); await caption(line, ms - 520, r);
   }
