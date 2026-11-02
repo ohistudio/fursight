@@ -108,12 +108,22 @@ namespace FurSight
                 }
                 catch (Exception e) { Debug.LogWarning("[FurSight] anchors: " + e.Message); }
             }
-            // ask about each one found here (anchored), or kept by position when anchors weren't allowed
+            // the ones found here (anchored), or kept by position when anchors weren't allowed
+            var here = Data.items.FindAll(i => _where.ContainsKey(i) || string.IsNullOrEmpty(i.id));
+            if (here.Count == 0) return;
+            // first, in front of you: did you fix these from last time? Then each one on the real thing
+            var head = Camera.main.transform;
+            var fwd = Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized;
+            string when = DateTimeOffset.FromUnixTimeSeconds(here[here.Count - 1].at).ToLocalTime().ToString("ddd d MMM");
+            string names = string.Join(", ", here.ConvertAll(i => i.label).GetRange(0, Mathf.Min(3, here.Count))) + (here.Count > 3 ? $" and {here.Count - 3} more" : "");
+            VerdictCard.Verdict(head.position + fwd * 0.65f - Vector3.up * 0.08f, "From last time", "caution",
+                $"Did you fix these from your last room check ({when})? {names}.", "Look around: each one has a card on it. Sorted it, or Still there.", false, "Room check")
+                .TagAlong();
+            Sfx.Pin(head.position + fwd * 0.65f);
+            await Task.Delay(900);
             int shown = 0;
-            foreach (var item in Data.items.ToArray())
+            foreach (var item in here)
             {
-                bool anchored = _where.ContainsKey(item);
-                if (!anchored && !string.IsNullOrEmpty(item.id)) continue;   // an anchor from another room
                 if (shown >= 6) break;
                 Ask(item, Pos(item));
                 shown++;

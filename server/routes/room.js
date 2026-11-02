@@ -53,10 +53,10 @@ module.exports = handler(async (body, req) => {
   if (!img) throw bad("send a photo, or turn the pet cam on");
   const name = (ctx && ctx.pet && ctx.pet.name) || "the rabbit";
   const { data } = await spark({
-    system: `You check a room for ${name}, a free-roaming house rabbit. List the things you can actually SEE that matter: things he'll chew (cables first, wooden furniture legs, skirting, door frames, books), toxic plants, small things he could swallow, gaps he could get stuck in, and soft furnishings he may pee on or mark (rugs, sofa, bed, cushions). Most important first, at most 8. Then, under good, up to 4 things you can see that are already good for him (hay, a hideaway or tunnel, chew toys, a litter tray, water, cable covers, a pen, soft flooring for grip); an empty list if there are none. No em dashes.`,
+    system: `You check a room for ${name}, a free-roaming house rabbit. List the things you can actually SEE that matter: things he'll chew (cables first, wooden furniture legs, skirting, door frames, books), toxic plants, small things he could swallow, gaps he could get stuck in, and soft furnishings he may pee on or mark (rugs, sofa, bed, cushions). Most important first, at most 12. Then, under good, up to 4 things you can see that are already good for him (hay, a hideaway or tunnel, chew toys, a litter tray, water, cable covers, a pen, soft flooring for grip); an empty list if there are none. No em dashes.`,
     text: `Check this room for ${name}.`, images: [img], schema: SCHEMA, name: "Room", maxTokens: 4000,
   });
-  const hazards = await Promise.all((data.hazards || []).slice(0, 8).map(async (h) => ({
+  const hazards = await Promise.all((data.hazards || []).slice(0, 12).map(async (h) => ({
     label: h.label, kind: h.kind, risk: h.risk, why: h.why, fix: h.fix,
     ...(await ring(img, h)),
   })));
