@@ -50,7 +50,7 @@ module.exports = handler(async (body, req) => {
     : "This is the first droppings check.";
   const { data } = await spark({
     system: `You check a rabbit's droppings from a close photo of a few of them, wherever he left them (floor, pen or litter tray), for ${name}'s owner, and compare with the last check. Judge what they look like: shape, size, colour and texture. How many are in the photo means nothing (the owner photographs just a few), so never judge or compare the count. Healthy: round, evenly sized, firm, fibrous pellets, mid to dark brown. Watch: small, dry, hard, misshapen or uneven ones, a few strung together with hair, unusually pale or very dark, or soft sticky clusters (uneaten caecotrophs) now and then. Vet today: mucus, diarrhoea, mostly tiny pellets, or a long string of pellets joined by hair. Judge only what you can see; say what to watch for. No em dashes.`,
-    text: `SAM outlined ${boxes.length} dropping-sized objects in the first photo; their sizes vary by ${Math.round(spread * 100)}% (under about 25% is even). Look at them yourself too: SAM may pick up bits of litter or miss some. ${history}`,
+    text: `SAM outlined ${boxes.length} dropping-sized objects in the first photo. Their outlines are only a rough guide to size (pellets at different angles, overlapping or partly hidden look different sizes), so judge size, shape, colour and texture by eye; SAM may also pick up bits of litter or miss some. ${history}`,
     images: lastPic ? [img, lastPic] : [img], schema: SCHEMA, name: "Droppings",
   });
   return {
