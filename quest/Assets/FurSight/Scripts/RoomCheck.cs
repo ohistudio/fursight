@@ -187,7 +187,7 @@ namespace FurSight
         static string Word(string kind, string risk)
         {
             string what = kind == "cable" || kind == "chew" ? "chewing" : kind == "toxic" ? "toxic" : kind == "swallow" ? "swallowing"
-                : kind == "stuck" ? "getting stuck" : kind == "stain" ? "peeing on it" : "worth a look";
+                : kind == "stuck" ? "getting stuck" : kind == "stain" ? "peeing on it" : kind == "sharp" ? "cutting himself" : "worth a look";
             return (risk == "high" ? "High" : risk == "medium" ? "Medium" : "Low") + " risk: " + what;
         }
 
