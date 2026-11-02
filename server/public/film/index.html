@@ -350,7 +350,7 @@ async function story(r) {
     ["Meta Quest: make your own stickers", [["Meta Quest", "Pinch to take a photo of Xiaosi; the polaroid, then his sticker pops onto its corner"]], 6000, "Snap a photo of him to make your own stickers. Your hands stay in front of it all, with depth occlusion.", null, true],
     ["Meta Quest: the poo check", [["Meta Quest", "Today's to-dos pop up; press Poo check now, look at a few of his droppings: a dot on each one, and the card compares with last time"]], 6000, "Today's to-dos pop up. The poo check puts a dot on every dropping, and compares with last time."],
     ["His week, wrapped", [["Meta Quest", "Open His week; swipe through Wrapped with your hand, stickers popping out, then his week card", "4-quest-his-week-9s.mp4"], ["Phone", "His week, wrapped, on the phone: the same story, slide by slide", "12-phone-wrapped-tall.mp4", false, true]], 9000, "His week, wrapped, on Quest and your phone. Swipe through it with your hand.", "2fr .62fr"],
-    ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops", "9-phone-flop-alert.mp4"]], 7000, "Scrolling Instagram? When he flops, you get his sticker.", null, true],
+    ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops", "9-phone-flop-alert.mp4"]], 5500, "Scrolling Instagram? When he flops, you get his sticker.", null, true],
     ["The app: diary and stats", [["Web app", "Scroll the diary (marked-up check photos), then weight, tray visits, hay, his week", "7-web-diary-stats-6s.mp4"]], 6000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
   ];
   const total = shots.filter((x) => Array.isArray(x)).length;
@@ -379,10 +379,6 @@ async function story(r) {
   await wait(300, r); await caption("Muse Spark is the agent. SAM 3.1 is the finder. All through the Meta Model API.", 3800, r);
   extra(""); await wait(500, r);
 
-  extra(""); pose("stretch");
-  await Promise.all([breathe(2600, r), caption("Treat them. Without the worry.", 2600, r)]);
-  $("capText").classList.remove("on");
-
   sfx("whoosh", .6);
   extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:54%"><h2>Where it could go next</h2>
     <div class="dev soon"><div class="pic"><img class="stk" src="/meta/vr-glasses.png" alt="Meta VR Glasses"></div><b>Meta VR Glasses</b><p>Sit with his pet cams in a cosy room while you're away</p></div>
@@ -399,7 +395,9 @@ async function story(r) {
     <div class="foot">Not built yet: the same kit and models, with a care plan for each</div></div>`);
   await wait(300, r); await caption("Next, beyond rabbits: reptiles, amphibians, cats and dogs. And toddlers, who also chew cables.", 4600, r);
   $("capText").classList.remove("on");
-  extra(""); await wait(500, r);
+  extra(""); pose("stretch");
+  await Promise.all([breathe(2600, r), caption("Treat them. Without the worry.", 2600, r)]);
+  $("capText").classList.remove("on");
   music(false); sfx("end", .7);
   card(`<div class="plate"><h1>FurSight</h1><p>Spoil them. Worry less.</p></div>`);
 }
