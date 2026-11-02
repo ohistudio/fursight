@@ -110,7 +110,7 @@ flowchart LR
   Brain -- verdicts, answers, alerts, labels --> Active
 ```
 
-Under the hood: the brain is the FurSight API on Vercel (it holds the Meta key; no device ever sees it) calling the Meta Model API, plus a hub on Cloudflare Workers and Durable Objects for households, the diary and the pet cam relay. One household, every device: each device links with a 4-letter code and gets its own signed key (revoke a device and its key stops working). The API holds the Meta key; no device ever sees it.
+Under the hood: the brain is the FurSight API on Vercel (it holds the Meta key; no device ever sees it) calling the Meta Model API, plus a hub on Cloudflare Workers and Durable Objects for households, the diary and the pet cam relay. One household, every device: each device links with a 4-letter code and gets its own signed key (revoke a device and its key stops working).
 
 **Hard problems, and what worked**
 
