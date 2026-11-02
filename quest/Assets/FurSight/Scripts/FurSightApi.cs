@@ -71,5 +71,18 @@ namespace FurSight
                 throw new System.Exception($"{path}: {req.responseCode} {req.error} {req.downloadHandler?.text}");
             return JObject.Parse(req.downloadHandler.text);
         }
+
+        /// a picture the server hosts itself (path like "/demo/xiaosi-sticker.png")
+        public static async Task<Texture2D> Texture(string path)
+        {
+            using var req = UnityWebRequestTexture.GetTexture(Settings.server.TrimEnd('/') + path, true);
+            req.timeout = 20;
+            var op = req.SendWebRequest();
+            while (!op.isDone) await Task.Yield();
+            if (req.result != UnityWebRequest.Result.Success) { Debug.LogWarning($"[FurSight] {path}: {req.error}"); return null; }
+            var tex = DownloadHandlerTexture.GetContent(req);
+            if (tex != null) tex.wrapMode = TextureWrapMode.Clamp;
+            return tex;
+        }
     }
 }

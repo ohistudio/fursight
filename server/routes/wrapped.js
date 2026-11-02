@@ -5,9 +5,13 @@
 //   POST /api/wrapped  {}  (a household device)
 //   -> { name, from, to, slides: [{ colour, kicker, title, big?: { n, fmt: "n"|"hm"|"kg" }, body?, foot?, sticker?,
 //        minis?: [ids], images?: [{ id, verdict?, caption }], list?: [{ n, text }], card?: layout, card_id?, summary?: [{ big, label }] }] }
-//   ids are diary entries whose picture is at the hub's /hub/diary/<id>/image
+//   ids are diary entries whose picture is at the hub's /hub/diary/<id>/image ("demo:<file>" is the server's /demo/<file>)
+//   POST /api/wrapped  { film: true }   a full week for filming: made-up numbers (marked simulated) around his own
+//   pictures, and this week's card (lib/film.js). Nothing is written to the diary.
 const { handler, bad } = require("../lib/http");
-const { context, recent } = require("../lib/hub");
+const { context, recent, uploads } = require("../lib/hub");
+const { filmWeek, FILM_RECAP } = require("../lib/film");
+const FSFactCard = require("../public/factcard.js");
 const FSActivity = require("../public/activity.js"), FSTray = require("../public/tray.js"), FSCal = require("../public/calendar.js");
 
 const COLOURS = ["#9B6CF0", "#2FA8F5", "#3DBE6B", "#FF4D5E", "#FFB627", "#7A4ED1", "#1E86C9", "#2B2A33"];
@@ -16,8 +20,10 @@ const kg = (g) => (g / 1000).toFixed(2);
 module.exports = handler(async (body, req) => {
   const auth = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!auth.startsWith("fs1.")) throw bad("link this device first");
-  const [ctx, entries] = await Promise.all([context(auth), recent(auth, 200)]);
+  const [ctx, real] = await Promise.all([context(auth), recent(auth, 200)]);
   if (!ctx.pet) throw bad("add a pet first");
+  const pictures = body.film ? await uploads(auth, ["moment", "food", "photo", "ask", "note", "pose", "room"], 80).catch(() => []) : [];
+  const entries = body.film ? filmWeek({ pet: ctx.pet, entries: real, pictures }) : real;
   const p = ctx.pet, name = p.name;
   const nicks = String(p.nicknames || "").split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
   const nick = (i) => (nicks.length ? nicks[i % nicks.length] : name);
@@ -70,7 +76,8 @@ module.exports = handler(async (body, req) => {
   if (caught.length >= 2) S.push({ colour: COLOURS[1], kicker: "Caught on cam", title: `${nick(0)}'s best bits`,
     images: caught.map((e) => ({ id: e.id, caption: new Date(e.at).toLocaleDateString("en-GB", { weekday: "short" }), sticker: true })) });
   // only fact cards (his real stickers and numbers); an older card that was an AI drawing is left out
-  const card = week.find((e) => e.kind === "recap" && e.extra && e.extra.layout);
+  let card = week.find((e) => e.kind === "recap" && e.extra && e.extra.layout);
+  if (!card && body.film) card = { id: null, title: FILM_RECAP(p).title, extra: { layout: FSFactCard.layout({ pet: p, entries, recap: FILM_RECAP(p) }) } };
   if (card) S.push({ colour: COLOURS[5], kicker: "This week's card", title: card.title, card: card.extra.layout, card_id: card.id });
   const asks = week.filter((e) => e.kind === "ask").length, summary = [];
   if (a.has) summary.push({ big: FSActivity.time(a.week.loaf), label: "loafing" }, { big: String(a.week.flops), label: "flops" }, { big: FSActivity.time(a.week.active), label: "on the move" });

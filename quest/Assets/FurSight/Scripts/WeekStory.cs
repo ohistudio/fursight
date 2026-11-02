@@ -18,6 +18,9 @@ namespace FurSight
         const float W = 0.42f, H = 0.56f, R = 0.04f, Thick = 0.012f, Front = -Thick, Dwell = 6.5f;
         static WeekStory _open;
         public static bool IsOpen => _open != null;
+        // for filming: a full week (made-up numbers, marked simulated, around his own pictures) and this week's card,
+        // from /api/wrapped { film: true }. Nothing is written to the diary. Turn off for real use.
+        public static bool Film = true;
         public static void CloseIfOpen() { if (_open != null) _open.Close(); }   // Close all on the hand menu
 
         JObject _data;
@@ -27,7 +30,6 @@ namespace FurSight
         Transform _panel, _content, _flow, _bars;
         MeshRenderer _bg;
         readonly List<(TextMeshPro t, int n, string fmt, float from)> _counters = new List<(TextMeshPro, int, string, float)>();
-        readonly List<Transform> _bobbers = new List<Transform>();
         static readonly Dictionary<string, Texture2D> _tex = new Dictionary<string, Texture2D>();
         bool _making;
 
@@ -48,7 +50,7 @@ namespace FurSight
             transform.position = head.position + fwd * dist - Vector3.up * 0.05f;
             transform.localScale = Vector3.one * (dist / 0.75f);
             var waiting = VerdictCard.Checking(transform.position, "Gathering his week from the diary", "His week", Theme.Grape);
-            try { _data = await FurSightApi.Post("/api/wrapped", new { }, 30); }
+            try { _data = await FurSightApi.Post("/api/wrapped", new { film = Film }, 30); }
             catch (System.Exception e)
             {
                 Debug.LogWarning("[FurSight] wrapped: " + e.Message);
@@ -119,7 +121,6 @@ namespace FurSight
             _at = Mathf.Clamp(i, 0, _slides.Count - 1);
             _shownAt = Time.time;
             _counters.Clear();
-            _bobbers.Clear();
             if (_content != null) Destroy(_content.gameObject);
             _content = new GameObject("Slide " + _at).transform;
             _content.SetParent(_panel, false);
@@ -184,12 +185,6 @@ namespace FurSight
                 if (t == null) continue;
                 float k = Mathf.Clamp01((Time.time - from) / 1.1f), v = n * (1f - Mathf.Pow(1f - k, 3f));
                 t.text = Format(v, fmt);
-            }
-            for (int k = 0; k < _bobbers.Count; k++)
-            {
-                var b = _bobbers[k];
-                if (b == null) continue;
-                b.localRotation = Quaternion.Euler(0f, Mathf.Sin(Time.time * 0.9f + k) * 10f, b.localEulerAngles.z);
             }
         }
 
@@ -289,7 +284,7 @@ namespace FurSight
                 f.localRotation = Quaternion.Euler(0f, 0f, (i % 2 == 0 ? -1f : 1f) * 3f);
                 bool cut = im["sticker"]?.Value<bool>() ?? false;
                 if (!cut) Shapes.MakeSlab("Frame", f, Shapes.RoundedRectRing(cell + 0.012f, cell + 0.012f, 0.012f), 0.004f, Theme.Card, Theme.CardLip, Vector3.zero);
-                var q = Quad(f, cell, cell, cut);
+                var q = Quad(cut ? Wiggle.Make(f, cell) : f, cell, cell, cut);
                 q.localPosition = new Vector3(0f, 0f, cut ? -0.02f : -0.0045f);
                 _ = Fill(q, (string)im["id"], cell, cell, cut);
                 string v = (string)im["verdict"];
@@ -337,9 +332,8 @@ namespace FurSight
             holder.SetParent(_content, false);
             holder.localPosition = at;
             holder.localRotation = Quaternion.Euler(0f, 0f, tilt);
-            var q = Quad(holder, size, size, true);
+            var q = Quad(Wiggle.Make(holder, size), size, size, true);
             _ = Fill(q, id, size, size, true);
-            _bobbers.Add(holder);
             StartCoroutine(Juice.Pop(holder, delay, 0.35f, 2.6f));
         }
 
@@ -383,7 +377,7 @@ namespace FurSight
                     sh.localPosition = new Vector3(p.x, p.y, z - 0.004f - (i == 0 ? 0.03f : 0.012f));
                     sh.localRotation = Quaternion.Euler(0f, 0f, rot);
                     float s = (sts.Count == 1 ? 470f : size) * k;
-                    var q = Quad(sh, s, s, true);
+                    var q = Quad(Wiggle.Make(sh, s), s, s, true);
                     _ = Fill(q, (string)sts[i], s, s, true);
                     if (host != null) host.StartCoroutine(Juice.Pop(sh, 0.4f + i * 0.12f, 0.35f, 2.4f));
                 }
@@ -516,7 +510,11 @@ namespace FurSight
         static async Task Fill(Transform q, string id, float w, float h, bool fit)
         {
             if (string.IsNullOrEmpty(id)) return;
-            if (!_tex.TryGetValue(id, out var tex) || tex == null) { tex = await HubClient.DiaryImage(id); if (tex != null) _tex[id] = tex; }
+            if (!_tex.TryGetValue(id, out var tex) || tex == null)
+            {
+                tex = id.StartsWith("demo:") ? await FurSightApi.Texture("/demo/" + id.Substring(5)) : await HubClient.DiaryImage(id);
+                if (tex != null) _tex[id] = tex;
+            }
             if (q == null || tex == null) return;
             var mat = q.GetComponent<MeshRenderer>().sharedMaterial;
             mat.SetTexture("_BaseMap", tex);
