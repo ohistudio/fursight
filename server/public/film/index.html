@@ -313,15 +313,16 @@ async function story(r) {
 
   // the kit
   pose("grooming");
-  await Promise.all([breathe(3800, r), caption("So we built FurSight: one pet care assistant on Quest, your phone, smart glasses (Meta Ray-Ban Display) and the web.", 3800, r, true)]);
+  await Promise.all([breathe(1300, r), caption("So we built FurSight, a pet care assistant.", 1300, r, true)]);
   show("cam1"); sfx("click", .7); await wait(500, r);
-  await caption("A cam on his pen, for his hay, food and water.", 1900, r);
+  await caption("In the background, cams watch him: one on his pen, for his hay, food and water.", 2200, r);
   show("cam2"); sfx("click", .7); await wait(300, r);
   pose("side");
   await Promise.all([hop("away", 1800, r, 3), caption("A cam that follows him when he roams.", 1800, r)]);
   pose("loaf", 1);
   show("trayscale"); sfx("click", .7); await wait(300, r); show("traytop"); show("traykg"); sfx("click", .5);
   await caption("And a litter tray that weighs him every visit.", 2000, r);
+  await caption("When you want, check on him from Quest, your phone, smart glasses (Meta Ray-Ban Display) or the web.", 3200, r, true);
 
   // and each worry gets an answer
   pose("alert");
