@@ -1,11 +1,8 @@
 name: tests
 on: [push, pull_request]
 jobs:
-  server:
+  test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -13,4 +10,4 @@ jobs:
           node-version: 22
       - run: npm test
       - name: Food safety benchmark
-        run: node scripts/bench.js
+        run: npm run bench

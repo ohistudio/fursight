@@ -43,19 +43,19 @@ Muse Spark's food verdict always passes through a rabbit safety list (RWAF and H
 | Treat-only foods (27) | **27 of 27 kept off "safe"** |
 | Safe foods (26) | **0 blocked as toxic** |
 
-**Zero toxic foods called safe.** Details and how the first run found 14 gaps (now fixed): [docs/benchmark.md](docs/benchmark.md). It runs on every push (`cd server && npm test`).
+**Zero toxic foods called safe.** Details and how the first run found 14 gaps (now fixed): [docs/benchmark.md](docs/benchmark.md). It runs on every push (`npm test`; the 135 foods are in [`eval/`](eval/)).
 
-## Run it yourself
+## Quickstart
 
 No kit or rabbit needed to look around: open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
 
-1. **Server** (the API, the web app at `/`, the glasses web app at `/glasses/`): `cd server`, copy `.env.example` to `.env.local` and fill in `MODEL_API_KEY` (from dev.meta.ai), `FURSIGHT_APP_TOKEN` (any long random string) and `HUB_KEY`. Then `node dev.js` serves it on http://localhost:3030. Deploy with `npx vercel --prod`.
+1. **Server** (the API, the web app at `/`, the glasses web app at `/glasses/`): copy `.env.example` to `server/.env.local` and fill in `MODEL_API_KEY` (from dev.meta.ai), `FURSIGHT_APP_TOKEN` (any long random string) and `HUB_KEY`. Then `npm run dev` serves it on http://localhost:3030. Deploy with `cd server && npx vercel --prod`.
 2. **Hub and pet cam relay** (a Cloudflare Worker: households, devices, the diary, live cam frames): `cd cam && npm install`, put the same `HUB_KEY` in `cam/.dev.vars`, then `npm run dev` (local, port 8788) or `npm run deploy` with `npx wrangler secret put HUB_KEY`.
 3. **iPhone** (Today, Ask, Check, the Ray-Ban Display app through the Wearables Device Access Toolkit): `cd ios && xcodegen generate`, open `FurSight.xcodeproj`, set your team and run on a phone. It links to your household with a 4-letter code (web app, Devices tab).
 4. **Meta Quest 3**: open `quest/` in Unity 6000.3.17f1, create `Assets/FurSight/Resources/fursight_local.json` with `{"server": "<your server URL>", "token": "<FURSIGHT_APP_TOKEN>"}`, then build for Android. On launch it shows a code to link it.
 5. **Ray-Ban Display**: the glasses web app at `/glasses/`, or the iPhone app's Glasses tab (Meta AI app, developer mode).
 6. **Pet cams**: any webcam or old phone; open the web app's Pet cam tab and choose **Use this device as a pet cam**.
-7. **Tests**: `cd server && npm test`.
+7. **Tests and benchmark**: `npm test` (tests in [`tests/`](tests/)) and `npm run bench` (rebuilds [docs/benchmark.md](docs/benchmark.md) from [`eval/`](eval/)).
 
 ## What it is
 

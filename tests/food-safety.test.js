@@ -3,8 +3,8 @@
 // (RWAF and House Rabbit Society guidance). Run: npm test   Report: npm run bench
 const test = require("node:test");
 const assert = require("node:assert");
-const { guard } = require("../lib/verdict");
-const B = require("./rabbit-foods.json");
+const { guard } = require("../server/lib/verdict");
+const B = require("../eval/rabbit-foods.json");
 const after = (food, model = "safe") => guard("rabbit", { food, verdict: model }).verdict;
 
 test("no toxic food gets through as anything but toxic, even when the model says safe", () => {

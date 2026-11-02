@@ -1,0 +1,13 @@
+{
+  "name": "fursight",
+  "private": true,
+  "description": "FurSight: one pet care assistant on Meta Quest, Ray-Ban Display, phone and web, built on the Meta Model API",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "bench": "node eval/bench.js",
+    "dev": "cd server && node dev.js"
+  }
+}
