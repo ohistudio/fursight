@@ -228,7 +228,7 @@ enum DemoNotification {
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent("flop-\(UUID().uuidString).png")
                 if (try? data.write(to: url)) != nil, let a = try? UNNotificationAttachment(identifier: "sticker", url: url) { c.attachments = [a] }
             }
-            let req = UNNotificationRequest(identifier: "demo-flop", content: c, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 4, repeats: false))
+            let req = UNNotificationRequest(identifier: "demo-flop-\(UUID().uuidString)", content: c, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 4, repeats: false))
             try? await UNUserNotificationCenter.current().add(req)
         }
     }
