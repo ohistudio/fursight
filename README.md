@@ -83,39 +83,34 @@ Every photo, what it saw and the credits: [docs/benchmark-photos.md](docs/benchm
 
 ## How it's built
 
+FurSight is one brain with two kinds of input: **passive** data from the cams and the Tray, collected all day while you're not looking, and **active** data from whatever device you pick up to check, ask or look.
+
 ```mermaid
 flowchart LR
-  subgraph Devices
-    Q[Meta Quest 3<br/>Unity, passthrough, hands, Depth API, spatial anchors]
-    G[Ray-Ban Display<br/>glasses web app]
-    I[iPhone app<br/>+ glasses app via Device Access Toolkit]
-    W[Web app<br/>any browser]
+  subgraph Passive["Passive: always watching"]
+    C1[Pen cam<br/>hay, food, water]
+    C2[Room cam<br/>follows him]
+    T[FurSight Tray<br/>weight, visits, droppings]
   end
-  subgraph Vercel["FurSight API (Vercel)"]
-    A[Ask agent<br/>Muse Spark picks from 17 tools]
-    F[Food, room, poo, label checks]
-    S[Rabbit safety list<br/>can only make a verdict stricter]
+  subgraph Brain["FurSight brain"]
+    MS[Muse Spark<br/>the agent]
+    SAM[SAM 3.1<br/>the finder]
+    MV[Muse Voice Transcribe<br/>the ears]
+    SL[Safety list<br/>can only make it stricter]
+    D[His diary and memory<br/>days, rooms, treats, vet records]
   end
-  subgraph Meta["Meta Model API"]
-    MS[Muse Spark]
-    SAM[SAM 3.1]
-    MV[Muse Voice Transcribe]
+  subgraph Active["Active: when you check"]
+    Q[Meta Quest 3]
+    G[Ray-Ban Display]
+    I[iPhone]
+    W[Web]
   end
-  subgraph CF["Hub (Cloudflare Workers + Durable Objects)"]
-    H[Households, devices, diary, calendar]
-    R[Pet cam relay<br/>frames only while someone watches]
-  end
-  C[Pet cams<br/>any webcam or old phone]
-  Q & G & I & W --> Vercel
-  Vercel --> Meta
-  A --> S
-  F --> S
-  Vercel <--> CF
-  C --> R
-  R --> Q & G & I & W
+  Passive -- his day --> Brain
+  Active -- photos, questions, voice --> Brain
+  Brain -- verdicts, answers, alerts, labels --> Active
 ```
 
-One household, every device: each device links with a 4-letter code and gets its own signed key (revoke a device and its key stops working). The API holds the Meta key; no device ever sees it.
+Under the hood: the brain is the FurSight API on Vercel (it holds the Meta key; no device ever sees it) calling the Meta Model API, plus a hub on Cloudflare Workers and Durable Objects for households, the diary and the pet cam relay. One household, every device: each device links with a 4-letter code and gets its own signed key (revoke a device and its key stops working). The API holds the Meta key; no device ever sees it.
 
 **Hard problems, and what worked**
 
