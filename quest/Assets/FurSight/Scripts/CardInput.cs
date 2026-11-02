@@ -48,7 +48,15 @@ namespace FurSight
                 _handPts[o] = P(pos, 0.11f); _handPts[o + 1] = P(pos + rot * Vector3.forward * 0.07f, 0.07f);
             }
             Shader.SetGlobalVectorArray(HandsId, _handPts);
+            if (Time.time >= _reportAt)
+            {
+                _reportAt = Time.time + 3f;
+                var l = Hands.Get(Hands.Left); var r = Hands.Get(Hands.Right);
+                Debug.Log($"[FurSight] hands: left {(l.tracked ? "tracked" : "no")}, right {(r.tracked ? "tracked" : "no")}, controllers L {OVRInput.IsControllerConnected(OVRInput.Controller.LTouch)} R {OVRInput.IsControllerConnected(OVRInput.Controller.RTouch)}, " +
+                          $"points {System.Array.FindAll(_handPts, v => v.w > 0f).Length}, SOFT {Shader.IsKeywordEnabled("SOFT_OCCLUSION")}, HARD {Shader.IsKeywordEnabled("HARD_OCCLUSION")}");
+            }
         }
+        float _reportAt;
         static Vector4 P(Vector3 p, float r) => new Vector4(p.x, p.y, p.z, r);
 
         /// a real hand (or controller) is within reach of this point: cards hold still while you reach for them

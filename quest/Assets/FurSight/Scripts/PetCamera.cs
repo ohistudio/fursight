@@ -195,6 +195,17 @@ namespace FurSight
             while (!Meta.XR.EnvironmentDepth.EnvironmentDepthManager.IsSupported && Time.time < until) yield return null;
             if (dm != null && !dm.enabled) dm.enabled = true;
             yield return new WaitForSeconds(3f);
+            // your hands must stay in the depth (that's what puts them over the UI): make sure nothing took them out
+            string removal = "?";
+            var subs = new System.Collections.Generic.List<UnityEngine.XR.OpenXR.Features.Meta.MetaOpenXROcclusionSubsystem>();
+            SubsystemManager.GetSubsystems(subs);
+            foreach (var o in subs)
+            {
+                bool was = o.isHandRemovalEnabled;
+                var r = o.TrySetHandRemovalEnabled(false);
+                removal = $"was {was}, set off: {r}, now {o.isHandRemovalEnabled}";
+            }
+            Debug.Log($"[FurSight] hand removal: {removal}");
             Debug.Log($"[FurSight] depth: enabled {dm.isActiveAndEnabled}, available {dm.IsDepthAvailable}, occlusion {dm.OcclusionShadersMode}, " +
                       $"SOFT_OCCLUSION {Shader.IsKeywordEnabled("SOFT_OCCLUSION")}, managers {FindObjectsByType<Meta.XR.EnvironmentDepth.EnvironmentDepthManager>(FindObjectsSortMode.None).Length}");
         }
