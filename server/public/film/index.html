@@ -31,6 +31,9 @@
   #card .plate { background: #FFFFFF; padding: .5em 1.1em .6em; border-radius: .5em; box-shadow: 0 .12em 0 rgba(43,42,51,.12); }
   #card .plate p { color: var(--ink); }
   /* the kit and the price, after the story */
+  #pip { position: absolute; left: 3%; top: 6%; width: 30%; aspect-ratio: 16 / 9; border-radius: 22px; overflow: hidden; background: #F3F0F8; box-shadow: 0 10px 0 rgba(43,42,51,.12); opacity: 0; transform: scale(.9); transition: opacity .35s ease, transform .35s ease; pointer-events: none; }
+  #pip.on { opacity: 1; transform: none; }
+  #pip video { width: 100%; height: 100%; object-fit: cover; display: block; }
   #extra { position: absolute; inset: 0; padding-bottom: 12%; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
   #extra.on { opacity: 1; }
   .kitrow { position: absolute; inset: 3% 3% 17% 3%; display: flex; gap: 2.5%; align-items: center; justify-content: center; }
@@ -123,7 +126,7 @@
 </style>
 </head>
 <body>
-<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="extra"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
+<div id="stage"><div id="frame"><div id="scene"></div><div id="dim"></div><div id="card"></div><div id="pip"></div><div id="extra"></div><div id="cap"><span id="capText"></span></div><div id="go"><span>▶ Play with sound</span></div></div></div>
 <div id="hint"><b id="tc">0:00</b> · R or click to replay · M mutes</div>
 <script>
 // The FurSight film (about 3:00): the intro's story, white "VID HERE" boxes where the real footage goes, one
@@ -148,6 +151,14 @@ const extra = (html) => { $("extra").innerHTML = html || $("extra").innerHTML; $
 const caption = async (text, ms, r, dark = false) => {
   const c = $("capText"); c.classList.remove("on"); await wait(220, r);
   c.textContent = text; c.classList.toggle("dark", dark); c.classList.add("on"); await wait(ms, r);
+};
+// the real thing, small and to the side while the story says it (a clip from film/clips; hidden if it's missing)
+const pip = (clip, from = 0) => {
+  const el = $("pip");
+  if (!clip) { el.classList.remove("on"); return; }
+  el.innerHTML = `<video src="clips/${clip}#t=${from}" muted autoplay playsinline></video>`;
+  el.querySelector("video").onerror = () => el.classList.remove("on");
+  el.classList.add("on");
 };
 const card = (html) => { $("card").innerHTML = html; $("card").classList.toggle("on", !!html); };
 
@@ -205,7 +216,7 @@ const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 
 // ---------------------------------------------------------------- the story
 async function story(r) {
   for (const id of ["cablering", "avoglow", "trayscale", "traytop", "cam1", "cam2", "cardCable", "cardAvo", "cardHay", "cardTray", "cardBerry", "berry", "berryq", "cardAsk", "cardAway", "cardWeek", "devices", "traykg"]) show(id, false);
-  $("dim").style.opacity = 0; card(""); extra(""); $("capText").classList.remove("on");
+  $("dim").style.opacity = 0; card(""); extra(""); pip(null); $("capText").classList.remove("on");
   Object.assign(bun, { x: S.spots.pen[0], y: S.spots.pen[1], face: 1, pose: "loaf", lift: 0, tilt: 0, sx: 1, sy: 1, size: 1 }); draw();
 
   PACE = 0.68;
@@ -255,11 +266,12 @@ async function story(r) {
 
   // and each worry gets an answer
   pose("alert");
-  show("cardBerry"); sfx("chime", .5); await caption("Show FurSight the treats you give him. It remembers, and tells you if and when he can have the next.", 3600, r);
-  show("cardAvo"); show("avoglow"); sfx("chime", .5); await caption("It checks food before you share it.", 2200, r);
-  show("cardCable"); show("cablering"); sfx("chime", .5); await caption("It warns you about hazards before he finds them.", 2400, r);
-  show("cardHay"); show("cardTray"); sfx("chime", .5); await caption("And it notices when something changes.", 2400, r);
+  show("cardBerry"); pip("6-phone-food-check-8s.mp4", 4.6); sfx("chime", .5); await caption("Show FurSight the treats you give him. It remembers, and tells you if and when he can have the next.", 3600, r);
+  show("cardAvo"); show("avoglow"); pip("3a-quest-food-sports-drink-6s.mp4", 3.2); sfx("chime", .5); await caption("It checks food before you share it.", 2200, r);
+  show("cardCable"); show("cablering"); pip("1-quest-room-check-9s.mp4", 3.5); sfx("chime", .5); await caption("It warns you about hazards before he finds them.", 2400, r);
+  show("cardHay"); show("cardTray"); pip("7-web-diary-stats-6s.mp4"); sfx("chime", .5); await caption("And it notices when something changes.", 2400, r);
   for (const id of ["cardBerry", "cardAvo", "cardCable", "cardHay", "cardTray", "cablering", "avoglow"]) show(id, false);
+  pip(null);
 
   PACE = 1;
   // the real thing: placeholders for the footage, in order. Each: a title, the boxes (one per clip, side by
