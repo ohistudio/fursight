@@ -116,9 +116,9 @@
   .call pre { margin: 0; background: #2B2A33; color: #EDE7F7; border-radius: 14px; padding: 5% 6%; font: 700 clamp(8px, .95vw, 16px)/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; min-height: 15em; }
   .call pre i { font-style: normal; color: #FFB23F; }
   .call pre em { font-style: normal; color: #8FD3A8; }
-  .call .out { grid-column: 1 / -1; justify-self: center; display: flex; align-items: center; gap: .7em; background: #FFFFFF; border-radius: 99px; padding: .45em 1.2em .45em .5em; box-shadow: 0 5px 0 #D9900A; opacity: 0; transform: scale(.9); transition: opacity .4s, transform .4s cubic-bezier(.2,.9,.3,1); margin-top: 1.5%; }
+  .call .out { grid-column: 1 / -1; justify-self: center; display: flex; align-items: center; gap: .7em; background: #FFFFFF; border-radius: 99px; padding: .45em 1.2em .45em .5em; box-shadow: 0 5px 0 var(--vl, #D9900A); opacity: 0; transform: scale(.9); transition: opacity .4s, transform .4s cubic-bezier(.2,.9,.3,1); margin-top: 1.5%; }
   .call .out.on { opacity: 1; transform: none; }
-  .call .out i { width: 1.8em; height: 1.8em; border-radius: 50%; background: #FFB627; color: #FFFFFF; display: grid; place-items: center; font: 900 clamp(12px, 1.4vw, 24px) Nunito, sans-serif; font-style: normal; }
+  .call .out i { width: 1.8em; height: 1.8em; border-radius: 50%; background: var(--v, #FFB627); color: #FFFFFF; display: grid; place-items: center; font: 900 clamp(12px, 1.4vw, 24px) Nunito, sans-serif; font-style: normal; }
   .call .out span { font: 900 clamp(12px, 1.5vw, 26px) Nunito, sans-serif; color: var(--ink); }
   .call .out small { font: 800 clamp(9px, 1vw, 17px) Nunito, sans-serif; color: var(--muted); margin-left: .4em; }
   /* one model, many jobs */
@@ -291,11 +291,11 @@ async function story(r) {
     ["The free-roam cam finds him", [["Free-roam cam", "Wide view of the room; FurSight finds him and zooms in, then pan and zoom with the cam controls"]], 6000, "When he roams, the cam finds him with SAM 3.1 and zooms in."],
     ["On the FurSight Tray", [["Litter cam", "He hops on; his weight and the visit appear (the scale is simulated in this build)"], ["The FurSight Tray", "A concept render: a litter tray with a scale and a camera looking down", "/kit/tray.jpg"]], 6000, "He hops on the tray: weighed, and the visit logged."],
     ["Hay, food and water", [["Hay rack", "Through the day: SAM 3.1 measures it, 100% in the morning to 20% by evening"], ["Food bowl", "Pellets going down, the label updating"], ["Water", "Water level, the label updating"]], 6000, "SAM 3.1 measures his hay, pellets and water through the day. Less hay is the first sign."],
-    ["Food check, wherever you are", [["Ray-Ban Display", "Hold up a strawberry; the verdict on the glasses"], ["Phone", "The app's Check: a photo of the food, the verdict with its label", "6-phone-food-check-8s.mp4"]], 8000, "Hold a treat up to your glasses or your phone. Can he have it?"],
+    ["Food check, wherever you are", [["Ray-Ban Display", "Hold up a treat; the verdict on the glasses"], ["Phone", "The app's Check on a meal: kimchi, pickles and salad, each with its verdict", "11-phone-salad-check.mp4"]], 8000, "Hold food up to your glasses, or point your phone at a whole plate. Can he have it?"],
     null,
     "many",
-    ["Wherever you are", [["Ray-Ban Display", "Mid-game at the bowling alley: \"How is he?\", the answer and his sticker on the glasses (bowling footage with the glasses view overlaid)"], ["Phone", "The app: how he is today", "5-phone-today-7s.mp4"], ["Meta Quest", "Watching his pet cam stream in a window"]], 7000, "Wherever you are, whatever you're doing, check how he is: on your glasses, your phone or your Quest."],
-    ["Meta Quest: room check", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"]], 11000, "On Quest, check the room. Muse Spark finds each hazard, and the headset's depth pins it on the real thing."],
+    ["Wherever you are", [["Ray-Ban Display", "Mid-game at the bowling alley: \"How is he?\", the answer and his sticker on the glasses"], ["Ray-Ban Display", "At the traffic lights: a look at his cam on the glasses"], ["Meta Quest", "Watching his pet cam stream in a window"]], 7000, "Wherever you are, whatever you're doing, check how he is: on your glasses, your phone or your Quest."],
+    ["Room check, on every device", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"], ["Phone", "The app's Check on the desk: numbered hazards, a card for each", "10-phone-room-check.mp4"], ["Ray-Ban Display", "Hazard check on the glasses: what he could chew, right in view"]], 11000, "Check the room on Quest, phone or glasses. Muse Spark finds each hazard, and on Quest the headset's depth pins it on the real thing."],
     ["Meta Quest: the room remembers", [["Meta Quest", "Next launch: 'From last time, did you fix these?', a Still there? card on each hazard; move the deodorant out of reach, press Sorted it", "2-quest-room-remembers-7s.mp4"]], 7000, "Each hazard is saved as a spatial anchor. Next time, FurSight remembers where it was and asks if you fixed it."],
     ["Meta Quest: food in hand", [["Meta Quest", "Sports drink: hold it up, the verdict on your hand", "3a-quest-food-sports-drink-6s.mp4"], ["Meta Quest", "Chicken breast: hold it up, the verdict on your hand", "3b-quest-food-chicken-6s.mp4"]], 6000, "On Quest, hold food up, and the answer sits right on your hand."],
     ["Meta Quest: ask out loud", [["Meta Quest", "Ask a question out loud with the mic; Muse Spark's answer on a card (keep the sound)", null, true]], 7000, "Ask out loud. FurSight hears you, and Muse Spark answers about him."],
@@ -358,28 +358,27 @@ async function story(r) {
   card(`<div class="plate"><h1>FurSight</h1><p>Spoil them. Worry less.</p></div>`);
 }
 
-// One real Muse Spark call (a strawberry, from the Quest's test photos), step by step: the picture that's sent,
-// what Muse Spark is asked to do, the JSON that came back, and the card it becomes.
+// One real Muse Spark call (a coffee, from the phone's Check), step by step: the picture that's sent, what Muse
+// Spark is asked to do, the JSON that came back (3 s), then SAM 3.1's outline of the same cup, and the card.
 async function museCall(r) {
   const J = `{
-  "food": <i>"strawberry"</i>,
+  "food": <i>"coffee"</i>,
   "held": <em>true</em>,
-  "verdict": <i>"caution"</i>,
-  "portion": <i>"half a small strawberry"</i>,
-  "reason": <i>"High sugar can upset rabbit digestion so feed only as treat."</i>,
-  "instead": <i>"timothy hay"</i>,
-  "wait_days": <em>3</em>,
-  "box": [<em>15, 60, 909, 982</em>]
+  "label": <i>"SPRINGGO COFFEE"</i>,
+  "verdict": <i>"toxic"</i>,
+  "reason": <i>"Caffeine can cause heart and digestive problems in rabbits."</i>,
+  "instead": <i>"water and hay"</i>,
+  "box": [<em>170, 0, 850, 873</em>]
 }`;
-  extra(`<div class="call"><h2>One Muse Spark call</h2>
-    <div class="step" id="c1"><span class="tag">1 · Sent</span><img src="sent.jpg" alt="A strawberry"><p>One frame from the glasses, 512 px</p></div>
+  extra(`<div class="call"><h2>One check: Muse Spark, then SAM 3.1</h2>
+    <div class="step" id="c1"><span class="tag" id="c1tag">1 · Sent</span><img id="c1img" src="clips/coffee-sent.jpg" alt="A coffee cup" onerror="this.onerror=null;this.src='sent.jpg'"><p id="c1p">One photo from the phone</p></div>
     <div class="arrow" id="a1">→</div>
     <div class="step" id="c2"><span class="tag">2 · Muse Spark</span><ul>
       <li>What food is it? Is it held?</li><li>Safe, a treat, or never?</li><li>How much, and what instead?</li><li>Days until the next one</li><li>A box round it in the picture</li></ul>
       <p>Checked against the rabbit safety list, which always wins. Through the Meta Model API.</p></div>
     <div class="arrow" id="a2">→</div>
-    <div class="step" id="c3"><span class="tag">3 · Back in 4 s</span><pre id="json"></pre></div>
-    <div class="out" id="c4"><i>!</i><span>Strawberry: small treat only</span><small>half a small one · next in 3 days</small></div></div>`);
+    <div class="step" id="c3"><span class="tag">3 · Back in 3 s</span><pre id="json"></pre></div>
+    <div class="out" id="c4" style="--v:#FF4D5E;--vl:#D93545"><i>✕</i><span>Coffee: don't</span><small>caffeine · water and hay instead</small></div></div>`);
   await wait(300, r);
   caption("Here's one Muse Spark call: the picture sent, what it's asked, and what comes back.", 4200, r).catch(() => {});
   const on = (id) => $(id) && $(id).classList.add("on"), op = (id) => $(id) && ($(id).style.opacity = 1);
@@ -388,7 +387,12 @@ async function museCall(r) {
   await wait(700, r); op("a2"); on("c3"); sfx("ping", .4);
   const lines = J.split("\n"), pre = $("json");
   for (let k = 1; k <= lines.length; k++) { pre.innerHTML = lines.slice(0, k).join("\n"); await wait(200, r); }
-  await wait(500, r); on("c4"); sfx("chime", .55);
+  // SAM 3.1 on the same picture: the cup's exact outline (its real mask, "cup")
+  await wait(400, r);
+  const im = $("c1img"); if (im && im.src.includes("coffee-sent")) { im.style.transition = "opacity .35s"; im.style.opacity = 0; await wait(350, r); im.src = "clips/coffee-sam.jpg"; im.style.opacity = 1;
+    $("c1tag").textContent = "4 · SAM 3.1"; $("c1p").textContent = "Outlines the exact cup, in 2 s"; sfx("ping", .4); }
+  caption("Muse Spark says what it is. SAM 3.1 outlines exactly where.", 2600, r).catch(() => {});
+  await wait(2600, r); on("c4"); sfx("chime", .55);
   await caption("Then it's a card on the food, on your glasses, Quest or phone.", 3000, r);
 }
 
