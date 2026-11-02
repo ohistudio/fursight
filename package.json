@@ -8,6 +8,8 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "bench": "node eval/bench.js",
-    "dev": "cd server && node dev.js"
+    "dev": "cd server && node dev.js",
+    "bench:photos": "node eval/photos.js",
+    "bench:latency": "node eval/latency.js"
   }
 }

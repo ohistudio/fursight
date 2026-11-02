@@ -60,6 +60,71 @@ Muse Spark's food verdict always passes through a rabbit safety list (RWAF and H
 
 **Zero toxic foods called safe.** Details and how the first run found 14 gaps (now fixed): [docs/benchmark.md](docs/benchmark.md). It runs on every push (`npm test`; the 135 foods are in [`eval/`](eval/)).
 
+**On real photos, end to end.** 41 openly licensed food and plant photos (Wikimedia Commons) through the live food check, Muse Spark and the safety list together:
+
+| | Result |
+|---|---|
+| Toxic foods and plants (19) | **19 of 19 called "don't"** |
+| Treat-only foods (12) | **12 of 12 kept off "safe"** |
+| Safe foods (10) | **8 of 10 not blocked**: both misses were cautious (a single unidentified leaf, and celery juice in a celery photo) |
+| Toxic called safe | **0** |
+
+Every photo, what it saw and the credits: [docs/benchmark-photos.md](docs/benchmark-photos.md). Run it: `npm run bench:photos`.
+
+**How long things take**, end to end against the live server (5 runs each, from China through a VPN; `npm run bench:latency`):
+
+| Feature | Median | Slowest |
+|---|---|---|
+| Sticker (SAM 3.1 cut-out) | 1.1 s | 1.3 s |
+| Ask, typed (Muse Spark agent) | 3.2 s | 3.4 s |
+| Food check (Muse Spark + safety list) | 5.1 s | 6.9 s |
+| Droppings check (SAM 3.1 + Muse Spark) | 7.2 s | 10.0 s |
+| Room check (Muse Spark names, SAM 3.1 outlines) | 12.7 s | 14.0 s |
+
+## How it's built
+
+```mermaid
+flowchart LR
+  subgraph Devices
+    Q[Meta Quest 3<br/>Unity, passthrough, hands, Depth API, spatial anchors]
+    G[Ray-Ban Display<br/>glasses web app]
+    I[iPhone app<br/>+ glasses app via Device Access Toolkit]
+    W[Web app<br/>any browser]
+  end
+  subgraph Vercel["FurSight API (Vercel)"]
+    A[Ask agent<br/>Muse Spark picks from 17 tools]
+    F[Food, room, poo, label checks]
+    S[Rabbit safety list<br/>can only make a verdict stricter]
+  end
+  subgraph Meta["Meta Model API"]
+    MS[Muse Spark]
+    SAM[SAM 3.1]
+    MV[Muse Voice Transcribe]
+  end
+  subgraph CF["Hub (Cloudflare Workers + Durable Objects)"]
+    H[Households, devices, diary, calendar]
+    R[Pet cam relay<br/>frames only while someone watches]
+  end
+  C[Pet cams<br/>any webcam or old phone]
+  Q & G & I & W --> Vercel
+  Vercel --> Meta
+  A --> S
+  F --> S
+  Vercel <--> CF
+  C --> R
+  R --> Q & G & I & W
+```
+
+One household, every device: each device links with a 4-letter code and gets its own signed key (revoke a device and its key stops working). The API holds the Meta key; no device ever sees it.
+
+**Hard problems, and what worked**
+
+- **Labels on the real thing in Quest.** Muse Spark names each hazard with a short noun, SAM 3.1 outlines it in the passthrough camera frame, and the outline's centre goes through the camera's intrinsics into a Depth API raycast to land on the object in the room. Each label is saved as a spatial anchor, so next time FurSight asks "did you fix these from last time?" with a card on each one.
+- **SAM can't find "rabbit droppings", but it can find "small brown object".** SAM 3.1 returned nothing for droppings, poop, pellet or dung; shape words found 33 of them in one photo. The poo check asks for the shape, and Muse Spark judges size and colour.
+- **The model is never the last word on food.** Every verdict passes the safety list, which can only make it stricter, and the agent is told a diary food check is a check, never "he ate it" (it once told me to call the vet over a chocolate I had only checked).
+- **Only hands and arms cover the labels.** Quest uses Meta's soft occlusion from the Depth API, gated to arm's reach, so your hand passes in front of a card but the room never hides it.
+- **Pet cams that cost almost nothing.** The relay only carries frames while someone is watching, motion is spotted in the browser for free, and the AI is only asked once he's settled.
+
 ## Quickstart
 
 No kit or rabbit needed to look around: open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
@@ -83,6 +148,29 @@ A rabbit care kit and app: pet cams watch how he rests, flops and eats his hay, 
 ![Concept render of the FurSight Tray](docs/tray-concept.jpg)
 
 *The FurSight Tray, a concept render (not a photo).*
+
+### As a product
+
+| | Price | Cost to make |
+|---|---|---|
+| **The kit**: FurSight Tray + pen cam + pan-and-tilt cam, 3 months of Plus | **$249** | about $100 landed (about 50% gross margin sold direct) |
+| FurSight Tray alone (scale, camera looking down, temperature and humidity) | $149 | about $42 |
+| FurSight Cam: pen / pan and tilt | $59 / $69 | about $24 each |
+| **Free** app: live view, weight and tray visits, diary, calendar, notes | $0 | almost nothing (no AI) |
+| **FurSight Plus**: the AI (his day from the cams, hay and bowl checks, early warnings, food checks, Ask, stickers, Wrapped) | **$7.99 a month or $69 a year** | about $4 of AI a household a month with the on-cam model |
+
+Rough numbers to show it holds up, not a business plan: [docs/product.md](docs/product.md).
+
+### Beyond rabbits
+
+The same kit fits any pet that lives in an enclosure and needs watching, especially the ones whose keepers already run thermometers, hygrometers and cams:
+
+- **Reptiles**: basking and cool-side temperatures, UV lamp hours, humidity, shedding and feeding days, and which live food and greens are safe.
+- **Amphibians**: water temperature and humidity, misting, and which live food is safe.
+- **Guinea pigs, chinchillas and other small pets**: the same hay, tray and food checks with their own safety lists.
+- **Cats and dogs**: free-roam cams that find them, food and plant checks, litter and walks.
+
+Each species is one safety list ([server/lib/species/](server/lib/species/)) and a care plan; the cams, the Tray's sensors, the agent and every device stay the same.
 
 More on the kit: [fursight-seven.vercel.app/kit](https://fursight-seven.vercel.app/kit/). As a product, with rough costs, the subscription and the AI per household: [docs/product.md](docs/product.md). Try it without the kit or a rabbit: open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
 

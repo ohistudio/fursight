@@ -1,0 +1,330 @@
+[
+ {
+  "food": "chocolate",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/34/2023_Baton_kokosowy_Knoppers_%282%29.jpg/960px-2023_Baton_kokosowy_Knoppers_%282%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:2023_Baton_kokosowy_Knoppers_(2).jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Jacek Halicki"
+ },
+ {
+  "food": "avocado",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f2/Persea_americana_fruit_2.JPG/960px-Persea_americana_fruit_2.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Persea_americana_fruit_2.JPG",
+  "license": "CC BY-SA 3.0",
+  "author": "B.navez"
+ },
+ {
+  "food": "onion",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/20/Spanish_Onions_-_The_Fruit_Bowl%2C_Brighton_2024-03-21.jpg/960px-Spanish_Onions_-_The_Fruit_Bowl%2C_Brighton_2024-03-21.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Spanish_Onions_-_The_Fruit_Bowl,_Brighton_2024-03-21.jpg",
+  "license": "CC0",
+  "author": "Andy Li"
+ },
+ {
+  "food": "garlic",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/Garlic_bulbs_and_cloves.jpg/960px-Garlic_bulbs_and_cloves.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Garlic_bulbs_and_cloves.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Ivar Leidus"
+ },
+ {
+  "food": "leek",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/Leeks_-_Harbourside_Market%2C_Wellington%2C_New_Zealand_-_DSC09771.jpg/960px-Leeks_-_Harbourside_Market%2C_Wellington%2C_New_Zealand_-_DSC09771.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Leeks_-_Harbourside_Market,_Wellington,_New_Zealand_-_DSC09771.jpg",
+  "license": "CC0",
+  "author": "Daderot"
+ },
+ {
+  "food": "rhubarb",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2b/Rheum_rhabarbarum.2006-04-27.uellue.jpg/960px-Rheum_rhabarbarum.2006-04-27.uellue.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Rheum_rhabarbarum.2006-04-27.uellue.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Dieter Weber (User:Uellue)"
+ },
+ {
+  "food": "french fries",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Truffle_oil_french_fries_%2833024792848%29.jpg/960px-Truffle_oil_french_fries_%2833024792848%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Truffle_oil_french_fries_(33024792848).jpg",
+  "license": "CC BY-SA 2.0",
+  "author": "Tony Webster from Minneapolis, Minnesota, United States"
+ },
+ {
+  "food": "lily",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Formosa_lily%2C_Nagai_Park%2C_Osaka.jpg/960px-Formosa_lily%2C_Nagai_Park%2C_Osaka.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Formosa_lily,_Nagai_Park,_Osaka.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Laitche"
+ },
+ {
+  "food": "daffodil",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Narcissus_flowers.jpg/960px-Narcissus_flowers.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Narcissus_flowers.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Uberprutser"
+ },
+ {
+  "food": "tulip",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/Tulipa_suaveolens_floriade_to_Canberra.jpg/960px-Tulipa_suaveolens_floriade_to_Canberra.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Tulipa_suaveolens_floriade_to_Canberra.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "John O'Neill"
+ },
+ {
+  "food": "foxglove",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0e/Fingerhut_-_Fischbacher_Alpen.JPG/960px-Fingerhut_-_Fischbacher_Alpen.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Fingerhut_-_Fischbacher_Alpen.JPG",
+  "license": "CC BY-SA 4.0",
+  "author": "C.Stadler/Bwag"
+ },
+ {
+  "food": "ivy",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Hedera_helix_Leaves_3008px.jpg/960px-Hedera_helix_Leaves_3008px.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Hedera_helix_Leaves_3008px.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Photo by and (c)2006 Derek Ramsey (Ram-Man).  Location credit to the Chanticleer"
+ },
+ {
+  "food": "yew",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Taxus_baccata_Lviv.JPG/960px-Taxus_baccata_Lviv.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Taxus_baccata_Lviv.JPG",
+  "license": "CC BY-SA 3.0",
+  "author": "Mykola Swarnyk"
+ },
+ {
+  "food": "poinsettia",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Euphorbia_pulcherrima_%28Barlovento%29_04.jpg/960px-Euphorbia_pulcherrima_%28Barlovento%29_04.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Euphorbia_pulcherrima_(Barlovento)_04.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Frank Vincentz"
+ },
+ {
+  "food": "buttercup",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/Scherpe_boterbloem_%28Ranunculus_acris%29_01.JPG/960px-Scherpe_boterbloem_%28Ranunculus_acris%29_01.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Scherpe_boterbloem_(Ranunculus_acris)_01.JPG",
+  "license": "CC BY-SA 3.0",
+  "author": "Dominicus Johannes Bergsma"
+ },
+ {
+  "food": "mushrooms",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/Twee_tere_paddenstoelen._06-11-2024._%28d.j.b%29.jpg/960px-Twee_tere_paddenstoelen._06-11-2024._%28d.j.b%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Twee_tere_paddenstoelen._06-11-2024._(d.j.b).jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Dominicus Johannes Bergsma"
+ },
+ {
+  "food": "coffee beans",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c5/Roasted_coffee_beans.jpg/960px-Roasted_coffee_beans.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Roasted_coffee_beans.jpg",
+  "license": "Public domain",
+  "author": "MarkSweep"
+ },
+ {
+  "food": "bread",
+  "expected": "toxic",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/Home_made_sour_dough_bread.jpg/960px-Home_made_sour_dough_bread.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Home_made_sour_dough_bread.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Tomascastelazo"
+ },
+ {
+  "food": "cookies",
+  "expected": "toxic",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Koekjestrommel_open.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+  "page": "https://commons.wikimedia.org/wiki/File:Koekjestrommel_open.jpg",
+  "license": "Public domain",
+  "author": "Pudding4brains"
+ },
+ {
+  "food": "apple",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Honeycrisp.jpg/960px-Honeycrisp.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Honeycrisp.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Jonathunder"
+ },
+ {
+  "food": "banana",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/Cavendish_banana_from_Maracaibo.jpg/960px-Cavendish_banana_from_Maracaibo.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Cavendish_banana_from_Maracaibo.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Wilfredor"
+ },
+ {
+  "food": "strawberry",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Strawberries.JPG/960px-Strawberries.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Strawberries.JPG",
+  "license": "CC BY-SA 2.0",
+  "author": ""
+ },
+ {
+  "food": "grapes",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9d/Edle_Weinrebe%2C_%27Vitis_vinifera%27_subsp._%27vinifera.jpg/960px-Edle_Weinrebe%2C_%27Vitis_vinifera%27_subsp._%27vinifera.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Edle_Weinrebe,_%27Vitis_vinifera%27_subsp._%27vinifera.jpg",
+  "license": "CC BY 2.0",
+  "author": "eflon (Alex from Ithaca, NY)"
+ },
+ {
+  "food": "blueberries",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0b/Blueberries-In-Pack.jpg/960px-Blueberries-In-Pack.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Blueberries-In-Pack.jpg",
+  "license": "CC0",
+  "author": "Evan-Amos"
+ },
+ {
+  "food": "raspberries",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4e/Framboise_Margy_3.jpg/960px-Framboise_Margy_3.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Framboise_Margy_3.jpg",
+  "license": "Public domain",
+  "author": "Vassil"
+ },
+ {
+  "food": "mango",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Mangos_-_single_and_halved.jpg/960px-Mangos_-_single_and_halved.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Mangos_-_single_and_halved.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Ivar Leidus"
+ },
+ {
+  "food": "pineapple",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/75/AnanasComosusOnPlant.jpg/960px-AnanasComosusOnPlant.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:AnanasComosusOnPlant.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Markus Leupold-L\u00f6wenthal"
+ },
+ {
+  "food": "carrot",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Carrots_of_many_colors.jpg/960px-Carrots_of_many_colors.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Carrots_of_many_colors.jpg",
+  "license": "Public domain",
+  "author": "Stephen Ausmus"
+ },
+ {
+  "food": "kiwi",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Kiwi_%28Actinidia_chinensis%29_1_Luc_Viatour.jpg/960px-Kiwi_%28Actinidia_chinensis%29_1_Luc_Viatour.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Kiwi_(Actinidia_chinensis)_1_Luc_Viatour.jpg",
+  "license": "CC BY-SA 2.5",
+  "author": "Luc Viatour"
+ },
+ {
+  "food": "orange",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e3/Oranges_-_whole-halved-segment.jpg/960px-Oranges_-_whole-halved-segment.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Oranges_-_whole-halved-segment.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Ivar Leidus"
+ },
+ {
+  "food": "cherries",
+  "expected": "caution",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bb/Cherry_Stella444.jpg/960px-Cherry_Stella444.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Cherry_Stella444.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Benjamint444, edited by Fir0002"
+ },
+ {
+  "food": "romaine lettuce",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Romaine_lettuce.jpg/960px-Romaine_lettuce.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Romaine_lettuce.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Rainer Zenz"
+ },
+ {
+  "food": "basil",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Ocimum_Basilicum_leaf_lighted_by_the_left.jpg/960px-Ocimum_Basilicum_leaf_lighted_by_the_left.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Ocimum_Basilicum_leaf_lighted_by_the_left.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "BernaBotto"
+ },
+ {
+  "food": "mint",
+  "expected": "safe",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/5/58/Menthe_aromatique.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+  "page": "https://commons.wikimedia.org/wiki/File:Menthe_aromatique.JPG",
+  "license": "Public domain",
+  "author": "moi-m\u00eame"
+ },
+ {
+  "food": "dandelion",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/Taraxacum_officinale_plant6_%2816375803122%29.jpg/960px-Taraxacum_officinale_plant6_%2816375803122%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Taraxacum_officinale_plant6_(16375803122).jpg",
+  "license": "CC BY 2.0",
+  "author": "Harry Rose from South West Rocks, Australia"
+ },
+ {
+  "food": "hay",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Foin_meule_Roumanie.jpg/960px-Foin_meule_Roumanie.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Foin_meule_Roumanie.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Myrabella"
+ },
+ {
+  "food": "bell pepper",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/de/Capsicum_annuum_fruits_IMGP0049.jpg/960px-Capsicum_annuum_fruits_IMGP0049.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Capsicum_annuum_fruits_IMGP0049.jpg",
+  "license": "CC BY-SA 3.0",
+  "author": "Nikodem Nijaki"
+ },
+ {
+  "food": "celery",
+  "expected": "safe",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Jus-celeri.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+  "page": "https://commons.wikimedia.org/wiki/File:Jus-celeri.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Photodune"
+ },
+ {
+  "food": "fennel",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e6/Fennel_bulb.jpg/960px-Fennel_bulb.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Fennel_bulb.jpg",
+  "license": "CC BY-SA 4.0",
+  "author": "Tiia Monto"
+ },
+ {
+  "food": "watercress",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dd/Watercress_%282%29.JPG/960px-Watercress_%282%29.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Watercress_(2).JPG",
+  "license": "CC BY 3.0",
+  "author": "Masparasol"
+ },
+ {
+  "food": "bok choy",
+  "expected": "safe",
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8c/Brassica_rapa_var._chinensis_%28leaf%29.jpg/960px-Brassica_rapa_var._chinensis_%28leaf%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+  "page": "https://commons.wikimedia.org/wiki/File:Brassica_rapa_var._chinensis_(leaf).jpg",
+  "license": "CC BY 2.5",
+  "author": "\u304a\u3080\u3053\u3055\u3093\u5fd7\u671b"
+ }
+]
