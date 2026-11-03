@@ -72,6 +72,10 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 
 **Muse Spark, the agent**
 
+<img src="docs/examples/spark-ask-quest-pumpkin-boy.jpg" width="480" alt="Quest: Muse Spark's answer card, 'How about Pumpkin Boy for the wee man, since he's snuggled in his little orange pumpkin house munching away?', with Xiaosi eating banana in front of it">
+
+**Ask out loud, on Quest.** Asked for a new nickname, Muse Spark looked at him: "How about Pumpkin Boy… since he's snuggled in his little orange pumpkin house munching away?" He eats his banana in front of the card: depth occlusion keeps him on top.
+
 | | |
 |---|---|
 | ![Quest: a "Sports drink: Don't" card pinned to the bottle in the room](docs/examples/spark-food-quest.jpg) | ![Phone: a meal checked, kimchi marked "Don't"](docs/examples/spark-food-phone.jpg) |
