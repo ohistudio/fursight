@@ -68,6 +68,10 @@ async function makeDemo({ pic = null, stickers = [], tz = 0, into = null } = {})
     ({ token } = await hub("/households", { name: "Demo" }, "POST", null));
     await hub("/pets/xiaosi", { name: NAME, species: "rabbit", breed: "Netherland Dwarf", sex: "male", colour: "white", age: "3", nicknames: "Little Loaf, Mr Si, Bun Bun",
     notes: "Had GI stasis in the spring. Loves coriander. (Demo household: mock data.)", care: CARE, ...(pic ? { photo: pic } : {}) }, "PUT", token);
+    // his three pet cams, always on: recordings of the real cams, looping, so a demo has live-looking cams with no page open
+    const ch = () => Array.from({ length: 16 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"[Math.floor(Math.random() * 56)]).join("");
+    for (const [name, clip] of [["Cage cam", "/demo/cam-litter.mp4"], ["Top cam", "/demo/cam-cage.mp4"], ["Free-roam cam", "/demo/cam-roam.mp4"]])
+      await hub("/cams/" + ch(), { name, clip }, "PUT", token).catch(() => {});
   }
   // a dropped connection mid-way shouldn't sink the whole demo: each write gets a couple more tries
   const post = async (e, tries = 3) => {

@@ -1353,6 +1353,7 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
   $tabs.classList.add("hidden");
   $app.innerHTML = `<div class="stack pop"><h2>${esc(name)}</h2>${clip ? `<span class="chip" style="justify-self:start">Playing a recording: ${esc(clip.name)}</span>` : ""}<p class="muted">Leave this open near ${esc(me.pets[0].name)}, with his hay, food bowl and water in view. It only sends pictures while someone is watching, and checks the hay and bowls every couple of hours.</p>
     <div class="cam"><video id="v" playsinline muted autoplay></video><div class="live" id="st">starting</div></div>
+    ${clip ? "" : `<select id="camPick" class="input" style="justify-self:center;max-width:100%" aria-label="Which camera"></select>`}
     <p class="muted center" id="act" style="font-size:14px">Watching for ${esc(me.pets[0].name)}</p>
     ${clip ? "" : `<button class="btn ghost small" id="diaryToggle" style="justify-self:center"></button>`}
     <button class="btn ghost" id="stop">Stop being a pet cam</button></div>`;
@@ -1373,7 +1374,21 @@ async function beCam(resume = false, clip = null, fixedName = null, replaces = n
     clipT0 = performance.now();
     stream = player.captureStream ? player.captureStream() : player.mozCaptureStream();   // the first one ended with the read-through
   }
-  else try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false }); }
+  else try {
+    // a computer with a webcam plugged in: use the one chosen here last time, or the plugged-in one over the built-in
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false });
+    const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+    const want = cams.find((d) => d.deviceId === store.get("fs.camDevice")) || (cams.length > 1 && cams.find((d) => !/facetime|built-in|iphone|desk view/i.test(d.label)));
+    if (want && want.deviceId !== stream.getVideoTracks()[0].getSettings().deviceId) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: want.deviceId }, width: { ideal: 1920 } }, audio: false });
+    }
+    const pick = document.getElementById("camPick"), now = stream.getVideoTracks()[0].getSettings().deviceId;
+    if (pick && cams.length > 1) {
+      pick.innerHTML = cams.map((d, i) => `<option value="${d.deviceId}"${d.deviceId === now ? " selected" : ""}>${esc(d.label || "Camera " + (i + 1))}</option>`).join("");
+      pick.onchange = () => { store.set("fs.camDevice", pick.value); beCam(true, null, name); };
+    } else if (pick) pick.remove();
+  }
   catch (e) { toast("Couldn't open the camera"); return render(); }
   const v = document.getElementById("v"); v.srcObject = stream;
   const c = document.createElement("canvas"); c.width = c.height = 480; const g = c.getContext("2d");

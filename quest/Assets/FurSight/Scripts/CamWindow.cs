@@ -106,6 +106,14 @@ namespace FurSight
             if (!string.IsNullOrEmpty(FurSightApi.CamClip)) { PlayClip(FurSightApi.CamClip); return; }
             if (!string.IsNullOrEmpty(FurSightApi.CamChannel)) { _ = Socket(); StartCoroutine(FallbackIfNoSocket()); }
             else _status.text = "no camera linked";
+            // filming (WeekStory.Film): if the live cam sends nothing, his recorded free-roam footage, so the window is never empty
+            if (WeekStory.Film) StartCoroutine(FilmIfNoFrames());
+        }
+
+        IEnumerator FilmIfNoFrames()
+        {
+            yield return new WaitForSeconds(4f);
+            if (_lastFrame <= 0f && _player == null) PlayClip(System.IO.Path.Combine(Application.streamingAssetsPath, "roam-cam.mp4"));
         }
 
         void PlayClip(string url)

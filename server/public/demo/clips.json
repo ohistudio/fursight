@@ -1,3 +1,18 @@
 [
-  { "file": "petcam.mp4", "name": "Xiaosi on the floor" }
+ {
+  "file": "petcam.mp4",
+  "name": "Xiaosi on the floor"
+ },
+ {
+  "file": "cam-litter.mp4",
+  "name": "Cage cam (side)"
+ },
+ {
+  "file": "cam-cage.mp4",
+  "name": "Top cam"
+ },
+ {
+  "file": "cam-roam.mp4",
+  "name": "Free-roam cam"
+ }
 ]

@@ -200,9 +200,10 @@ export class Household {
       const b = await req.json().catch(() => ({}));
       // one cam per device: a browser that lost its saved channel starts a new one, which replaces the old.
       // {replaces: channel}: this device takes over an existing cam (its name and its place in the list)
-      this.sql.exec("DELETE FROM cams WHERE device = ? AND channel != ?", device, mm[1]);
-      if (/^[A-Za-z0-9]{16}$/.test(String(b.replaces || "")) && b.replaces !== mm[1]) this.sql.exec("DELETE FROM cams WHERE channel = ?", b.replaces);
       const clip = /^\/demo\/[\w.-]{1,80}\.mp4$/.test(String(b.clip || "")) ? b.clip : null;   // only the web app's own demo clips
+      // (a cam that plays one of the demo recordings can sit beside the device's others: the demo household has three)
+      if (!clip) this.sql.exec("DELETE FROM cams WHERE device = ? AND channel != ? AND clip IS NULL", device, mm[1]);
+      if (/^[A-Za-z0-9]{16}$/.test(String(b.replaces || "")) && b.replaces !== mm[1]) this.sql.exec("DELETE FROM cams WHERE channel = ?", b.replaces);
       this.sql.exec("INSERT OR REPLACE INTO cams (channel, name, device, updated, clip) VALUES (?, ?, ?, ?, ?)", mm[1], String(b.name || "Pet cam").slice(0, 40), device, Date.now(), clip);
       return json({ channel: mm[1], name: b.name || "Pet cam" });
     }
