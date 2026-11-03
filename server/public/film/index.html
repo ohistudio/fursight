@@ -47,9 +47,9 @@
   #floaters img { position: absolute; width: 10%; filter: drop-shadow(0 8px 10px rgba(43,42,51,.22)); opacity: 0; transform: scale(.4) rotate(var(--r)); transition: opacity .4s, transform .5s cubic-bezier(.34,1.56,.64,1); }
   #floaters.on img { opacity: 1; transform: scale(1) rotate(var(--r)); animation: bob 3.2s ease-in-out infinite; animation-delay: var(--d); }
   @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
-  #cold { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #cold { position: absolute; inset: 0; background: #9B6CF0; opacity: 0; pointer-events: none; transition: opacity .25s; }
   #cold.on { opacity: 1; }
-  #cold video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+  #cold video { position: absolute; inset: 18px; width: calc(100% - 36px); height: calc(100% - 36px); object-fit: cover; opacity: 0; border-radius: 44px; }
   #cold video.on { opacity: 1; }
   #cold .dev { position: absolute; left: 3%; bottom: 5%; font: 900 clamp(12px, 1.6vw, 28px) Nunito, sans-serif; color: #FFFFFF; background: rgba(43,42,51,.72); padding: .35em .9em; border-radius: 99px; }
   #extra { position: absolute; inset: 0; padding-bottom: 12%; background: var(--bg); opacity: 0; transition: opacity .7s ease; pointer-events: none; display: grid; place-items: center; }
@@ -138,6 +138,8 @@
   .many h2 { grid-column: 1 / -1; margin: 0; text-align: center; font-size: clamp(20px, 3.2vw, 54px); font-weight: 900; color: var(--ink); }
   .many .job { opacity: 0; transform: translateY(12px) scale(.97); transition: opacity .45s, transform .45s cubic-bezier(.2,.9,.3,1); display: grid; grid-template-columns: 44% 1fr; gap: 4%; align-items: center; background: #FFFFFF; border-radius: 24px; padding: 3%; box-shadow: 0 6px 0 rgba(43,42,51,.10); }
   .many .job.on { opacity: 1; transform: none; }
+  /* every real clip framed in FurSight purple, with the darker lip of the app's cards */
+  .vid:has(video), .vid:has(img.still) { box-shadow: 0 0 0 6px #9B6CF0, 0 11px 0 6px #7A4DD0; }
   .many .vid { background: #F1EEF6; box-shadow: none; border-radius: 16px; padding: 6%; }
   .many .vid b { font-size: clamp(12px, 1.6vw, 28px); }
   .many .jt b { display: block; font: 900 clamp(13px, 1.7vw, 30px) Nunito, sans-serif; color: var(--ink); margin-bottom: .2em; }
@@ -370,7 +372,7 @@ async function story(r) {
     ["Room check, on every device", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"], ["Phone", "The app's Check on the desk: numbered hazards, a card for each", "10-phone-room-check-tall.mp4", false, true]], 9500, "Check the room on Quest or your phone. Muse Spark finds each hazard, and on Quest the headset's depth pins it on the real thing.", "2fr .62fr"],
     ["Meta Quest: the room remembers", [["Meta Quest", "Next launch: 'From last time, did you fix these?', a Still there? card on each hazard; move the deodorant out of reach, press Sorted it", "2-quest-room-remembers-7s.mp4"]], 7000, "Each hazard is saved as a spatial anchor. Next time, FurSight remembers where it was and asks if you fixed it."],
     ["Meta Quest: can he have banana?", [["Meta Quest", "Hold it up: \"Small treat only, one thin slice\"", "banana-check.mp4"], ["Meta Quest", "So he gets a little piece", "banana-feed.mp4"]], 6000, "Can he have banana? A small treat, so he gets a little piece. FurSight remembers he had some today."],
-    ["Meta Quest: ask out loud", [["Meta Quest", "Asked out loud for a new nickname; Muse Spark looks at him and answers on a card", "pumpkin-boy.mp4"], ["Saved to his diary", "The picture it looked at: SAM 3.1 found him, and the answer", "nickname-saved.jpg"]], 6000, "Ask out loud, about anything. \"Pumpkin Boy\", since he's in his pumpkin house.", "1.6fr 1fr"],
+    ["Meta Quest: ask out loud", [["Meta Quest", "Asked out loud for a new nickname; Muse Spark looks at him and answers on a card", "pumpkin-boy.mp4"], ["Saved to his diary", "The picture it looked at: SAM 3.1 found him, and the answer", "nickname-saved.jpg"]], 6000, "Ask anything out loud, and it looks at him and answers. Here: \"Pumpkin Boy\".", "1.6fr 1fr"],
     ["Meta Quest: make your own stickers", [["Meta Quest", "Pinch with both hands and pull: a camera frame around him", "sticker-frame.mp4"], ["Meta Quest", "The polaroid, then his sticker pops onto its corner", "sticker-result.mp4"]], 7000, "Snap a photo of him to make your own stickers. Your hands stay in front of it all, with depth occlusion.", null, true],
     ["Meta Quest: the poo check", [["Meta Quest", "Frame his droppings with both hands: SAM 3.1 puts a dot on each one, and the card compares with last time", "poo-check-quest.mp4"], ["Saved to his diary", "The picture it saved: SAM 3.1 rings every dropping", "poo-saved.jpg"]], 6500, "Frame his droppings with both hands. SAM finds every one, and Muse Spark compares with last time.", "1.6fr 1fr"],
     ["His week, wrapped", [["Meta Quest", "Open His week; swipe through Wrapped with your hand, stickers popping out, then his week card", "4-quest-his-week-9s.mp4"], ["Phone", "His week, wrapped, on the phone: the same story, slide by slide", "12-phone-wrapped-tall.mp4", false, true]], 9000, "His week, wrapped, on Quest and your phone. Swipe through it with your hand.", "2fr .62fr"],
