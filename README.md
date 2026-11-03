@@ -48,6 +48,39 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 | **SAM 3.1** | Finds him on each pet cam, cuts him out as stickers, measures the hay pile, outlines room hazards, rings his droppings for the poo check | [lib/sam.js](server/lib/sam.js), [routes/sticker.js](server/routes/sticker.js), [routes/room.js](server/routes/room.js) |
 | **Muse Voice Transcribe** | Spoken questions and notes on Quest | [lib/meta.js](server/lib/meta.js) `transcribe()`, [routes/note.js](server/routes/note.js) |
 
+
+### In pictures: every one is a real output
+
+**SAM 3.1, the finder**
+
+| | |
+|---|---|
+| ![Room check: eight things outlined and numbered on a photo of a room](docs/examples/sam-room-check.jpg) | ![Poo check: each dropping ringed, "Looks healthy"](docs/examples/sam-poo-check.jpg) |
+| **Room check.** Muse Spark names what he could chew; SAM outlines each one, numbered. | **Poo check.** SAM rings every dropping (it finds "small brown object", not "droppings"); Muse Spark judges them. |
+| ![A coffee cup, then the same cup with SAM's mask over it](docs/examples/sam-coffee-mask.jpg) | ![His flop on the pet cam, SAM's blue outline, then his sticker](docs/examples/sam-sticker.jpg) |
+| **Food in hand.** SAM's mask on the cup, so Quest can pin the verdict to it. | **Stickers.** SAM finds him on the pet cam and cuts him out, in about a second. |
+
+![Three pet cams with SAM's tracking boxes: on the litter tray from the side and from above, and flopped by his bowl](docs/examples/sam-tracking-cams.jpg)
+
+**Tracking on the pet cams.** SAM finds him a few times a second; the cam logs what he's doing (here a litter visit from two angles, and a flop).
+
+![The free-roam cam: SAM finds him, the cam turns and zooms in 2.9x, then follows him into his bed](docs/examples/sam-tracking-free-roam.jpg)
+
+**The free-roam cam follows him.** SAM finds him, the OBSBOT turns and zooms in, then keeps him in frame.
+
+![Six of his stickers, all cut out by SAM from the pet cam](docs/examples/sam-stickers.jpg)
+
+**Muse Spark, the agent**
+
+| | |
+|---|---|
+| ![Quest: a "Sports drink: Don't" card pinned to the bottle in the room](docs/examples/spark-food-quest.jpg) | ![Phone: a meal checked, kimchi marked "Don't"](docs/examples/spark-food-phone.jpg) |
+| **Food check on Quest.** The verdict, why, and what to give instead, pinned to the real bottle. | **Food check on the phone.** Every food on the plate gets its own verdict. |
+| ![Quest room check: labels on the real objects around the room](docs/examples/spark-room-quest.jpg) | ![Ray-Ban Display: "How is he?" answered on the glasses, with the steps it took](docs/examples/spark-ask-glasses.jpg) |
+| **Room check on Quest.** Each hazard labelled where it really is, saved with spatial anchors. | **Ask on the glasses.** The agent checks the cams, his tray and diary, then answers. |
+| ![The hay rack from the side and from above: 45%, then 20% and "top it up"](docs/examples/spark-hay.jpg) | ![A grid of his day: eating hay, drinking, grooming, flopped](docs/examples/spark-his-day.jpg) |
+| **His hay.** Muse Spark reads the rack: 45%, then 20% and "top it up". | **His day.** What the free-roam cam logged: eating hay, drinking, grooming, a flop. |
+
 ## Food safety benchmark
 
 Muse Spark's food verdict always passes through a rabbit safety list (RWAF and House Rabbit Society guidance) that can make it stricter, never softer. Tested on the worst case, the model wrongly saying "safe" to everything, over 135 foods:
