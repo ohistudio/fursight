@@ -183,6 +183,14 @@ namespace FurSight
 #endif
                 }
             if (showScan) StartCoroutine(Scan(shot));
+            // a cropped picture: the models answer in the crop's own 0-1, so its rays and depth samples go through the crop
+            if (crop is Rect c && (c.width < 0.999f || c.height < 0.999f))
+            {
+                var full = shot.rayFor;
+                shot.rayFor = (v, p) => full(c.position + Vector2.Scale(v, c.size), p);
+                for (int i = 0; i < shot.gridPoints.Length; i++)
+                    shot.gridPoints[i] = new Vector2((shot.gridPoints[i].x - c.x) / c.width, (shot.gridPoints[i].y - c.y) / c.height);
+            }
             return shot;
         }
 
