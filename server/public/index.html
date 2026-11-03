@@ -481,12 +481,18 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><button class="btn sun" id="roomLive">Check the room for dangers</button><input id="roomPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="roomOut"></div><div id="pooNow"></div><input id="pooPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="pooOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><button class="btn sun" id="roomLive">Check the room for dangers</button><input id="roomPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="roomOut"></div>
+    <div class="card stack" id="askCard"><b>Ask about ${esc(me.pets[0].name)}</b><div class="row" style="gap:8px"><input id="askQ" class="field" style="flex:1;min-width:0" placeholder="How is he today?" autocomplete="off"><button class="btn grape small" id="askGo" style="flex:none;width:auto">Ask</button></div>
+      <div class="chips">${["How is he today?", "Give him a new nickname", "Can he have banana?", "Has he eaten enough hay?"].map((q) => `<button class="chip pick" data-askq="${esc(q)}">${esc(q)}</button>`).join("")}</div><div id="askOut"></div></div><div id="pooNow"></div><input id="pooPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="pooOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("foodPhoto").onchange = async (e) => e.target.files[0] && foodCheck(await shrink(e.target.files[0]));
   document.getElementById("foodLive").onclick = foodCamera;
+  const goAsk = () => askAbout(document.getElementById("askQ").value.trim());
+  document.getElementById("askGo").onclick = goAsk;
+  document.getElementById("askQ").onkeydown = (e) => { if (e.key === "Enter") goAsk(); };
+  for (const b of document.querySelectorAll("[data-askq]")) b.onclick = () => { document.getElementById("askQ").value = b.dataset.askq; goAsk(); };
   document.getElementById("roomLive").onclick = () => liveCamera(`Point at the room where ${me.pets[0].name} plays`, "Check this room", "roomPhoto", "roomOut", (img) => roomCheck({ image: img }));
   document.getElementById("roomPhoto").onchange = async (e) => e.target.files[0] && roomCheck({ image: await shrink(e.target.files[0]) });
   document.getElementById("pooPhoto").onchange = async (e) => e.target.files[0] && pooCheck(await shrink(e.target.files[0]));
@@ -1645,6 +1651,22 @@ async function pooCheck(photo) {
 }
 
 // Room check: Muse Spark lists what matters, SAM outlines each; numbered rings on the picture, a list below
+// Ask: the same agent as Quest and the glasses. Muse Spark picks its tools (his cams, finding him, the tray, hay,
+// his diary and the safety list), then answers; the steps it took are shown under the answer.
+async function askAbout(question) {
+  const $o = document.getElementById("askOut"), name = me.pets[0].name;
+  if (!question) return toast("Type a question first");
+  $o.innerHTML = `<div class="center stack">${bean("thinking", 70)}<p class="muted">Looking at ${esc(name)}'s cams and diary…</p></div>`;
+  try {
+    const r = await api("/api/ask", { question, from: "phone", tz: -new Date().getTimezoneOffset() });
+    const v = ["safe", "caution", "toxic", "vet"].includes(r.verdict) ? r.verdict : null;
+    const steps = (r.steps || []).map((st) => `<li>${esc(st.label)}${st.detail ? ` <span class="muted">${esc(String(st.detail).slice(0, 80))}</span>` : ""}</li>`).join("");
+    $o.innerHTML = `<div class="stack pop" style="gap:8px">${v ? `<span class="chip t-${v}" style="justify-self:start">${esc(vword({ kind: "ask", verdict: v }) || v)}</span>` : ""}
+      <p style="font-size:17px;line-height:1.4">${esc(r.needs ? r.needs.ask : r.answer)}</p>
+      ${steps ? `<details open><summary class="muted" style="font-size:13px">How it decided (${(r.steps || []).length} steps, ${((r.ms || 0) / 1000).toFixed(1)} s)</summary><ol style="font-size:13px;margin:6px 0 0 18px;line-height:1.5">${steps}</ol></details>` : ""}</div>`;
+  } catch (e) { $o.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
+}
+
 async function roomCheck(req) {
   const $o = document.getElementById("roomOut"), name = me.pets[0].name;
   $o.innerHTML = `<div class="center stack">${bean("thinking", 80)}<p class="muted">Looking around the room…</p></div>`;
