@@ -95,6 +95,7 @@
   /* camera */
   .cam { position: relative; border-radius: 18px; overflow: hidden; background: #111; aspect-ratio: 1; }
   .cam video, .cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam [hidden] { display: none; }   /* (display: block above would otherwise keep the empty picture over a recording) */
   .live { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.55); color: #fff; font-size: 13px; padding: 4px 10px; border-radius: 999px; }
   .live b { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--coral); margin-right: 6px; }
 
