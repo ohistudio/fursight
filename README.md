@@ -6,7 +6,7 @@
 
 *Room check on Quest, the room remembering it next time, a food check on the glasses, a meal check on the phone, his week on Quest.*
 
-Watch: **[the film](https://fursight-seven.vercel.app/film/)** · [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
+Watch: **[the 3-minute film on YouTube](https://youtu.be/fLGHKN8H0hQ)** · [the film in your browser](https://fursight-seven.vercel.app/film/) · [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
 
 ## Meta Global AI Hackathon 2026
 
@@ -17,7 +17,7 @@ Watch: **[the film](https://fursight-seven.vercel.app/film/)** · [the intro](ht
   - **SAM 3.1**, the finder: outlines each hazard in a room check so Quest can pin a label on the real object, finds him across the pet cams, rings his droppings, and cuts out his stickers.
   - **Muse Voice Transcribe**, the ears: questions asked out loud on Quest and the phone.
 - **Bonus categories:** Best Agentic Use-Case · Best Creative Build
-- **Video:** [the film](https://fursight-seven.vercel.app/film/)
+- **Video:** [youtu.be/fLGHKN8H0hQ](https://youtu.be/fLGHKN8H0hQ) (3:00)
 - **Install on Quest:** [FurSight-Quest.apk](https://github.com/ohistudio/fursight/releases/latest) (sideload, then link it to the demo rabbit with a code)
 - **How to use it on each device:** [docs/how-to-use.md](docs/how-to-use.md) (web, Quest, iPhone, Ray-Ban Display glasses app and web app)
 - **Try it with no key or login:** [fursight-seven.vercel.app](https://fursight-seven.vercel.app), press **Try it with a demo rabbit** (on an iPhone, open it in Safari: food, room and poo checks all work there). To run your own: [Quickstart](#quickstart).
