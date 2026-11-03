@@ -148,7 +148,8 @@ namespace FurSight
             }
             if (inside != _poked) { _inSince = Time.time; _pokeDone = false; }
             _poked = inside;
-            if (inside != null && !_pokeDone && inside.Ready && Time.time >= _quietUntil && Time.time - _inSince >= Dwell)
+            // a finger already resting where a new button pops up (the photo you just framed) doesn't press it: it has to come in fresh
+            if (inside != null && !_pokeDone && inside.Ready && _inSince >= inside.ReadyAt && Time.time >= _quietUntil && Time.time - _inSince >= Dwell)
             {
                 _pokeDone = true; Consumed = true; Pressed(inside);
             }
@@ -328,6 +329,7 @@ namespace FurSight
         }
         float _readyAt;
         public bool Ready => Time.time >= _readyAt;
+        public float ReadyAt => _readyAt;
         public void Press() { Sfx.Press(transform.position); OnPress?.Invoke(); }
         void OnDestroy() => CardInput.Unregister(this);
     }

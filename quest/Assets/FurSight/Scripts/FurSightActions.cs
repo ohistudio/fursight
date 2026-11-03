@@ -107,7 +107,8 @@ namespace FurSight
             if (_mic.Recording) { _mic.Stop(); return; }   // pressing Ask again finishes the question
             if (Busy || !Ready()) return;
             Busy = true; _noting = false;
-            _askShot = about ?? PetCamera.Instance.Take();  // what you're looking at, for context
+            // what you're looking at: taken when you finish speaking, not now (now your palm and the menu fill the view)
+            _askShot = about;
             Sfx.Snap(InFront());
             if (about != null) _last = null;               // the photo's card stays up while you ask about it
             Clear();
@@ -127,6 +128,7 @@ namespace FurSight
                 Busy = false;
                 return;
             }
+            if (_askShot == null) _askShot = PetCamera.Instance.Take();
             _status = VerdictCard.Checking(InFront(0.12f), "Looking and thinking", "Thinking", Theme.Grape);
             try
             {
