@@ -28,17 +28,25 @@ namespace FurSight
 
         void Awake() => _instance = this;
 
+        // what the frame is for: a diary photo (the menu's Photo button), or someone else's shot (the poo check)
+        System.Action<Rect?, Vector3> _onShot;
+
         // the menu's Photo button
-        public static void Begin()
+        public static void Begin() => Begin(null, "Frame a photo");
+
+        // frame it with both hands; onShot gets the crop and where the frame was. False when hands aren't tracked
+        public static bool Begin(System.Action<Rect?, Vector3> onShot, string title)
         {
             var me = _instance;
             bool hands = Hands.Get(Hands.Left).tracked && Hands.Get(Hands.Right).tracked;
-            if (me == null || !hands) { FurSightActions.Instance?.TakePhoto(); return; }
+            if (me == null || !hands) { if (onShot == null) FurSightActions.Instance?.TakePhoto(); return false; }
             var head = Camera.main.transform;
             if (me._hint != null) me._hint.Dismiss();
+            me._onShot = onShot;
             me._armedUntil = Time.time + ArmedFor;
-            me._hint = VerdictCard.Verdict(head.position + head.forward * 0.5f + Vector3.up * 0.05f, "Frame a photo", "none",
+            me._hint = VerdictCard.Verdict(head.position + head.forward * 0.5f + Vector3.up * 0.05f, title, "none",
                 "Pinch with both hands, pull them apart to frame it, then let go.", null);
+            return true;
         }
 
         void Update()
@@ -149,8 +157,10 @@ namespace FurSight
                 if (max.x - min.x > 0.03f && max.y - min.y > 0.03f) crop = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
             }
             StartCoroutine(Flash(_corners[0], _corners[2]));
+            var onShot = _onShot; _onShot = null;
             End();
-            FurSightActions.Instance?.TakePhoto(crop, centre);
+            if (onShot != null) onShot(crop, centre);
+            else FurSightActions.Instance?.TakePhoto(crop, centre);
         }
 
         // the shutter: a white panel filling the frame, gone in a blink

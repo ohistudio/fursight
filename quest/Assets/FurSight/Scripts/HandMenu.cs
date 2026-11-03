@@ -61,7 +61,8 @@ namespace FurSight
                 if (_armed && _facingFor > 0.15f) { _armed = false; Open(PalmPoint(hand), true); }
                 return;
             }
-            if (!_onPalm || _panel == null) return;
+            if (_panel == null) { _open = false; _armed = true; return; }   // the panel went (a card cleared everything): ready to open again
+            if (!_onPalm) return;
             _awayFor = facing < closeFacing ? _awayFor + Time.deltaTime : 0f;
             if (_awayFor > 0.35f) { Close(); return; }
             if (hand.tracked) _panel.position = Vector3.Lerp(_panel.position, PalmPoint(hand), 1f - Mathf.Exp(-14f * Time.deltaTime));

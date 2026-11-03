@@ -34,7 +34,15 @@ namespace FurSight
             (a.GetComponent<PooCheck>() ?? a.gameObject.AddComponent<PooCheck>()).Run();
         }
 
-        public void Run() { if (!_busy) StartCoroutine(CountThenCheck()); }
+        // like a photo: frame his droppings with both hands and let go; only what's in the frame is checked.
+        // (Hands not tracked: the old countdown, the whole view.)
+        public void Run()
+        {
+            if (_busy) return;
+            Clear();
+            if (PhotoFrame.Begin((crop, at) => { _busy = true; _ = Check(crop); }, "Frame his droppings")) return;
+            StartCoroutine(CountThenCheck());
+        }
 
         IEnumerator CountThenCheck()
         {
@@ -51,11 +59,11 @@ namespace FurSight
             _ = Check();
         }
 
-        async Task Check()
+        async Task Check(Rect? crop = null)
         {
             var cam = PetCamera.Instance;
             if (cam == null || !cam.Ready) { Debug.LogWarning("[FurSight] camera not ready"); if (_checking != null) _checking.Dismiss(); _busy = false; return; }
-            var shot = cam.Take();
+            var shot = cam.Take(crop);
             var head = Camera.main.transform;
             Sfx.Snap(head.position + head.forward * 0.3f);
             StartCoroutine(Juice.Buzz(0.2f, 0.04f));
