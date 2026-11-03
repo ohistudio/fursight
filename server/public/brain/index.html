@@ -1,0 +1,54 @@
+<!doctype html><html><head><meta charset="utf-8"><title>FurSight brain</title>
+<style>
+@font-face{font-family:N;src:url(Nunito-800.ttf);font-weight:800}@font-face{font-family:N;src:url(Nunito-900.ttf);font-weight:900}
+:root{--ink:#2B2A33;--muted:#8A8794;--fern:#3DBE6B;--fernl:#2C9A52;--sun:#FFB627;--sunl:#D9900A;--coral:#FF4D5E;--corall:#D63446;--sky:#2FA8F5;--skyl:#1C84C9;--grape:#9B6CF0;--grapel:#7A4DD0;--card:#fff;--lip:#E4DFD6;--bg:#FFF6E9}
+*{box-sizing:border-box;margin:0}body{width:1600px;height:860px;background:var(--bg);font-family:N,sans-serif;color:var(--ink);overflow:hidden;position:relative}
+h1{position:absolute;left:0;right:0;top:34px;text-align:center;font-weight:900;font-size:46px;letter-spacing:-.5px}
+h1 small{display:block;font-size:22px;font-weight:800;color:var(--muted);letter-spacing:0;margin-top:6px}
+.col{position:absolute;top:170px;width:330px}.col h2{font-weight:900;font-size:24px;margin-bottom:4px}.col p.k{font-weight:800;font-size:16px;color:var(--muted);margin-bottom:14px}
+.left{left:46px}.right{right:46px}
+.tile{background:var(--card);border-radius:22px;box-shadow:0 7px 0 var(--lip);padding:10px;margin-bottom:22px;display:flex;gap:12px;align-items:center}
+.tile img{width:118px;height:84px;object-fit:cover;border-radius:14px;flex:none}
+.tile b{font-weight:900;font-size:19px;display:block}.tile span{font-weight:800;font-size:14px;color:var(--muted);line-height:1.25;display:block}
+.tile span.pill{color:#fff;display:inline-block;width:auto;line-height:1.3;}.pill{display:inline-block;font-weight:900;font-size:13px;color:#fff;border-radius:99px;padding:3px 10px;margin-bottom:4px}
+.brain{position:absolute;left:470px;top:182px;width:660px;background:#fff;border-radius:44px;box-shadow:0 12px 0 var(--lip);padding:34px 40px}
+.brain .head{display:flex;align-items:center;gap:18px;margin-bottom:22px}.brain .head b{font-weight:900;font-size:38px;display:block}.brain .head span{font-weight:800;font-size:18px;color:var(--muted)}
+.m{border-radius:20px;padding:14px 18px;margin-bottom:14px;color:#fff;display:flex;align-items:center;gap:14px}
+.m b{font-weight:900;font-size:24px;min-width:200px}.m span{font-weight:800;font-size:16px;opacity:.95;line-height:1.25}
+.grape{background:var(--grape);box-shadow:0 6px 0 var(--grapel)}.sky{background:var(--sky);box-shadow:0 6px 0 var(--skyl)}.sun{background:var(--sun);box-shadow:0 6px 0 var(--sunl)}
+.fern{background:var(--fern);box-shadow:0 6px 0 var(--fernl)}.ink{background:var(--ink);box-shadow:0 6px 0 #141319}
+svg.arrows{position:absolute;inset:0;pointer-events:none}
+.lab{position:absolute;font-weight:900;font-size:16px;background:#fff;border-radius:99px;padding:5px 14px;box-shadow:0 4px 0 var(--lip);white-space:nowrap}
+.foot{position:absolute;bottom:26px;left:0;right:0;text-align:center;font-weight:800;font-size:17px;color:var(--muted)}
+</style></head><body>
+<h1>One brain, two kinds of input<small>Passive data from his cams, collected all day while you're not looking. Active data from whatever device you pick up.</small></h1>
+<div class="col left"><h2>Passive</h2><p class="k">always watching, no screen needed</p>
+ <div class="tile"><img src="img/cage.jpg"><div><span class="pill" style="background:var(--fern)">Cage cam</span><b>Litter tray</b><span>Every visit, from the side</span></div></div>
+ <div class="tile"><img src="img/top.jpg"><div><span class="pill" style="background:var(--fern)">Top cam</span><b>Hay, food, water</b><span>The whole cage, from above</span></div></div>
+ <div class="tile"><img src="img/roam.jpg"><div><span class="pill" style="background:var(--fern)">Free-roam cam</span><b>His day</b><span>Finds him, turns and zooms</span></div></div>
+ <div class="tile"><img src="/kit/tray.jpg"><div><span class="pill" style="background:var(--muted)">Concept</span><b>FurSight Tray</b><span>Weighs him every visit</span></div></div>
+</div>
+<div class="brain"><div class="head"><div id="bean"></div><div><b>FurSight brain</b><span>on the Meta Model API</span></div></div>
+ <div class="m grape"><b>Muse Spark</b><span>the agent: picks its tools, checks food, reads his hay, writes his day</span></div>
+ <div class="m sky"><b>SAM 3.1</b><span>the finder: him on every cam, hazards, droppings, stickers</span></div>
+ <div class="m sun"><b>Voice Transcribe</b><span>the ears: questions asked out loud</span></div>
+ <div class="m fern"><b>Safety list</b><span>135 foods; can only make a verdict stricter, never softer</span></div>
+ <div class="m ink"><b>His memory</b><span>diary, rooms, treats, vet records, his week</span></div>
+</div>
+<div class="col right"><h2>Active</h2><p class="k">when you check, ask or look</p>
+ <div class="tile"><img src="img/quest.jpg"><div><span class="pill" style="background:var(--grape)">Meta Quest 3</span><b>Labels on real things</b><span>Food, rooms, his poo</span></div></div>
+ <div class="tile"><img src="img/glasses.jpg"><div><span class="pill" style="background:var(--grape)">Ray-Ban Display</span><b>Wherever you are</b><span>"How is he?" and his cam</span></div></div>
+ <div class="tile"><img src="img/phone.jpg" style="object-position:top"><div><span class="pill" style="background:var(--grape)">iPhone</span><b>Check a whole plate</b><span>Alerts and stickers</span></div></div>
+ <div class="tile"><img src="img/web.jpg" style="object-position:top"><div><span class="pill" style="background:var(--grape)">Web</span><b>His diary and stats</b><span>Any browser</span></div></div>
+</div>
+<svg class="arrows" viewBox="0 0 1600 860"><defs><marker id="h" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="26" refX="10" refY="13" orient="auto"><path d="M0,2 L24,13 L0,24 z" fill="#2B2A33"/></marker></defs>
+ <path d="M384 470 C 420 470, 425 470, 452 470" stroke="#3DBE6B" stroke-width="10" fill="none" stroke-linecap="round" marker-end="url(#h)"/>
+ <path d="M1216 420 C 1185 420, 1175 440, 1148 440" stroke="#9B6CF0" stroke-width="10" fill="none" stroke-linecap="round" marker-end="url(#h)"/>
+ <path d="M1140 600 C 1170 600, 1180 640, 1206 640" stroke="#2FA8F5" stroke-width="10" fill="none" stroke-linecap="round" marker-end="url(#h)"/>
+</svg>
+<div class="lab" style="left:376px;top:420px;color:var(--fernl)">his day</div>
+<div class="lab" style="left:1090px;top:368px;color:var(--grapel)">photos, questions, voice</div>
+<div class="lab" style="left:1080px;top:662px;color:var(--skyl)">verdicts, answers, alerts</div>
+<div class="foot">Everything simulated is labelled: the Tray is a concept, its scale simulated in this build. The cams are real.</div>
+<script src="/bean.js"></script><script>document.getElementById("bean").innerHTML = bean("idle", 96);</script>
+</body></html>
