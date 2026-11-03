@@ -66,7 +66,7 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 
 ![The free-roam cam: SAM finds him, the cam turns and zooms in 2.9x, then follows him into his bed](docs/examples/sam-tracking-free-roam.jpg)
 
-**The free-roam cam follows him.** SAM finds him, the OBSBOT turns and zooms in, then keeps him in frame.
+**The free-roam cam follows him.** SAM finds him, the OBSBOT Tiny 2 webcam turns and zooms in, then keeps him in frame.
 
 ![Six of his stickers, all cut out by SAM from the pet cam](docs/examples/sam-stickers.jpg)
 
@@ -162,7 +162,7 @@ No kit or rabbit needed to look around: open [fursight-seven.vercel.app](https:/
 3. **iPhone** (Today, Ask, Check, the Ray-Ban Display app through the Wearables Device Access Toolkit): `cd ios && xcodegen generate`, open `FurSight.xcodeproj`, set your team and run on a phone. It links to your household with a 4-letter code (web app, Devices tab).
 4. **Meta Quest 3**: open `quest/` in Unity 6000.3.17f1, create `Assets/FurSight/Resources/fursight_local.json` with `{"server": "<your server URL>", "token": "<FURSIGHT_APP_TOKEN>"}`, then build for Android. On launch it shows a code to link it.
 5. **Ray-Ban Display**: the glasses web app at `/glasses/`, or the iPhone app's Glasses tab (Meta AI app, developer mode).
-6. **Pet cams**: any webcam or old phone; open the web app's Pet cam tab and choose **Use this device as a pet cam**.
+6. **Pet cams**: any webcam or old phone; open the web app's Pet cam tab and choose **Use this device as a pet cam**. Built and filmed with an **OBSBOT Tiny 2** (a pan, tilt and zoom webcam: FurSight's free-roam cam turns and zooms to follow him) and an iPhone above his cage.
 7. **Tests and benchmark**: `npm test` (tests in [`tests/`](tests/)) and `npm run bench` (rebuilds [docs/benchmark.md](docs/benchmark.md) from [`eval/`](eval/)).
 
 Or run the server in Docker: `docker build -t fursight .` then `docker run -p 3030:3030 -e MODEL_API_KEY=... -e FURSIGHT_APP_TOKEN=... -e HUB_KEY=... fursight`.
