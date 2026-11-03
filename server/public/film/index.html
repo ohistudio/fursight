@@ -103,9 +103,9 @@
   .vids .row { display: grid; gap: 2%; justify-content: center; }
   .vids .row[style*="(1,"] { grid-template-columns: min(100%, 72vh * 16 / 9 * .82) !important; }
   .vid { position: relative; overflow: hidden; }
-  .vid .chip3 { position: absolute; right: 3%; top: 4%; z-index: 2; font: 900 clamp(8px, .9vw, 15px) Nunito, sans-serif; color: #FFFFFF; background: rgba(47,168,245,.92); padding: .3em .8em; border-radius: 99px; white-space: nowrap; max-width: 92%; overflow: hidden; text-overflow: ellipsis; }
+  .vid .chip3 { position: absolute; right: 3%; top: 4%; z-index: 2; font: 900 clamp(8px, .9vw, 15px) Nunito, sans-serif; color: #FFFFFF; background: rgba(47,168,245,.92); padding: .3em .8em; border-radius: 14px; max-width: 64%; line-height: 1.2; text-align: right; }
   #cold .prov { position: absolute; right: 3%; top: 5%; font: 800 clamp(10px, 1.15vw, 20px) Nunito, sans-serif; color: #FFFFFF; background: rgba(43,42,51,.72); padding: .35em .9em; border-radius: 99px; }
-  .vid .chip2 { position: absolute; left: 3%; bottom: 4%; z-index: 2; font: 900 clamp(9px, 1vw, 17px) Nunito, sans-serif; color: #FFFFFF; background: rgba(43,42,51,.72); padding: .3em .8em; border-radius: 99px; white-space: nowrap; }
+  .vid .chip2 { position: absolute; left: 3%; bottom: 4%; z-index: 2; font: 900 clamp(9px, 1vw, 17px) Nunito, sans-serif; color: #FFFFFF; background: rgba(43,42,51,.72); padding: .3em .8em; border-radius: 14px; max-width: 90%; line-height: 1.2; }
   .vid img.still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
   .vid video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
   .vid { aspect-ratio: 16 / 9; background: #FFFFFF; border-radius: 28px; box-shadow: 0 8px 0 rgba(43,42,51,.10); display: grid; place-content: center; text-align: center; padding: 4%; }
@@ -249,7 +249,7 @@ const pop = (r) => tween(450, r, (k) => { bun.size = k < .7 ? (k / .7) * 1.08 : 
 
 // ---------------------------------------------------------------- the story
 // the cold open: the best real moments first, a quick cut each, before the story (each: clip, from, seconds, device)
-const COLD = [["3a-quest-food-sports-drink-6s.mp4", 0, 1.9, "Meta Quest"], ["1-quest-room-check-11s.mp4", 3.9, 2.0, "Meta Quest"],
+const COLD = [["pumpkin-cold.mp4", 0.3, 2.2, "Meta Quest"], ["3a-quest-food-sports-drink-6s.mp4", 0, 1.9, "Meta Quest"], ["1-quest-room-check-11s.mp4", 3.9, 2.0, "Meta Quest"],
   ["11-phone-salad-check.mp4", 3.9, 1.9, "Phone"], ["rb-food-sunflower.mp4", 3.9, 1.9, "Ray-Ban Display · DAT app"], ["rb-cam-traffic.mp4", 2.6, 1.8, "Ray-Ban Display · web app"]];
 // loaded as the page opens, so they're ready when it plays
 function coldLoad() {
@@ -263,10 +263,16 @@ const MODEL = {
   "1-quest-room-check-11s.mp4": "Muse Spark names → SAM 3.1 outlines · 12.7 s", "1-quest-room-check-9s.mp4": "Muse Spark names → SAM 3.1 outlines · 12.7 s",
   "10-phone-room-check-tall.mp4": "Muse Spark → SAM 3.1", "room-check.jpg": "Muse Spark → SAM 3.1", "2-quest-room-remembers-7s.mp4": "Spatial anchors + Muse Spark",
   "rb-ask-bowling.mp4": "Muse Spark agent · 3.2 s", "poo-check.jpg": "SAM 3.1 + Muse Spark · 7.2 s",
-  "roam-finds-him.mp4": "SAM 3.1 finds him · 1.1 s", "sam-sticker-flop.mp4": "SAM 3.1 cut-out · 1.1 s", "roam-day-grid.mp4": "Muse Spark: what he's doing", "tray-visit-tall.mp4": "SAM 3.1 tracks him · 1.1 s", "cam-cage-wide.mp4": "SAM 3.1 tracks him", "cam-top-tall.mp4": "SAM 3.1 tracks him", "cam-roam-wide.mp4": "SAM 3.1 tracks him", "hay-top.mp4": "Muse Spark reads his hay", "hay-side.mp4": "Muse Spark reads his hay",
+  "roam-finds-him.mp4": "SAM 3.1 finds him · 1.1 s", "sam-sticker-flop.mp4": "SAM 3.1 cut-out · 1.1 s", "roam-day-grid.mp4": "Muse Spark: what he's doing", "poo-check-quest.mp4": "SAM 3.1 + Muse Spark · 7.2 s", "poo-saved.jpg": "SAM 3.1 rings each one", "nickname-saved.jpg": "SAM 3.1 finds him", "banana-check.mp4": "Muse Spark + safety list · 5.1 s", "pumpkin-boy.mp4": "Voice Transcribe → Muse Spark · 3.2 s", "sticker-result.mp4": "Muse Spark note, SAM 3.1 sticker", "tray-visit-tall.mp4": "SAM 3.1 tracks him · 1.1 s", "cam-cage-wide.mp4": "SAM 3.1 tracks him", "cam-top-tall.mp4": "SAM 3.1 tracks him", "cam-roam-wide.mp4": "SAM 3.1 tracks him", "hay-top.mp4": "Muse Spark reads his hay", "hay-side.mp4": "Muse Spark reads his hay",
   "4-quest-his-week-9s.mp4": "Muse Spark writes his week", "12-phone-wrapped-tall.mp4": "Muse Spark writes his week", "9-phone-flop-alert.mp4": "Muse Spark spots it, SAM 3.1 cuts him out",
   "8-web-vet-papers.mp4": "Muse Spark reads the letter",
 };
+// one clip full screen (the ending: him eating his banana), using the cold open's frame
+async function fullClip(clip, ms, dev, r) {
+  const el = $("cold");
+  el.innerHTML = `<video src="clips/${clip}" muted playsinline autoplay class="on"></video><div class="dev">${dev}</div>`;
+  el.classList.add("on"); await wait(ms, r); el.classList.remove("on"); await wait(250, r); el.innerHTML = "";
+}
 async function coldOpen(r) {
   const el = $("cold");
   coldLoad();
@@ -293,7 +299,7 @@ async function story(r) {
 
   PACE = 1;
   await coldOpen(r);
-  PACE = 0.6;
+  PACE = 0.55;
   // open close up on him, then pull back to the room
   closeUp(true); music(true); sfx("title", .6);
   await breathe(600, r);
@@ -352,21 +358,21 @@ async function story(r) {
   // the real thing: placeholders for the footage, in order. Each: a title, the boxes (one per clip, side by
   // side: [label, what to film]), seconds, and the caption over it. null = the Muse Spark call.
   const shots = [
-    ["His three pet cams", [["Cage cam · OBSBOT", "Side view: he hops into his litter tray", "cam-cage-wide.mp4"], ["Top cam · iPhone", "The same moment from above: the whole cage", "cam-top-tall.mp4", null, true], ["Free-roam cam · OBSBOT", "Flopped out by his bowl", "cam-roam-wide.mp4"]], 6000, "Three pet cams, everyday webcams and an old phone, watch him while you're not on your devices. FurSight keeps learning his day.", "1fr .45fr 1fr"],
+    ["His three pet cams", [["OBSBOT Tiny 2 webcam", "The cage cam, stuck to the side of his cage", "cage-obsbot-tall.mp4", null, true], ["Cage cam · OBSBOT", "Side view: he hops into his litter tray", "cam-cage-wide.mp4"], ["Top cam · iPhone", "The same moment from above: the whole cage", "cam-top-tall.mp4", null, true], ["Free-roam cam · OBSBOT", "Flopped out by his bowl", "cam-roam-wide.mp4"]], 6000, "Three pet cams, everyday webcams and an old phone, watch him while you're not on your devices. FurSight keeps learning his day.", ".42fr 1fr .42fr 1fr"],
     ["The free-roam cam finds him", [["OBSBOT Tiny 2 webcam", "The free-roam cam: an everyday webcam on his floor", "phone-obsbot-tall.mp4", null, true], ["Free-roam cam", "SAM 3.1 finds him and the cam turns and zooms in", "roam-finds-him.mp4"]], 4500, "An everyday webcam on his floor. SAM 3.1 finds him and the cam follows.", ".5fr 1fr"],
     ["His day, from the free-roam cam", [["What it logged", "Eating hay, drinking, grooming, a flop: his day, written for you", "roam-day-grid.mp4"], ["SAM 3.1", "He flops, and SAM cuts him out as a sticker", "sam-sticker-flop.mp4"]], 4500, "It logs his day, and a flop becomes a sticker.", null, true],
     ["On the FurSight Tray", [["Top cam", "He hops into his litter tray: SAM 3.1 tracks him, the visit is logged (the scale is simulated in this build)", "tray-visit-tall.mp4", null, true], ["The FurSight Tray", "A concept render: a litter tray with a scale and a camera looking down", "/kit/tray.jpg"]], 6000, "He hops on the tray: the visit logged, and with the FurSight Tray, weighed.", ".5fr 1fr"],
-    ["His hay, from above and the side", [["OBSBOT Tiny 2 webcam", "The cage cam: stuck to the side of his cage", "cage-obsbot-tall.mp4", null, true], ["Top cam", "His hay rack, half full, then low", "hay-top.mp4"], ["Cage cam", "The same moments from the side", "hay-side.mp4"]], 5000, "Two cams, one hay rack: FurSight sees it going down and tells you to top it up. Less hay is the first sign.", ".45fr 1fr 1fr"],
+    ["His hay, from above and the side", [["Top cam", "His hay rack, half full, then low", "hay-top.mp4"], ["Cage cam", "From the side: the rack goes from 45% to low", "hay-side.mp4"]], 5000, "Two cams, one hay rack: FurSight sees it going down and tells you to top it up. Less hay is the first sign."],
     ["Food check, wherever you are", [["Ray-Ban Display · DAT app", "Out on a walk: a sunflower, and the verdict on the glasses", "rb-food-sunflower.mp4"], ["Phone", "The app's Check on a meal: kimchi, pickles and salad, each with its verdict", "11-phone-salad-check.mp4"]], 6000, "Glasses or phone: can he have it? Tested on 41 real photos, every toxic food caught."],
     null,
     "many",
-    ["Wherever you are", [["Ray-Ban Display · web app", "Mid-game at the bowling alley: \"How is he?\", answered on the glasses", "rb-ask-bowling.mp4"], ["Ray-Ban Display · web app", "At the traffic lights: his pet cam, live on the glasses", "rb-cam-traffic.mp4"], ["Meta Quest", "In a café: his pet cam live in a window on Quest"]], 7000, "Wherever you are, whatever you're doing, check how he is: on your glasses or your Quest."],
-    ["Room check, on every device", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"], ["Phone", "The app's Check on the desk: numbered hazards, a card for each", "10-phone-room-check-tall.mp4", false, true]], 11000, "Check the room on Quest or your phone. Muse Spark finds each hazard, and on Quest the headset's depth pins it on the real thing.", "2fr .62fr"],
+    ["Wherever you are", [["Ray-Ban Display · web app", "Mid-game at the bowling alley: \"How is he?\", answered on the glasses", "rb-ask-bowling.mp4"], ["Ray-Ban Display · web app", "At the traffic lights: his pet cam, live on the glasses", "rb-cam-traffic.mp4"], ["Meta Quest", "Out for the evening: his pet cam live in a window on Quest", "quest-webcam.mp4"]], 6000, "Wherever you are, whatever you're doing, check how he is: on your glasses or your Quest."],
+    ["Room check, on every device", [["Meta Quest", "Look round the room; red cards on what he could chew, green on what's good for him", "1-quest-room-check-11s.mp4"], ["Phone", "The app's Check on the desk: numbered hazards, a card for each", "10-phone-room-check-tall.mp4", false, true]], 9500, "Check the room on Quest or your phone. Muse Spark finds each hazard, and on Quest the headset's depth pins it on the real thing.", "2fr .62fr"],
     ["Meta Quest: the room remembers", [["Meta Quest", "Next launch: 'From last time, did you fix these?', a Still there? card on each hazard; move the deodorant out of reach, press Sorted it", "2-quest-room-remembers-7s.mp4"]], 7000, "Each hazard is saved as a spatial anchor. Next time, FurSight remembers where it was and asks if you fixed it."],
-    ["Meta Quest: food in hand", [["Meta Quest", "Sports drink: hold it up, the verdict on your hand", "3a-quest-food-sports-drink-6s.mp4"], ["Meta Quest", "Chicken breast: hold it up, the verdict on your hand", "3b-quest-food-chicken-6s.mp4"]], 6000, "On Quest, hold food up, and the answer sits right on your hand."],
-    ["Meta Quest: ask out loud", [["Meta Quest", "Ask a question out loud with the mic; Muse Spark's answer on a card (keep the sound)", null, true]], 7000, "Ask out loud. FurSight hears you, and Muse Spark answers about him."],
-    ["Meta Quest: make your own stickers", [["Meta Quest", "Pinch to take a photo of Xiaosi; the polaroid, then his sticker pops onto its corner"]], 6000, "Snap a photo of him to make your own stickers. Your hands stay in front of it all, with depth occlusion.", null, true],
-    ["Meta Quest: the poo check", [["Meta Quest", "Today's to-dos pop up; press Poo check now, look at a few of his droppings: a dot on each one, and the card compares with last time"]], 6000, "Today's to-dos pop up. The poo check puts a dot on every dropping, and compares with last time."],
+    ["Meta Quest: can he have banana?", [["Meta Quest", "Hold it up: \"Small treat only, one thin slice\"", "banana-check.mp4"], ["Meta Quest", "So he gets a little piece", "banana-feed.mp4"]], 6000, "Can he have banana? A small treat, so he gets a little piece. FurSight remembers he had some today."],
+    ["Meta Quest: ask out loud", [["Meta Quest", "Asked out loud for a new nickname; Muse Spark looks at him and answers on a card", "pumpkin-boy.mp4"], ["Saved to his diary", "The picture it looked at: SAM 3.1 found him, and the answer", "nickname-saved.jpg"]], 6000, "Ask out loud, about anything. \"Pumpkin Boy\", since he's in his pumpkin house.", "1.6fr 1fr"],
+    ["Meta Quest: make your own stickers", [["Meta Quest", "Pinch with both hands and pull: a camera frame around him", "sticker-frame.mp4"], ["Meta Quest", "The polaroid, then his sticker pops onto its corner", "sticker-result.mp4"]], 7000, "Snap a photo of him to make your own stickers. Your hands stay in front of it all, with depth occlusion.", null, true],
+    ["Meta Quest: the poo check", [["Meta Quest", "Frame his droppings with both hands: SAM 3.1 puts a dot on each one, and the card compares with last time", "poo-check-quest.mp4"], ["Saved to his diary", "The picture it saved: SAM 3.1 rings every dropping", "poo-saved.jpg"]], 6500, "Frame his droppings with both hands. SAM finds every one, and Muse Spark compares with last time.", "1.6fr 1fr"],
     ["His week, wrapped", [["Meta Quest", "Open His week; swipe through Wrapped with your hand, stickers popping out, then his week card", "4-quest-his-week-9s.mp4"], ["Phone", "His week, wrapped, on the phone: the same story, slide by slide", "12-phone-wrapped-tall.mp4", false, true]], 9000, "His week, wrapped, on Quest and your phone. Swipe through it with your hand.", "2fr .62fr"],
     ["Phone: a sticker alert", [["Phone", "A notification with his sticker when he flops", "9-phone-flop-alert.mp4"]], 5500, "Scrolling Instagram? When he flops, you get his sticker.", null, true],
     ["The app: diary and stats", [["Web app", "Scroll the diary (marked-up check photos), then weight, tray visits, hay, his week", "7-web-diary-stats-6s.mp4"]], 6000, "It all lands in his diary: what he ate, his weight, his tray, his week."],
@@ -395,7 +401,7 @@ async function story(r) {
     <div class="model" style="border-top-color:#FFB23F"><b>Muse Voice Transcribe · the ears</b><p>Spoken questions and notes on Quest</p></div>
     <div class="foot">All through the Meta Model API · Tested on 41 real photos and 135 foods: <b style="color:var(--ink)">zero toxic foods called safe</b> · room check 12.7 s, food 5.1 s, stickers 1.1 s</div></div>`);
   await wait(300, r); await caption("Muse Spark is the agent. SAM 3.1 is the finder. Tested on 135 foods: zero toxic foods called safe.", 3800, r);
-  extra(""); await wait(500, r);
+  await wait(200, r);   // straight to the next slide (clearing it first flashed the story behind)
 
   sfx("whoosh", .6);
   extra(`<div class="devs" style="grid-template-columns:repeat(2,1fr);width:54%"><h2>Where it could go next</h2>
@@ -414,7 +420,7 @@ async function story(r) {
   await wait(300, r); await caption("Next, beyond rabbits: reptiles, amphibians, cats and dogs. And toddlers, who also chew cables.", 4600, r);
   $("capText").classList.remove("on");
   extra(""); pose("stretch");
-  await Promise.all([breathe(2600, r), caption("Treat them. Without the worry.", 2600, r)]);
+  await Promise.all([breathe(3400, r), fullClip("banana-eat.mp4", 3400, "Meta Quest", r), caption("Treat them. Without the worry.", 3200, r)]);
   $("capText").classList.remove("on");
   music(false); sfx("end", .7);
   card(`<div class="plate"><h1>FurSight</h1><p>Spoil them. Worry less.</p></div>`);
@@ -463,7 +469,7 @@ async function manyJobs(r) {
   const jobs = [
     ["Room check", "Muse Spark lists what he'd chew, and what's good for him; SAM 3.1 rings each one", ["Muse Spark", "SAM 3.1"], "Quest or web room check, the rings appearing", "room-check.jpg"],
     ["Poo check", "Muse Spark judges shape, size and colour next to the last check's photo", ["Muse Spark", "SAM 3.1"], "Today's droppings beside last time's", "poo-check.jpg"],
-    ["Ask, the agent", "Muse Spark picks its tools: switches cams, finds him, reads the diary and the safety list", ["Muse Spark", "SAM 3.1"], "An Ask answer with its steps: pet cam, find, diary"],
+    ["Ask, the agent", "Muse Spark picks its tools: switches cams, finds him, reads the diary and the safety list", ["Muse Spark", "SAM 3.1"], "An Ask answer with its steps: pet cam, find, diary", "ask-steps.jpg"],
     ["Vet papers", "Muse Spark reads a photo or PDF of a vet letter into his history: the date, what was done, medicines, follow-ups", ["Muse Spark"], "Upload a vet PDF; it lands as a record in the diary", "8-web-vet-papers.mp4"],
   ];
   extra(`<div class="many"><h2>One model, many jobs</h2>${jobs.map(([t, d, m, f, pic], i) => `<div class="job" id="j${i}"><div class="vid"><div><b>VID HERE</b><small>${f}</small></div>${pic && /\.mp4$/.test(pic) ? `<video src="clips/${pic}" muted autoplay playsinline onerror="this.remove()"></video>` : pic ? `<div class="scan"><img class="base" src="clips/${pic}" alt="" onerror="this.parentNode.remove()"><img class="top" src="clips/${pic}" alt=""><i></i></div>` : ""}</div>

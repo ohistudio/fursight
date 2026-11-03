@@ -70,6 +70,11 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 
 ![Six of his stickers, all cut out by SAM from the pet cam](docs/examples/sam-stickers.jpg)
 
+| | |
+|---|---|
+| ![The saved poo check: every dropping ringed, "Poo check: looks healthy"](docs/examples/sam-poo-saved.jpg) | ![The saved Ask: SAM's box on him in his pumpkin bed, and the Pumpkin Boy answer](docs/examples/sam-nickname-saved.jpg) |
+| **The picture each check saves.** On Quest you see dots on the droppings; the diary keeps the photo with SAM's rings on every one. | **What Ask looked at.** SAM found him in the photo; the answer and your question are saved with it. |
+
 **Muse Spark, the agent**
 
 <img src="docs/examples/spark-ask-quest-pumpkin-boy.jpg" width="480" alt="Quest: Muse Spark's answer card, 'How about Pumpkin Boy for the wee man, since he's snuggled in his little orange pumpkin house munching away?', with Xiaosi eating banana in front of it">
