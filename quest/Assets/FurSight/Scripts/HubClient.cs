@@ -73,7 +73,7 @@ namespace FurSight
             string code = (string)s["code"], nonce = (string)s["nonce"];
             var head = Camera.main.transform;
             _codeCard = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Link to FurSight", "none",
-                $"In the FurSight app on your phone, open Devices, tap Link a device and enter\n<size=180%><color=#2B2A33>{string.Join(" ", code.ToCharArray())}</color></size>", null).TagAlong();
+                $"On your phone or laptop, open <b>fursight-seven.vercel.app</b>, press <b>Try it with a demo rabbit</b> (or use your own household), then <b>Devices</b>, and enter\n<size=180%><color=#2B2A33>{string.Join(" ", code.ToCharArray())}</color></size>", null).TagAlong();
             _codeCard.KeepOpen();
             while (true)
             {

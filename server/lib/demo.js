@@ -141,11 +141,12 @@ async function makeDemo({ pic = null, stickers = [], tz = 0, into = null } = {})
   // ---- moments, checks and care across the fortnight
   // his nicknames in the moments, as the pet cam would write them (the demo rabbit's, or yours)
   const nk = (i) => NICKS.length ? NICKS[i % NICKS.length] : NAME;
-  const momentDays = [[6, 11, `${nk(0)} is having a big flop`], [5, 15, `${nk(1)} is stretched out like a croissant`], [4, 9, `${nk(2)} is loafing like a pro`],
-    [3, 14, `${nk(0)} flopped right by the hay`], [2, 17, `${nk(1)} is having a big stretch`], hr > 9 ? [0, Math.min(hr - 0.2, 13.3), `${nk(2)} is having a big flop`] : [1, 16, `${nk(2)} is having a big flop`]];
-  momentDays.forEach(([d, h, title], i) => {
+  // each with its own sticker (routes/demo.js passes them in this order: flop, hop, loaf, by the hay, grooming, grooming)
+  const momentDays = [[6, 11, `${nk(0)} is having a big flop`, "flop"], [5, 15, `${nk(1)} is off on a little hop`, "stretched"], [4, 9, `${nk(2)} is loafing like a pro`, "loaf"],
+    [3, 14, `${nk(0)} is stretched out by the hay`, "stretched"], [2, 17, `${nk(1)} is having a good groom`, "grooming"], hr > 9 ? [0, Math.min(hr - 0.2, 13.3), `${nk(2)} is washing his face`, "grooming"] : [1, 16, `${nk(2)} is washing his face`, "grooming"]];
+  momentDays.forEach(([d, h, title, pose], i) => {
     const st = stickers.length ? stickers[i % stickers.length] : null;
-    go({ kind: "moment", title, at: at(d, h), ...(st || pic ? { image: st || pic } : {}), extra: { pose: i % 2 ? "stretched" : "flop", sticker: !!st } });
+    go({ kind: "moment", title, at: at(d, h), ...(st || pic ? { image: st || pic } : {}), extra: { pose, sticker: !!st } });
   });
   await go({ kind: "droppings", title: "Droppings check", note: "38 found. Round, even, a good size. A healthy tray.", verdict: "safe", at: at(1, 9), extra: { count: 38, verdict: "normal" } });
   if (into) { await Promise.all(inflight); return { token, entries: n }; }   // just the stats; the rest is a demo household's

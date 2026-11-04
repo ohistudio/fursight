@@ -196,6 +196,7 @@
   .note { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 2px; margin: 6px 4px -4px; }
   .note svg { width: 54px; height: 50px; color: var(--grape-lip); }
   .note.small .hand { font-size: 25px; }
+  .note.left { grid-template-columns: auto 1fr; } .note.left svg { transform: scaleX(-1); margin-left: 34px; }
   .tipsoff { justify-self: end; background: none; border: 0; color: var(--muted); font: 800 13px Nunito, sans-serif; text-decoration: underline; padding: 2px; }
   /* the three quick ones, one tap each */
   .quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -319,7 +320,7 @@ function header() {
 // notes for judges in the demo: handwriting and an arrow down at what to press ("hide tips" turns them off)
 const ARROW = `<svg viewBox="0 0 54 50" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6c22 2 34 14 36 36"/><path d="M33 34l9 9 7-11"/></svg>`;
 const tipsOn = () => isDemo() && store.get("fs.tips") !== "0";
-const note = (text, small = false) => `<div class="note pop${small ? " small" : ""}"><span class="hand">${text}</span>${ARROW}</div>`;
+const note = (text, small = false, left = false) => `<div class="note pop${small ? " small" : ""}${left ? " left" : ""}">${left ? ARROW : ""}<span class="hand">${text}</span>${left ? "" : ARROW}</div>`;
 const CAMERA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>`;
 const SPARKLE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/><path d="M19 3v4M17 5h4"/></svg>`;
 
@@ -530,7 +531,7 @@ let diaryShow = "all";
 async function today() {
   const tips = tipsOn();
   $app.innerHTML = `<div class="stack">${header()}
-    ${tips ? `<button class="tipsoff" id="tipsOff">Hide tips</button>${note("Try these: tap one, then take a photo of any food or room (or choose one)", true)}` : ""}
+    ${tips ? `<button class="tipsoff" id="tipsOff">Hide tips</button>${note("Tap here, then take a photo of any food (or choose one). Rooms work the same.", true, true)}` : ""}
     <div class="quick"><button class="btn" id="foodLive">${CAMERA}Can ${esc(me.pets[0].name)} eat this?</button><button class="btn sun" id="roomLive">${CAMERA}Check a room for dangers</button><a class="btn sky" href="/wrapped/">${SPARKLE}${esc(me.pets[0].name)}'s week, wrapped</a></div>
     <input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><input id="roomPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="roomOut"></div>
     ${tips ? note("Then ask how he is: it finds him on his pet cams", true) : ""}
@@ -1534,28 +1535,43 @@ function drawMarks(src, marks, cap) {
     i.onload = () => {
       const c = document.createElement("canvas"); c.width = i.width; c.height = i.height; const g = c.getContext("2d"); g.drawImage(i, 0, 0);
       const lw = Math.max(3, i.width / 200); g.lineWidth = lw; g.textBaseline = "middle";
+      // like the iPhone app: a dot on each thing (numbered on a room check), a white stem up to its label
       const placed = [], hits = (r) => placed.some((q) => r.x < q.x + q.w && r.x + r.w > q.x && r.y < q.y + q.h && r.y + r.h > q.y);
-      const ok2 = marks.filter((m) => Array.isArray(m.b) && m.b.length === 4);
-      for (const m of ok2) {
-        const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5";
-        g.strokeStyle = "#fff"; g.lineWidth = lw * 2.2; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
-        g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.roundRect(x0, y0, x1 - x0, y1 - y0, lw * 4); g.stroke();
-      }
-      // labels after every ring, so no ring is drawn over a label
-      for (const m of ok2) {
-        const text = m.n && m.t ? `${m.n}  ${m.t}` : m.t || (m.n ? String(m.n) : "");
-        if (!text) continue;
-        const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width)), col = MARK[m.v] || "#2FA8F5", cx = (x0 + x1) / 2;
-        g.font = `900 ${Math.round(lw * 4.7)}px Nunito, sans-serif`; g.textAlign = "left";
-        const tw = g.measureText(text).width, pw = tw + lw * 5, ph = lw * 7.6;
-        let r = { x: Math.min(Math.max(lw, cx - pw / 2), i.width - pw - lw), y: y0 - ph - lw * 1.5, w: pw, h: ph };
-        if (r.y < lw) r.y = y1 + lw * 1.5;   // no room above: under it
-        for (let k = 0; k < 8 && hits(r); k++) r.y += ph + lw;   // nudged down past any label already there
+      const pts = marks.filter((m) => Array.isArray(m.b) && m.b.length === 4).map((m) => {
+        const [x0, y0, x1, y1] = m.b.map((n, k) => n / 1000 * (k % 2 ? i.height : i.width));
+        return { m, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, col: MARK[m.v] || "#2FA8F5", R: m.n ? lw * 5.6 : m.t ? lw * 2.6 : lw * 2.2 };
+      });
+      const ink = (v) => (v === "caution" || v === "medium" ? "#2B2A33" : "#fff");
+      // labels first (placed so none overlap), then stems, pills and dots on top
+      const labels = [];
+      for (const p of pts) {
+        if (!p.m.t) continue;
+        g.font = `900 ${Math.round(lw * 4.7)}px Nunito, sans-serif`;
+        const pw = g.measureText(p.m.t).width + lw * 5, ph = lw * 7.6, stem = lw * 5;
+        const x = Math.min(Math.max(lw, p.cx - pw / 2), i.width - pw - lw);
+        let up = true, r = { x, y: p.cy - p.R - stem - ph, w: pw, h: ph };
+        if (r.y < lw) { up = false; r.y = p.cy + p.R + stem; }
+        for (let k = 0; k < 8 && hits(r); k++) r.y += up ? -(ph + lw) : ph + lw;
+        if (r.y < lw) r.y = lw;
         r.y = Math.min(r.y, i.height - ph - lw);
-        placed.push(r);
-        g.fillStyle = "rgba(20,19,26,.25)"; g.beginPath(); g.roundRect(r.x, r.y + lw * 0.8, pw, ph, ph / 2); g.fill();
-        g.fillStyle = col; g.beginPath(); g.roundRect(r.x, r.y, pw, ph, ph / 2); g.fill();
-        g.fillStyle = m.v === "caution" || m.v === "medium" ? "#2B2A33" : "#fff"; g.fillText(text, r.x + lw * 2.5, r.y + ph / 2 + lw * 0.3);
+        placed.push(r); labels.push({ p, r, ph, up });
+      }
+      if (!pts.some((p) => p.m.u)) pts.forEach((p) => p.dot = true); else pts.forEach((p) => (p.dot = !p.m.u));   // a group's label (poo check) has no dot of its own
+      for (const { p, r, ph } of labels) {
+        const ey = r.y + ph / 2 < p.cy ? r.y + ph : r.y;
+        g.strokeStyle = "#fff"; g.lineWidth = lw * 1.1; g.beginPath(); g.moveTo(p.cx, p.dot ? p.cy : ey); g.lineTo(Math.min(Math.max(p.cx, r.x + ph / 2), r.x + r.w - ph / 2), ey); g.stroke();
+      }
+      for (const { p, r, ph } of labels) {
+        g.fillStyle = "rgba(20,19,26,.25)"; g.beginPath(); g.roundRect(r.x, r.y + lw * 0.8, r.w, ph, ph / 2); g.fill();
+        g.fillStyle = p.col; g.beginPath(); g.roundRect(r.x, r.y, r.w, ph, ph / 2); g.fill();
+        g.font = `900 ${Math.round(lw * 4.7)}px Nunito, sans-serif`; g.textAlign = "left"; g.fillStyle = ink(p.m.v); g.fillText(p.m.t, r.x + lw * 2.5, r.y + ph / 2 + lw * 0.3);
+      }
+      for (const p of pts) {
+        if (!p.dot) continue;
+        g.fillStyle = "rgba(20,19,26,.3)"; g.beginPath(); g.arc(p.cx, p.cy + lw * 0.7, p.R + lw * 0.9, 0, 7); g.fill();
+        g.fillStyle = "#fff"; g.beginPath(); g.arc(p.cx, p.cy, p.R + lw * 0.9, 0, 7); g.fill();
+        g.fillStyle = p.col; g.beginPath(); g.arc(p.cx, p.cy, p.R, 0, 7); g.fill();
+        if (p.m.n) { g.font = `900 ${Math.round(p.R * 1.15)}px Nunito, sans-serif`; g.textAlign = "center"; g.fillStyle = ink(p.m.v); g.fillText(String(p.m.n), p.cx, p.cy + lw * 0.3); }
       }
       // the story strip: what the check found, along the bottom
       if (cap && cap.title) {
@@ -1690,7 +1706,7 @@ async function pooCheck(photo) {
     const [v, word, icon] = POO[r.verdict] || POO.watch;
     // each dropping ringed, the group labelled with the verdict, and the story along the bottom
     const marks = (r.boxes || []).map((b) => ({ b: [b.x0, b.y0, b.x1, b.y1].map((n) => Math.round(n * 1000)), v }));
-    if (marks.length) { const u = marks.reduce((a, m) => [Math.min(a[0], m.b[0]), Math.min(a[1], m.b[1]), Math.max(a[2], m.b[2]), Math.max(a[3], m.b[3])], [1000, 1000, 0, 0]); marks.push({ b: u, v, t: word }); }
+    if (marks.length) { const u = marks.reduce((a, m) => [Math.min(a[0], m.b[0]), Math.min(a[1], m.b[1]), Math.max(a[2], m.b[2]), Math.max(a[3], m.b[3])], [1000, 1000, 0, 0]); marks.push({ b: u, v, t: word, u: true }); }
     const cap = { title: `Poo check: ${word.toLowerCase()}`, line: `${TREND[r.trend] || TREND.first}. ${r.compare || r.summary || ""}`, v };
     const pic = await drawMarks(photo, marks, cap);
     const prev = (r.previous || [])[0];
@@ -1738,11 +1754,17 @@ async function askAbout(question) {
     // into his diary, like the glasses and Quest do, then the diary below shows it (the answer stays where it is)
     if (!r.needs) {
       const image = sticker || (r.snapshot && r.snapshot.image);
-      await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title: question, note: r.answer, pet: name, ...(image ? { image } : {}), ...(v ? { verdict: v } : {}),
-        extra: { sticker: !!sticker, steps: (r.steps || []).map((st) => ({ tool: st.tool, label: st.label, detail: st.detail, kind: st.kind })) } }) }).catch(() => {});
-      const keep = $o.innerHTML, y = window.scrollY;
-      await today();
-      const $n = document.getElementById("askOut"); if ($n) { $n.innerHTML = keep + `<p class="muted" style="margin:6px 0 0;font-size:13px">Saved to ${esc(name)}'s diary, below.</p>`; window.scrollTo(0, y); }
+      const saved = await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title: question, note: r.answer, pet: name, ...(image ? { image } : {}), ...(v ? { verdict: v } : {}),
+        extra: { sticker: !!sticker, steps: (r.steps || []).map((st) => ({ tool: st.tool, label: st.label, detail: st.detail, kind: st.kind })) } }) }).catch(() => null);
+      // the answer stays as it is; the new entry goes on top of the diary below it
+      const $l = document.getElementById("list");
+      if (saved && $l && $o.isConnected) {
+        $o.insertAdjacentHTML("beforeend", `<p class="muted" style="margin:6px 0 0;font-size:13px">Saved to ${esc(name)}'s diary, below.</p>`);
+        const first = $l.querySelector(".day"), entry = `<div class="card entry pop" style="margin-bottom:10px">${image ? `<img class="${sticker ? "sticker" : ""}" src="${image}" alt="">` : `<div class="badge v-${v || "other"}">•</div>`}
+          <div style="min-width:0"><h3>${esc(question)}</h3><div class="vword${v ? ` t-${v}` : ""}">${esc(vword({ kind: "ask", verdict: v }) || "Question")}</div><p class="muted" style="margin-top:4px">${esc(r.answer)}</p>
+          <div class="when">${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · from phone</div></div></div>`;
+        if (first && first.textContent === "Today") first.insertAdjacentHTML("afterend", entry); else $l.insertAdjacentHTML("afterbegin", `<div class="day">Today</div>` + entry);
+      }
     }
   } catch (e) { $o.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
 }

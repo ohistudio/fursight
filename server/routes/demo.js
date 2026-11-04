@@ -12,8 +12,8 @@ const { makeDemo } = require("../lib/demo");
 const { tzOf } = require("../lib/fed");
 
 const PIC = "data:image/jpeg;base64," + fs.readFileSync(path.join(__dirname, "../public/demo/xiaosi.jpg")).toString("base64");
-// four cut-outs of Xiaosi from the demo clip, so a week has different ones
-const STICKERS = ["xiaosi-sticker.png", "xiaosi-sticker-2.png", "xiaosi-sticker-3.png", "xiaosi-sticker-4.png"]
+// six cut-outs of Xiaosi, one per moment in the demo week, each matching what the moment says he's doing
+const STICKERS = ["xiaosi-flop.png", "xiaosi-hop.png", "xiaosi-loaf.png", "xiaosi-hay.png", "xiaosi-groom.png", "xiaosi-groom2.png"]
   .map((f) => "data:image/png;base64," + fs.readFileSync(path.join(__dirname, "../public/demo", f)).toString("base64"));
 
 // open to anyone (that's the point), so a light limit per visitor: a few demos an hour from one address
