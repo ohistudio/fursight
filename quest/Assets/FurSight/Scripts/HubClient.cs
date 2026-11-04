@@ -64,14 +64,39 @@ namespace FurSight
             try { yield return LinkSteps(); } finally { _linking = false; }
         }
 
+        // one card for "offline", kept up (and its words updated) while the link start keeps retrying
+        VerdictCard _offline;
+        string _offlineTitle;
+        void ShowOffline(Transform head, string title, string body)
+        {
+            if (_offline != null && _offlineTitle == title) return;
+            if (_offline != null) _offline.Dismiss();
+            _offlineTitle = title;
+            _offline = VerdictCard.Verdict(head.position + head.forward * 0.6f, title, "none", body, null).TagAlong();
+            _offline.KeepOpen();
+        }
+
         IEnumerator LinkSteps()
         {
-            var start = Send("POST", "/hub/link/start", new { kind = "quest", name = SystemInfo.deviceModel.Contains("Quest") ? SystemInfo.deviceModel : "Quest" }, false);
-            yield return start.SendWebRequest();
-            if (start.result != UnityWebRequest.Result.Success) { Debug.LogWarning("[FurSight] hub unreachable: " + start.error); yield break; }
+            // no Wi-Fi, or FurSight can't be reached: say so on a card and keep trying, so a first launch is never an empty room
+            var head = Camera.main.transform;
+            UnityWebRequest start = null;
+            // always try: the headset's own "no network" flag can be wrong (a proxy or cable still gets through)
+            while (true)
+            {
+                start = Send("POST", "/hub/link/start", new { kind = "quest", name = SystemInfo.deviceModel.Contains("Quest") ? SystemInfo.deviceModel : "Quest" }, false);
+                yield return start.SendWebRequest();
+                if (start.result == UnityWebRequest.Result.Success) break;
+                Debug.LogWarning("[FurSight] hub unreachable: " + start.error);
+                if (Application.internetReachability == NetworkReachability.NotReachable)
+                    ShowOffline(head, "No internet", "This Quest isn't online. Connect it to Wi-Fi (Settings > Wi-Fi); FurSight links as soon as it's back.");
+                else
+                    ShowOffline(head, "Can't reach FurSight", "The Quest is online but can't reach FurSight's server. Check the Wi-Fi has internet access; trying again every few seconds.");
+                yield return new WaitForSeconds(4f);
+            }
+            if (_offline != null) { _offline.Dismiss(); _offline = null; _offlineTitle = null; }
             var s = JObject.Parse(start.downloadHandler.text);
             string code = (string)s["code"], nonce = (string)s["nonce"];
-            var head = Camera.main.transform;
             _codeCard = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Link to FurSight", "none",
                 $"On your phone or laptop, open <b>fursight-seven.vercel.app</b>, press <b>Try it with a demo rabbit</b> (or use your own household), then <b>Devices</b>, and enter\n<size=180%><color=#2B2A33>{string.Join(" ", code.ToCharArray())}</color></size>", null).TagAlong();
             _codeCard.KeepOpen();
