@@ -21,7 +21,10 @@ const { run, user } = require("../lib/agent");
 const { lookup } = require("../lib/verdict");
 const { handler, image, text, bad, household } = require("../lib/http");
 const { pet: readPet, describe } = require("../lib/pet");
-const { context, camFrame, camView, recent, uploads, addDiary } = require("../lib/hub");
+const { context, camFrame: liveFrame, camView, recent, uploads, addDiary } = require("../lib/hub");
+// the demo household's cams play recorded loops (clip), not a live relay: Ask looks at a still from that loop
+const STILLS = require("../lib/demo-stills.json");
+const still = (clip) => { const a = STILLS[clip]; return a ? a[Math.floor(Date.now() / 20000) % a.length] : null; };
 const FSCal = require("../public/calendar.js");
 const FSTray = require("../public/tray.js");
 const FSRoutine = require("../public/routines.js");
@@ -65,6 +68,7 @@ module.exports = handler(async (body, req) => {
   const tools = {};
   // the pet cams: each one is "cam1", "cam2"... (its room name says where); pictures are cited by that id
   const cams = ctx ? ctx.cams.slice(0, 4).map((c, i) => ({ ...c, id: "cam" + (i + 1) })) : [];
+  const frameOf = (c, ...a) => (c.clip ? Promise.resolve(still(c.clip)) : liveFrame(c.channel, ...a));
   const camName = (n) => (/\bcam(era)?$/i.test(n) ? n : n + " cam");   // "the Simulated pet cam", not "...cam cam"
   const pictures = new Map();   // picture id -> { image, room, found }, newest last (not "shots": a tool has its own)
   const camList = cams.map((c) => `${c.id} "${c.name}"`).join(", ");
@@ -79,7 +83,7 @@ module.exports = handler(async (body, req) => {
     parameters: { type: "object", properties: { cam: { type: "string" } }, required: ["cam"], additionalProperties: false },
     async run({ cam }) {
       const which = cam === "all" || !camById(cam) ? cams : [camById(cam)];
-      const shots = await Promise.all(which.map(async (c) => ({ c, f: await camFrame(c.channel) })));
+      const shots = await Promise.all(which.map(async (c) => ({ c, f: await frameOf(c) })));
       const got = shots.filter((s) => s.f);
       for (const s of got) { seen.set(s.c.id, { kind: "cam", what: s.c.name }); pictures.set(s.c.id, { image: s.f, room: s.c.name, found: null }); }
       if (got.length) looked = "pet cam";
@@ -96,8 +100,8 @@ module.exports = handler(async (body, req) => {
       const wide = { z: 1, x: 0.5, y: 0.5 }, t = Date.now();
       // every camera goes wide, then SAM looks in each picture
       const looks = await Promise.all(cams.map(async (c) => {
-        await camView(c.channel, wide);
-        const f = await camFrame(c.channel, 4000, t);
+        if (!c.clip) await camView(c.channel, wide);
+        const f = await frameOf(c, 4000, t);
         const boxes = f ? await require("../lib/sam").find(f, p.species === "rabbit" ? "rabbit" : p.species).catch(() => []) : null;
         return { c, f, boxes };
       }));
@@ -108,8 +112,8 @@ module.exports = handler(async (body, req) => {
       const hit = on.find((l) => l.boxes && l.boxes.length);
       if (!hit) return { output: { found: false, looked: on.map((l) => l.c.id), note: `Not in view on any cam. He may be hiding: that alone isn't a worry.` }, images: on.map((l) => l.f), imageNote: "Wide views, in order: " + on.map((l) => l.c.id).join(", "),
         step: { tool: "find", label: `Looked for ${p.name} on ${on.length} cam${on.length > 1 ? "s" : ""}: not in view` } };
-      const v = await camView(hit.c.channel, zoomTo(wide, hit.boxes[0]));
-      const close = await camFrame(hit.c.channel, 4000, Date.now());
+      const v = hit.c.clip ? { z: 1 } : await camView(hit.c.channel, zoomTo(wide, hit.boxes[0]));
+      const close = hit.c.clip ? null : await liveFrame(hit.c.channel, 4000, Date.now());
       const id = hit.c.id + "z";
       seen.set(id, { kind: "cam", what: hit.c.name + " close-up" });
       pictures.set(hit.c.id, { image: hit.f, room: hit.c.name, found: true });
@@ -125,10 +129,11 @@ module.exports = handler(async (body, req) => {
     async run({ cam, box, what }) {
       const c = camById(cam);
       if (!c || !Array.isArray(box) || box.length !== 4) return { output: { error: `Pass one of ${cams.map((x) => x.id).join(", ")} and a 4-number box.` } };
+      if (c.clip) return { output: { error: "That cam is playing a recorded demo loop, so it can't zoom. Look at the picture you already have." } };
       const from = await camView(c.channel);
       const full = box[0] <= 0 && box[1] <= 0 && box[2] >= 1000 && box[3] >= 1000;
       const v = await camView(c.channel, full ? { z: 1, x: 0.5, y: 0.5 } : zoomTo(from, { x0: box[0] / 1000, y0: box[1] / 1000, x1: box[2] / 1000, y1: box[3] / 1000 }));
-      const f = await camFrame(c.channel, 4000, Date.now());
+      const f = await liveFrame(c.channel, 4000, Date.now());
       if (!f) return { output: { error: "That cam didn't send a picture." } };
       const id = c.id + "z" + Math.round(v.z * 10);
       seen.set(id, { kind: "cam", what: `${c.name}: ${what}` });
