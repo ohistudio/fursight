@@ -8,6 +8,12 @@
 
 Watch: **[the 3-minute film on YouTube](https://youtu.be/5Krj1QjiIVM)** · [the film in your browser](https://fursight-seven.vercel.app/film/) · [the intro](https://fursight-seven.vercel.app/intro/) · [how it uses Meta's models](https://fursight-seven.vercel.app/muse/) · [the kit](https://fursight-seven.vercel.app/kit/)
 
+### Short clips
+
+| [![How FurSight thinks](docs/videos/how-fursight-thinks.jpg)](docs/videos/how-fursight-thinks.mp4) | [![Meta's models at work](docs/videos/meta-models-at-work.jpg)](docs/videos/meta-models-at-work.mp4) | [![FurSight in 49 seconds](docs/videos/fursight-in-49-seconds.jpg)](docs/videos/fursight-in-49-seconds.mp4) |
+|:---:|:---:|:---:|
+| **[How FurSight thinks](docs/videos/how-fursight-thinks.mp4)** (40 s): picture in, SAM 3.1 finds, Muse Spark decides, back to you | **[Meta's models at work](docs/videos/meta-models-at-work.mp4)** (33 s): what each model does, shot by shot | **[FurSight in 49 seconds](docs/videos/fursight-in-49-seconds.mp4)**: the highlights, for sharing |
+
 ## Meta Global AI Hackathon 2026
 
 - **Track:** Indie Developer · **Problem statement:** Build for Your World
