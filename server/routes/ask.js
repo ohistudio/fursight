@@ -22,9 +22,10 @@ const { lookup } = require("../lib/verdict");
 const { handler, image, text, bad, household } = require("../lib/http");
 const { pet: readPet, describe } = require("../lib/pet");
 const { context, camFrame: liveFrame, camView, recent, uploads, addDiary } = require("../lib/hub");
-// the demo household's cams play recorded loops (clip), not a live relay: Ask looks at a still from that loop
+// the demo household's cams play recorded loops (clip), not a live relay: Ask looks at a still from that loop, one
+// every 3 s, at the point every viewer is watching (the loops share the wall clock, so he's only ever on one cam)
 const STILLS = require("../lib/demo-stills.json");
-const still = (clip) => { const a = STILLS[clip]; return a ? a[Math.floor(Date.now() / 20000) % a.length] : null; };
+const still = (clip) => { const a = STILLS[clip]; return a ? a[Math.floor(((Date.now() / 1000) % (a.length * 3)) / 3)] : null; };
 const FSCal = require("../public/calendar.js");
 const FSTray = require("../public/tray.js");
 const FSRoutine = require("../public/routines.js");

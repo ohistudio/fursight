@@ -1206,7 +1206,7 @@ function cam() {
   const cams = me.cams;
   $app.innerHTML = `<div class="stack">${header()}
     <div class="camgrid">${cams.map((c) => `<div class="card stack pop"><div class="cam"><img data-ch="${c.channel}" alt="" title="Tap to zoom in"><video data-vid="${c.channel}" muted playsinline autoplay hidden title="Tap to zoom in"></video><div class="live" data-live="${c.channel}">connecting</div></div>
-      <div class="row" style="justify-content:space-between"><h3>${esc(c.name)}</h3><div class="row" style="gap:6px"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}">Wide</button></div><div class="row" style="justify-content:space-between"><button class="btn ghost small" data-levels="${c.channel}" style="flex:none;width:auto">Check hay and bowls</button><button class="del" data-rmcam="${c.channel}">Remove this camera</button></div></div></div>`).join("")}</div>
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3>${esc(c.name)}</h3><div class="row" style="gap:6px;flex-wrap:nowrap"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}" style="flex:none;width:auto;white-space:nowrap">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}" style="flex:none;width:auto">Wide</button></div></div><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><button class="btn ghost small" data-levels="${c.channel}" style="flex:none;width:auto">Check hay and bowls</button><button class="del" data-rmcam="${c.channel}" style="white-space:nowrap">Remove this camera</button></div></div>`).join("")}</div>
     ${cams.length ? `<p class="muted center" style="font-size:13px">Tap a picture to zoom in there. FurSight zooms too when it looks for ${esc(me.pets[0].name)}.</p>` : ""}
     <div class="card stack pop"><h3>Setting up a pet cam</h3><p class="muted">Point it so FurSight can see ${esc(me.pets[0].name)}'s hay, food bowl and water as well as where he rests. It checks how much hay is gone and how full the bowls are every couple of hours, so they need to be in view. Somewhere steady, out of reach of chewing, with the light behind the camera.</p></div>
     <div class="card stack pop"><h2>Room check</h2><p class="muted">What could ${esc(me.pets[0].name)} chew, swallow, get stuck in or pee on? FurSight looks and rings each one.</p>
@@ -1239,7 +1239,7 @@ function cam() {
     const $i = document.querySelector(`[data-ch="${c.channel}"]`), $s = document.querySelector(`[data-live="${c.channel}"]`);
     if (c.clip) {   // a recording: play the clip itself, smoothly (the cam tab still sends pictures for Ask)
       const $v = document.querySelector(`[data-vid="${c.channel}"]`);
-      Object.assign($v, { src: c.clip, loop: true, muted: true, hidden: false }); $v.play().catch(() => {}); $i.hidden = true;
+      Object.assign($v, { src: c.clip, loop: true, muted: true, hidden: false }); $v.play().catch(() => {}); $i.hidden = true; clipClock($v);
       $s.innerHTML = "<b></b>recording"; continue;
     }
     let last = 0, url = null, frames = 0;
@@ -1653,6 +1653,14 @@ async function pooCheck(photo) {
 // Room check: Muse Spark lists what matters, SAM outlines each; numbered rings on the picture, a list below
 // Ask: the same agent as Quest and the glasses. Muse Spark picks its tools (his cams, finding him, the tray, hay,
 // his diary and the safety list), then answers; the steps it took are shown under the answer.
+// the demo cams are recordings on one shared clock (he's on the free-roam cam, then in his cage, never both),
+// so every viewer plays each one at the same point: the wall clock, modulo the loop
+function clipClock(v) {
+  const sync = () => { if (!v.isConnected) return clearInterval(t); if (!v.duration) return; const want = (Date.now() / 1000) % v.duration; if (Math.abs(v.currentTime - want) > 0.6) v.currentTime = want; };
+  const t = setInterval(sync, 5000);
+  v.addEventListener("loadedmetadata", sync, { once: true });
+}
+
 async function askAbout(question) {
   const $o = document.getElementById("askOut"), name = me.pets[0].name;
   if (!question) return toast("Type a question first");

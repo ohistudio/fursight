@@ -16,7 +16,15 @@ http.createServer(async (req, res) => {
     const rel = decodeURIComponent(req.url.split("?")[0]).replace(/\.\.+/g, "");
     const f = path.join(__dirname, "public", rel.endsWith("/") ? rel + "index.html" : rel);
     if (!fs.existsSync(f) || !fs.statSync(f).isFile()) { res.writeHead(404); return res.end("not found"); }
-    res.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream" });
+    const type = TYPES[path.extname(f)] || (f.endsWith(".mp4") ? "video/mp4" : "application/octet-stream"), size = fs.statSync(f).size;
+    // byte ranges, like Vercel: a video can only jump to a time (the demo cams' shared clock) if the server sends parts
+    const r = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || "");
+    if (r) {
+      const a = r[1] ? Number(r[1]) : size - Number(r[2]), b = r[1] && r[2] ? Math.min(Number(r[2]), size - 1) : size - 1;
+      res.writeHead(206, { "Content-Type": type, "Content-Range": `bytes ${a}-${b}/${size}`, "Content-Length": b - a + 1, "Accept-Ranges": "bytes" });
+      return fs.createReadStream(f, { start: a, end: b }).pipe(res);
+    }
+    res.writeHead(200, { "Content-Type": type, "Content-Length": size, "Accept-Ranges": "bytes" });
     return fs.createReadStream(f).pipe(res);
   }
   const m = req.url.match(/^\/api\/([a-z]+)/);

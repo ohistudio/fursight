@@ -501,6 +501,8 @@ function camLoop() {
   if (cam.clip) {
     const vid = $("camVid");
     Object.assign(vid, { src: API + cam.clip, loop: true, muted: true, hidden: false }); vid.play().catch(() => {});
+    // the demo cams share one clock (he's on one cam at a time): play at the wall clock, modulo the loop
+    vid.onloadedmetadata = () => { if (vid.duration) vid.currentTime = (Date.now() / 1000) % vid.duration; };
     $("camImg").hidden = true; $("camMsg").textContent = "";
     $("live").classList.add("on"); $("camState").textContent = "recording";
     const n = me.cams.length, i = me.cams.findIndex((c) => c.channel === cam.channel) + 1;
