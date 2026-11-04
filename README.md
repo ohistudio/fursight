@@ -108,7 +108,7 @@ FurSight is pet care: it never diagnoses. It notices changes and says when it's 
 | **SAM 3.1** | Finds him on each pet cam, cuts him out as stickers, measures the hay pile, outlines room hazards, rings his droppings for the poo check | [lib/sam.js](server/lib/sam.js), [routes/sticker.js](server/routes/sticker.js), [routes/room.js](server/routes/room.js) |
 | **Muse Voice Transcribe** | Spoken questions and notes on Quest | [lib/meta.js](server/lib/meta.js) `transcribe()`, [routes/note.js](server/routes/note.js) |
 
-Every model FurSight calls at runtime is one of these three, through the Meta Model API. **Text-to-speech (voice output only):** the Ray-Ban Display web app reads answers aloud with the browser's built-in voice (`speechSynthesis`, [public/glasses/index.html](server/public/glasses/index.html)); nothing is sent to another model. The sound effects in the film and intro pages were made with ElevenLabs before the event and play as audio files; no ElevenLabs call happens at runtime.
+Every model FurSight calls at runtime is one of these three, through the Meta Model API. **Text-to-speech (voice output only):** the Ray-Ban Display web app reads answers aloud with the browser's built-in voice (`speechSynthesis`, [public/glasses/index.html](server/public/glasses/index.html)); nothing is sent to another model. The sound effects in the film and intro pages were generated once with ElevenLabs ([docs/kit-src/make_sfx.mjs](docs/kit-src/make_sfx.mjs)) and play as audio files; no ElevenLabs call happens at runtime.
 
 
 ### In pictures: every one is a real output
