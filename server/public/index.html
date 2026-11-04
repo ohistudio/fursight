@@ -7,7 +7,7 @@
 <title>FurSight</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@700;800;900&display=swap">
 <style>
   :root {
     --fern: #3DBE6B; --fern-lip: #2A9A52; --sun: #FFB627; --sun-lip: #D9900A; --coral: #FF4D5E; --coral-lip: #D93545;
@@ -191,6 +191,29 @@
   @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 14px; font-weight: 900; z-index: 9; }
   .hidden { display: none !important; }
+  /* the judges' notes: handwriting, an arrow at what to press */
+  .hand { font: 700 30px/1.02 Caveat, cursive; color: var(--grape-lip); transform: rotate(-2.5deg); }
+  .note { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 2px; margin: 6px 4px -4px; }
+  .note svg { width: 54px; height: 50px; color: var(--grape-lip); }
+  .note.small .hand { font-size: 25px; }
+  .tipsoff { justify-self: end; background: none; border: 0; color: var(--muted); font: 800 13px Nunito, sans-serif; text-decoration: underline; padding: 2px; }
+  /* the three quick ones, one tap each */
+  .quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .quick .btn { flex-direction: column; gap: 6px; min-height: 104px; padding: 12px 6px; font-size: 15px; line-height: 1.15; text-align: center; white-space: normal; }
+  .quick .btn svg { width: 30px; height: 30px; flex: none; }
+  /* a check in progress: the photo with a scan line, the steps ticking along, a bar */
+  .working { display: grid; gap: 10px; }
+  .working .shot { position: relative; overflow: hidden; border-radius: 14px; background: #000; max-height: 260px; }
+  .working .shot img { display: block; width: 100%; max-height: 260px; object-fit: cover; opacity: .82; }
+  .working .shot::after { content: ""; position: absolute; left: 0; right: 0; height: 30%; top: -30%; background: linear-gradient(180deg, transparent, rgba(155,108,240,.55), transparent); animation: scan 1.6s ease-in-out infinite; }
+  @keyframes scan { to { top: 100%; } }
+  .working ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .working li { display: flex; gap: 10px; align-items: center; color: var(--muted); font-weight: 800; }
+  .working li i { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--line); flex: none; }
+  .working li.now { color: var(--ink); } .working li.now i { border-color: var(--grape); border-top-color: transparent; animation: spin .8s linear infinite; }
+  .working li.done { color: var(--ink); } .working li.done i { background: var(--fern); border-color: var(--fern); }
+  .working .bar { height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; } .working .bar i { display: block; height: 100%; width: 0; background: var(--grape); transition: width .9s linear; }
+  @media (prefers-reduced-motion: reduce) { .working .shot::after { animation: none; } }
 </style>
 </head>
 <body>
@@ -293,6 +316,28 @@ function header() {
     ${isDemo() ? `<div class="chip pop" style="justify-self:start;background:#EFE7FF;color:var(--grape-lip);border:0">Demo household: simulated data, not a real rabbit</div>` : ""}`;
 }
 
+// notes for judges in the demo: handwriting and an arrow down at what to press ("hide tips" turns them off)
+const ARROW = `<svg viewBox="0 0 54 50" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6c22 2 34 14 36 36"/><path d="M33 34l9 9 7-11"/></svg>`;
+const tipsOn = () => isDemo() && store.get("fs.tips") !== "0";
+const note = (text, small = false) => `<div class="note pop${small ? " small" : ""}"><span class="hand">${text}</span>${ARROW}</div>`;
+const CAMERA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.6"/></svg>`;
+const SPARKLE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/><path d="M19 3v4M17 5h4"/></svg>`;
+
+// a check in progress: the photo being looked at (scan line over it), each step ticking along, and a bar, so it's
+// clear something is happening for the 10-20 s Muse Spark and SAM take. stop() when the answer is in.
+function working($o, { photo = null, title, steps, secs = 12 }) {
+  $o.innerHTML = `<div class="card working pop">${photo ? `<div class="shot"><img src="${photo}" alt=""></div>` : `<div class="beanbox">${bean("thinking", 80)}</div>`}
+    <h3 style="margin:0">${esc(title)}</h3><ol>${steps.map((t) => `<li><i></i>${esc(t)}</li>`).join("")}</ol><div class="bar"><i></i></div><p class="muted" style="margin:0;font-size:13px">Usually ${secs - 4} to ${secs + 6} seconds.</p></div>`;
+  const lis = [...$o.querySelectorAll("li")], bar = $o.querySelector(".bar i"), t0 = Date.now();
+  const tick = () => {
+    const k = (Date.now() - t0) / 1000, n = Math.min(lis.length - 1, Math.floor((k / secs) * lis.length));
+    lis.forEach((li, i) => (li.className = i < n ? "done" : i === n ? "now" : ""));
+    if (bar) bar.style.width = Math.min(95, (k / secs) * 90) + "%";
+  };
+  tick(); const t = setInterval(() => ($o.isConnected ? tick() : clearInterval(t)), 400);
+  return () => clearInterval(t);
+}
+
 // change anything about him after he's set up: name, photo, details, nicknames, notes (the care plan stays)
 function editPet() {
   stopCam();
@@ -340,6 +385,7 @@ function welcome() {
   <div class="stack" style="margin-top:28px">
     <button class="btn" id="start">Add your pet</button>
     <button class="btn ghost" id="join">I already use FurSight on another phone</button>
+    ${note("Judges, start here! No login, no key.")}
     <button class="btn grape" id="demo">Try it with a demo rabbit</button>
     <p class="muted center" style="font-size:14px">No rabbit or hardware needed: two weeks of a demo rabbit's life, plus a simulated pet cam, litter tray scale and room sensor.</p>
   </div>`;
@@ -351,6 +397,7 @@ function welcome() {
   document.getElementById("join").onclick = () => linkThis("phone");
   document.getElementById("demo").onclick = async (e) => {
     e.target.disabled = true; e.target.textContent = "Setting up the demo (about 20 s)…";
+    store.set("fs.tips", null);   // a fresh demo shows the tips again
     try { const h = await api("/api/demo", { tz: -new Date().getTimezoneOffset() }); token = h.token; store.set("fs.token", token); tab = "today"; render(); }
     catch (err) { toast(err.message); e.target.disabled = false; e.target.textContent = "Try it with a demo rabbit"; }
   };
@@ -481,14 +528,21 @@ async function makeRecap(btn) {
 
 let diaryShow = "all";
 async function today() {
-  $app.innerHTML = `<div class="stack">${header()}<button class="btn" id="foodLive">Can ${esc(me.pets[0].name)} eat this?</button><input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><button class="btn sun" id="roomLive">Check the room for dangers</button><input id="roomPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="roomOut"></div>
+  const tips = tipsOn();
+  $app.innerHTML = `<div class="stack">${header()}
+    ${tips ? `<button class="tipsoff" id="tipsOff">Hide tips</button>${note("Try these: tap one, then take a photo of any food or room (or choose one)", true)}` : ""}
+    <div class="quick"><button class="btn" id="foodLive">${CAMERA}Can ${esc(me.pets[0].name)} eat this?</button><button class="btn sun" id="roomLive">${CAMERA}Check a room for dangers</button><a class="btn sky" href="/wrapped/">${SPARKLE}${esc(me.pets[0].name)}'s week, wrapped</a></div>
+    <input id="foodPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="foodOut"></div><input id="roomPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="roomOut"></div>
+    ${tips ? note("Then ask how he is: it finds him on his pet cams", true) : ""}
     <div class="card stack" id="askCard"><b>Ask about ${esc(me.pets[0].name)}</b><div class="row" style="gap:8px"><input id="askQ" class="field" style="flex:1;min-width:0" placeholder="How is he today?" autocomplete="off"><button class="btn grape small" id="askGo" style="flex:none;width:auto">Ask</button></div>
-      <div class="chips">${["How is he today?", "Give him a new nickname", "Can he have banana?", "Has he eaten enough hay?"].map((q) => `<button class="chip pick" data-askq="${esc(q)}">${esc(q)}</button>`).join("")}</div><div id="askOut"></div></div><div id="pooNow"></div><input id="pooPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="pooOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><a class="btn sky" href="/wrapped/">${esc(me.pets[0].name)}'s week, wrapped</a><button class="btn grape" id="recap">Make this week's card</button>
+      <div class="chips">${["How is he today?", "Give him a new nickname", "Can he have banana?", "Has he eaten enough hay?"].map((q) => `<button class="chip pick" data-askq="${esc(q)}">${esc(q)}</button>`).join("")}</div><div id="askOut"></div></div><div id="pooNow"></div><input id="pooPhoto" type="file" accept="image/*" capture="environment" class="hidden"><div id="pooOut"></div><div id="treatsNow"></div><div id="liveNow"></div><div id="levelsNow"></div><button class="btn grape" id="recap">Make this week's card</button>
     <button class="btn ghost" id="upload">Add photos, videos or vet papers</button>
     <div class="chips">${[["all", "Everything"], ["record", "Vet records"], ["media", "Photos and videos"]].map(([k, w]) => `<button class="chip pick${diaryShow === k ? " on" : ""}" data-show="${k}">${w}</button>`).join("")}</div>
     <div id="list"><div class="spinner" style="margin-top:30px"></div></div></div>`;
   document.getElementById("foodPhoto").onchange = async (e) => e.target.files[0] && foodCheck(await shrink(e.target.files[0]));
   document.getElementById("foodLive").onclick = foodCamera;
+  const $off = document.getElementById("tipsOff");
+  if ($off) $off.onclick = () => { store.set("fs.tips", "0"); today(); };
   const goAsk = () => askAbout(document.getElementById("askQ").value.trim());
   document.getElementById("askGo").onclick = goAsk;
   document.getElementById("askQ").onkeydown = (e) => { if (e.key === "Enter") goAsk(); };
@@ -1130,6 +1184,7 @@ function devices() {
   const icon = { phone: "Phone", quest: "Quest", glasses: "Glasses", camera: "Camera", web: "Browser", tray: "Litter tray" };
   $app.innerHTML = `<div class="stack">${header()}
     <div class="card stack pop"><h2>Link a device</h2><p class="muted">On the Quest, glasses or pet cam, FurSight shows a 4-letter code. Type it here.</p>
+      ${tipsOn() ? note("Got the Quest app or glasses? Open FurSight there, then type its code here", true) : ""}
       <input id="code" class="codein" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="····">
       <button class="btn sky" id="claim" disabled>Link</button></div>
     <div class="card stack pop"><h2>Simulated devices</h2><p class="muted">Try FurSight without the hardware. Each one is marked simulated wherever it shows up.</p>
@@ -1206,8 +1261,8 @@ function cam() {
   const cams = me.cams;
   $app.innerHTML = `<div class="stack">${header()}
     <div class="camgrid">${cams.map((c) => `<div class="card stack pop"><div class="cam"><img data-ch="${c.channel}" alt="" title="Tap to zoom in"><video data-vid="${c.channel}" muted playsinline autoplay hidden title="Tap to zoom in"></video><div class="live" data-live="${c.channel}">connecting</div></div>
-      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3>${esc(c.name)}</h3><div class="row" style="gap:6px;flex-wrap:nowrap"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}" style="flex:none;width:auto;white-space:nowrap">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}" style="flex:none;width:auto">Wide</button></div></div><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><button class="btn ghost small" data-levels="${c.channel}" style="flex:none;width:auto">Check hay and bowls</button><button class="del" data-rmcam="${c.channel}" style="white-space:nowrap">Remove this camera</button></div></div>`).join("")}</div>
-    ${cams.length ? `<p class="muted center" style="font-size:13px">Tap a picture to zoom in there. FurSight zooms too when it looks for ${esc(me.pets[0].name)}.</p>` : ""}
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h3>${esc(c.name)}</h3>${c.clip ? `<span class="chip" style="flex:none">Demo recording</span>` : `<div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><span class="chip" data-z="${c.channel}">1×</span><button class="btn ghost small" data-out="${c.channel}" style="flex:none;width:auto;white-space:nowrap">Zoom out</button><button class="btn ghost small" data-wide="${c.channel}" style="flex:none;width:auto">Wide</button></div>`}</div><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><button class="btn ghost small" data-levels="${c.channel}" style="flex:none;width:auto">Check hay and bowls</button><button class="del" data-rmcam="${c.channel}" style="white-space:nowrap">Remove this camera</button></div></div>`).join("")}</div>
+    ${cams.some((c) => !c.clip) ? `<p class="muted center" style="font-size:13px">Tap a picture to zoom in there. FurSight zooms too when it looks for ${esc(me.pets[0].name)}.</p>` : ""}
     <div class="card stack pop"><h3>Setting up a pet cam</h3><p class="muted">Point it so FurSight can see ${esc(me.pets[0].name)}'s hay, food bowl and water as well as where he rests. It checks how much hay is gone and how full the bowls are every couple of hours, so they need to be in view. Somewhere steady, out of reach of chewing, with the light behind the camera.</p></div>
     <div class="card stack pop"><h2>Room check</h2><p class="muted">What could ${esc(me.pets[0].name)} chew, swallow, get stuck in or pee on? FurSight looks and rings each one.</p>
       ${cams.map((c) => `<button class="btn ghost" data-room="${c.channel}">Check the ${esc(c.name)} view</button>`).join("")}
@@ -1553,6 +1608,7 @@ async function liveCamera(hint, label, inputId, outId, onPhoto) {
   const sheet = document.createElement("div");
   sheet.className = "foodcam";
   sheet.innerHTML = `<div class="fc-frame"><video playsinline autoplay muted></video><div class="fc-aim"></div><p>${esc(hint)}</p></div>
+    ${tipsOn() ? `<p class="hand" style="color:#fff;text-align:center;margin:6px 0 0">No food handy? Choose a photo from your phone</p>` : ""}
     <div class="fc-row"><button class="btn ghost small" id="fcPick">Choose a photo</button><button class="fc-shutter" id="fcGo" aria-label="${esc(label)}"></button><button class="btn ghost small" id="fcClose">Cancel</button></div>`;
   document.body.appendChild(sheet);
   const v = sheet.querySelector("video"); v.srcObject = stream;
@@ -1573,9 +1629,9 @@ async function liveCamera(hint, label, inputId, outId, onPhoto) {
 async function foodCheck(photo) {
   const $o = document.getElementById("foodOut"), p = me.pets[0], name = p.name;
   if (!$o) return;
-  $o.innerHTML = `<div class="card center stack pop">${bean("thinking", 80)}<p class="muted">Checking with Muse Spark…</p></div>`;
+  const stop = working($o, { photo, title: "Checking this food", steps: ["Sent to Muse Spark", "Naming each food it can see", "SAM 3.1 outlining each one", `Checking the safety list for ${name}`], secs: 14 });
   try {
-    const r = await api("/api/food", { image: photo, pet: { name, species: p.species, breed: p.breed, notes: p.notes }, tz: -new Date().getTimezoneOffset() });
+    const r = await api("/api/food", { image: photo, pet: { name, species: p.species, breed: p.breed, notes: p.notes }, tz: -new Date().getTimezoneOffset() }).finally(stop);
     const items = (r.items || []).filter((it) => Array.isArray(it.box) && it.box.length === 4);
     if (!items.length) { $o.innerHTML = `<div class="card stack pop"><h3>No food seen</h3><p class="muted">Hold it up close, in good light, and try again.</p></div>`; return; }
     const held = items[r.held] || items[0];
@@ -1628,9 +1684,9 @@ function pooCard(all) {
 async function pooCheck(photo) {
   const $o = document.getElementById("pooOut"), name = me.pets[0].name;
   if (!$o) return;
-  $o.innerHTML = `<div class="card center stack pop">${bean("thinking", 80)}<p class="muted">Looking at them, and comparing with the last check…</p></div>`;
+  const stop = working($o, { photo, title: "Checking his droppings", steps: ["SAM 3.1 finding each dropping", "Muse Spark judging shape, size and colour", "Comparing with the last check"], secs: 12 });
   try {
-    const r = await api("/api/droppings", { image: photo });
+    const r = await api("/api/droppings", { image: photo }).finally(stop);
     const [v, word, icon] = POO[r.verdict] || POO.watch;
     // each dropping ringed, the group labelled with the verdict, and the story along the bottom
     const marks = (r.boxes || []).map((b) => ({ b: [b.x0, b.y0, b.x1, b.y1].map((n) => Math.round(n * 1000)), v }));
@@ -1664,9 +1720,9 @@ function clipClock(v) {
 async function askAbout(question) {
   const $o = document.getElementById("askOut"), name = me.pets[0].name;
   if (!question) return toast("Type a question first");
-  $o.innerHTML = `<div class="center stack">${bean("thinking", 70)}<p class="muted">Looking at ${esc(name)}'s cams and diary…</p></div>`;
+  const stop = working($o, { title: `Asking about ${name}`, steps: ["Muse Spark reads the question", `Looking through ${name}'s pet cams`, "SAM 3.1 finding him", "Checking his diary and tray", "Writing the answer"], secs: 18 });
   try {
-    const r = await api("/api/ask", { question, from: "phone", tz: -new Date().getTimezoneOffset() });
+    const r = await api("/api/ask", { question, from: "phone", tz: -new Date().getTimezoneOffset() }).finally(stop);
     const v = ["safe", "caution", "toxic", "vet"].includes(r.verdict) ? r.verdict : null;
     const steps = (r.steps || []).map((st) => `<li>${esc(st.label)}${st.detail ? ` <span class="muted">${esc(String(st.detail).slice(0, 80))}</span>` : ""}</li>`).join("");
     $o.innerHTML = `<div class="stack pop" style="gap:8px">${v ? `<span class="chip t-${v}" style="justify-self:start">${esc(vword({ kind: "ask", verdict: v }) || v)}</span>` : ""}
@@ -1674,18 +1730,28 @@ async function askAbout(question) {
       <p style="font-size:17px;line-height:1.4">${esc(r.needs ? r.needs.ask : r.answer)}</p>
       ${steps ? `<details open><summary class="muted" style="font-size:13px">How it decided (${(r.steps || []).length} steps, ${((r.ms || 0) / 1000).toFixed(1)} s)</summary><ol style="font-size:13px;margin:6px 0 0 18px;line-height:1.5">${steps}</ol></details>` : ""}</div>`;
     // what it saw through the pet cam: him cut out as a sticker if SAM finds him, else the picture itself
+    let sticker = null;
     if (r.snapshot) {
-      const sticker = await makeSticker(r.snapshot.image, api).catch(() => null), $p = document.getElementById("askPic");
+      sticker = await makeSticker(r.snapshot.image, api).catch(() => null); const $p = document.getElementById("askPic");
       if ($p) $p.innerHTML = `<img alt="What FurSight saw" src="${sticker || r.snapshot.image}" style="${sticker ? "max-height:220px;max-width:100%" : "width:100%;max-height:260px;object-fit:cover;border-radius:14px"}">`;
+    }
+    // into his diary, like the glasses and Quest do, then the diary below shows it (the answer stays where it is)
+    if (!r.needs) {
+      const image = sticker || (r.snapshot && r.snapshot.image);
+      await hub("/diary", { method: "POST", body: JSON.stringify({ kind: "ask", title: question, note: r.answer, pet: name, ...(image ? { image } : {}), ...(v ? { verdict: v } : {}),
+        extra: { sticker: !!sticker, steps: (r.steps || []).map((st) => ({ tool: st.tool, label: st.label, detail: st.detail, kind: st.kind })) } }) }).catch(() => {});
+      const keep = $o.innerHTML, y = window.scrollY;
+      await today();
+      const $n = document.getElementById("askOut"); if ($n) { $n.innerHTML = keep + `<p class="muted" style="margin:6px 0 0;font-size:13px">Saved to ${esc(name)}'s diary, below.</p>`; window.scrollTo(0, y); }
     }
   } catch (e) { $o.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
 }
 
 async function roomCheck(req) {
   const $o = document.getElementById("roomOut"), name = me.pets[0].name;
-  $o.innerHTML = `<div class="center stack">${bean("thinking", 80)}<p class="muted">Looking around the room…</p></div>`;
+  const stop = working($o, { photo: req.image, title: "Checking the room", steps: ["Sent to Muse Spark", `Spotting what ${name} could chew, swallow or pee on`, "SAM 3.1 outlining each one", "Writing a fix for each"], secs: 22 });
   try {
-    const r = await api("/api/room", req), src = req.image || r.image;
+    const r = await api("/api/room", req).finally(stop), src = req.image || r.image;
     const colour = { high: "#FF4D5E", medium: "#FFB627", low: "#2FA8F5", good: "#3DBE6B" }, icon = { chew: "Chew", toxic: "Toxic", cable: "Cable", swallow: "Swallow", stuck: "Stuck", stain: "Pee spot", good: "Good for him" };
     // the hazards, then what is already good for him (green), numbered on from them
     const good = (r.good || []).map((g) => ({ ...g, risk: "good", kind: "good" })), all = r.hazards.concat(good);

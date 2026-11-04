@@ -142,6 +142,13 @@ async function build() {
   const poos = week.filter((e) => e.kind === "droppings");
   if (poos.length) S.push({ bg: COLOURS[6], html: `<div class="k rise">Poo patrol</div><h1 class="rise">Poo checks</h1><div class="big rise" data-count="${poos.length}">0</div><p class="rise">${poos.every((e) => e.verdict === "safe") ? "Every one looked healthy. A happy gut." : "One or two to keep an eye on; the diary has the details."}</p>` });
 
+  // room checks: how many, what they found, and the last one's picture with its rings
+  const rooms = week.filter((e) => e.kind === "room");
+  if (rooms.length) {
+    const found = rooms.reduce((n, e) => n + ((e.extra && e.extra.hazards) || []).length, 0), good = rooms.reduce((n, e) => n + ((e.extra && e.extra.good) || []).length, 0), pic = rooms.find((e) => e.has_image);
+    S.push({ bg: COLOURS[4], html: `<div class="k rise">Safe home</div><h1 class="rise">Rooms checked</h1><div class="big rise" data-count="${rooms.length}">0</div><p class="rise">${found} ${found === 1 ? "thing" : "things"} to sort${good ? `, ${good} already good for him` : ""}.</p>${pic ? `<img class="pop" src="${img(`/diary/${pic.id}/image`)}" alt="" style="width:100%;max-height:34vh;object-fit:cover;border-radius:18px">` : ""}` });
+  }
+
   const groomed = week.filter((e) => e.kind === "routine-done"), cared = week.filter((e) => e.kind === "care").length;
   if (groomed.length || cared) {
     const g = {}; for (const e of groomed) g[e.title] = (g[e.title] || 0) + 1;
@@ -165,6 +172,7 @@ async function build() {
         ${ws.length ? `<div><b>${(ws[ws.length - 1].weight_g / 1000).toFixed(2)} kg</b><span>weight</span></div>` : ""}
         ${checks.length ? `<div><b>${checks.length}</b><span>foods checked</span></div>` : ""}
         ${asks ? `<div><b>${asks}</b><span>questions asked</span></div>` : ""}
+        ${rooms.length ? `<div><b>${rooms.length}</b><span>rooms checked</span></div>` : ""}
       </div>
       <div style="font-size:13px;color:#6B6977">${wordmark()} · spoil them, worry less${tray.simulated || a.simulated ? " · includes simulated data" : ""}</div></div>
     <p class="rise" style="text-align:center;align-self:center;font-size:15px">Screenshot to share</p>` });

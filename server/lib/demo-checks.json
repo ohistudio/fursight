@@ -1,0 +1,353 @@
+{
+ "foods": [
+  {
+   "file": "carrot.jpg",
+   "title": "Carrot",
+   "verdict": "caution",
+   "note": "High in sugar for rabbits so only a tiny occasional treat.",
+   "marks": [
+    {
+     "b": [
+      152,
+      489,
+      452,
+      630
+     ],
+     "v": "caution",
+     "t": "Carrot: Small treat only"
+    },
+    {
+     "b": [
+      337,
+      0,
+      777,
+      220
+     ],
+     "v": "safe",
+     "t": "Carrot tops: Safe"
+    }
+   ],
+   "caption": {
+    "title": "Carrot: Small treat only",
+    "line": "How much: 1-2 thin slices as occasional treat only",
+    "v": "caution"
+   },
+   "credit": {
+    "author": "Stephen Ausmus",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Carrots_of_many_colors.jpg"
+   }
+  },
+  {
+   "file": "mint.jpg",
+   "title": "Mint",
+   "verdict": "safe",
+   "note": "Mint is safe for rabbits in moderation as part of varied greens.",
+   "marks": [
+    {
+     "b": [
+      5,
+      0,
+      995,
+      996
+     ],
+     "v": "safe",
+     "t": "Mint: Safe"
+    }
+   ],
+   "caption": {
+    "title": "Mint: Safe",
+    "line": "Mint is safe for rabbits in moderation as part of varied greens.",
+    "v": "safe"
+   },
+   "credit": {
+    "author": "moi-même",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Menthe_aromatique.JPG"
+   }
+  },
+  {
+   "file": "blueberries.jpg",
+   "title": "Blueberry",
+   "verdict": "caution",
+   "note": "High in sugar for rabbits so only a rare treat.",
+   "marks": [
+    {
+     "b": [
+      408,
+      376,
+      571,
+      540
+     ],
+     "v": "caution",
+     "t": "Blueberry: Small treat only"
+    }
+   ],
+   "caption": {
+    "title": "Blueberry: Small treat only",
+    "line": "How much: 1 to 2 berries",
+    "v": "caution"
+   },
+   "credit": {
+    "author": "Evan-Amos",
+    "license": "CC0",
+    "page": "https://commons.wikimedia.org/wiki/File:Blueberries-In-Pack.jpg"
+   }
+  },
+  {
+   "file": "raspberries.jpg",
+   "title": "Raspberry",
+   "verdict": "caution",
+   "note": "High sugar can upset delicate rabbit digestion and cause soft stools.",
+   "marks": [
+    {
+     "b": [
+      385,
+      365,
+      976,
+      959
+     ],
+     "v": "caution",
+     "t": "Raspberry: Small treat only"
+    }
+   ],
+   "caption": {
+    "title": "Raspberry: Small treat only",
+    "line": "How much: 1 to 2 berries as occasional treat",
+    "v": "caution"
+   },
+   "credit": {
+    "author": "Vassil",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Framboise_Margy_3.jpg"
+   }
+  },
+  {
+   "file": "dandelion.jpg",
+   "title": "Dandelion greens",
+   "verdict": "safe",
+   "note": "Dandelion leaves are safe if clean and pesticide free.",
+   "marks": [
+    {
+     "b": [
+      154,
+      178,
+      656,
+      872
+     ],
+     "v": "safe",
+     "t": "Dandelion greens: Safe"
+    }
+   ],
+   "caption": {
+    "title": "Dandelion greens: Safe",
+    "line": "Dandelion leaves are safe if clean and pesticide free.",
+    "v": "safe"
+   },
+   "credit": {
+    "author": "Harry Rose from South West Rocks, Australia",
+    "license": "CC BY 2.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Taraxacum_officinale_plant6_(16375803122).jpg"
+   }
+  },
+  {
+   "file": "bok-choy.jpg",
+   "title": "Bok choy",
+   "verdict": "safe",
+   "note": "Plain raw bok choy is a hydrating leafy green suitable for rabbits.",
+   "marks": [
+    {
+     "b": [
+      122,
+      21,
+      953,
+      972
+     ],
+     "v": "safe",
+     "t": "Bok choy: Safe"
+    }
+   ],
+   "caption": {
+    "title": "Bok choy: Safe",
+    "line": "Plain raw bok choy is a hydrating leafy green suitable for rabbits.",
+    "v": "safe"
+   },
+   "credit": {
+    "author": "おむこさん志望",
+    "license": "CC BY 2.5",
+    "page": "https://commons.wikimedia.org/wiki/File:Brassica_rapa_var._chinensis_(leaf).jpg"
+   }
+  },
+  {
+   "file": "cookies.jpg",
+   "title": "Assorted cookies",
+   "verdict": "toxic",
+   "note": "Full of sugar butter and flour that can cause deadly gut stasis in rabbits.",
+   "marks": [
+    {
+     "b": [
+      672,
+      548,
+      974,
+      973
+     ],
+     "v": "toxic",
+     "t": "Assorted cookies: Don't"
+    }
+   ],
+   "caption": {
+    "title": "Assorted cookies: Don't",
+    "line": "Full of sugar butter and flour that can cause deadly gut stasis in rabbits.",
+    "v": "toxic"
+   },
+   "credit": {
+    "author": "Pudding4brains",
+    "license": "Public domain",
+    "page": "https://commons.wikimedia.org/wiki/File:Koekjestrommel_open.jpg"
+   }
+  },
+  {
+   "file": "onion.jpg",
+   "title": "Spanish onion",
+   "verdict": "toxic",
+   "note": "Onions damage rabbit red blood cells and cause anemia.",
+   "marks": [
+    {
+     "b": [
+      271,
+      470,
+      560,
+      635
+     ],
+     "v": "toxic",
+     "t": "Spanish onion: Don't"
+    },
+    {
+     "b": [
+      832,
+      303,
+      1000,
+      554
+     ],
+     "v": "toxic",
+     "t": "Sweet potato: Don't"
+    },
+    {
+     "b": [
+      363,
+      865,
+      627,
+      1000
+     ],
+     "v": "toxic",
+     "t": "Potato: Don't"
+    }
+   ],
+   "caption": {
+    "title": "Spanish onion: Don't",
+    "line": "Onions damage rabbit red blood cells and cause anemia.",
+    "v": "toxic"
+   },
+   "credit": {
+    "author": "Andy Li",
+    "license": "CC0",
+    "page": "https://commons.wikimedia.org/wiki/File:Spanish_Onions_-_The_Fruit_Bowl,_Brighton_2024-03-21.jpg"
+   }
+  }
+ ],
+ "room": {
+  "file": "room.jpg",
+  "hazards": [
+   {
+    "label": "skirting board",
+    "kind": "chew",
+    "risk": "medium",
+    "why": "Exposed wooden trim invites chewing.",
+    "fix": "Cover with a chew guard or block access."
+   },
+   {
+    "label": "food bag",
+    "kind": "chew",
+    "risk": "low",
+    "why": "Plastic packaging is unsafe if chewed.",
+    "fix": "Store sealed out of rabbit reach."
+   }
+  ],
+  "good": [
+   {
+    "label": "pile of hay",
+    "why": "Provides food, bedding and enrichment for foraging."
+   },
+   {
+    "label": "castle hideaway",
+    "why": "Gives safe hiding place to rest and feel secure."
+   },
+   {
+    "label": "ceramic bowl",
+    "why": "Low heavy bowl is good for water or food."
+   }
+  ],
+  "marks": [
+   {
+    "b": [
+     345,
+     384,
+     1000,
+     745
+    ],
+    "v": "medium",
+    "t": "skirting board",
+    "n": 1
+   },
+   {
+    "b": [
+     0,
+     92,
+     96,
+     956
+    ],
+    "v": "low",
+    "t": "food bag",
+    "n": 2
+   },
+   {
+    "b": [
+     134,
+     396,
+     896,
+     928
+    ],
+    "v": "safe",
+    "t": "pile of hay",
+    "n": 3
+   },
+   {
+    "b": [
+     41,
+     0,
+     307,
+     725
+    ],
+    "v": "safe",
+    "t": "castle hideaway",
+    "n": 4
+   },
+   {
+    "b": [
+     897,
+     711,
+     1000,
+     894
+    ],
+    "v": "safe",
+    "t": "ceramic bowl",
+    "n": 5
+   }
+  ],
+  "caption": {
+   "title": "Room check: 2 to sort, 3 good",
+   "line": "Fix first: skirting board. Cover with a chew guard or block access.",
+   "v": "medium"
+  }
+ }
+}

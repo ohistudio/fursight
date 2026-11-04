@@ -58,7 +58,7 @@ Every device shares one household. Start on the web, then link each other device
 ![On Quest: the room check pins every hazard, a food verdict card, his pet cam in a window](docs/howto/quest.jpg)
 
 1. Download [FurSight-Quest.apk](https://github.com/ohistudio/fursight/releases/latest) and sideload it (Developer Mode, then Meta Quest Developer Hub, SideQuest or `adb install`). It's in Library > Unknown Sources.
-2. Open it and type the code it shows into the web app's **Devices** tab.
+2. Open it and type the code it shows into the web app's **Devices** tab (no household yet? Open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit** first).
 3. **Turn your left palm towards you** to open the menu; poke a button.
 4. **Check room**: look around and press. **Check food**: hold food up and press. **Ask**: press and speak. **Pet cam**: a window on his cams.
 

@@ -9,7 +9,9 @@
 //   await makeDemo({ into: token, stickers })   a week of simulated stats in an EXISTING household instead: weight
 //   and tray, room temperature, activity and flops, and moments with a sticker. Nothing else there is touched,
 //   and every entry is marked simulated (extra.sim), so DELETE /hub/diary?sim=1 takes exactly these back out.
+const fs = require("fs"), path = require("path");
 const FSActivity = require("../public/activity.js");
+const CHECKS = require("./demo-checks.json");
 const HUB = process.env.HUB_URL ? process.env.HUB_URL + "/hub" : "https://fursight-cam.wibble-crossplay.workers.dev/hub";
 
 async function hub(path, body, method = body ? "POST" : "GET", t = null) {
@@ -150,13 +152,17 @@ async function makeDemo({ pic = null, stickers = [], tz = 0, into = null } = {})
   await go({ kind: "warning", title: "Chewing a cable", note: `The pet cam saw ${NAME} chewing the lamp cable behind the sofa.`, verdict: "caution", at: at(2, 19) });
   await go({ kind: "alert", title: "Litter tray", note: "Only 5 visits and 74 g yesterday, much less than usual. Watch he's eating hay. No droppings for 12 hours is a vet call.", verdict: "caution", at: at(5, 8) });
   await go({ kind: "alert", title: "The room is warm", note: "It's 26.4°C by his tray: warm for a rabbit.", verdict: "caution", at: at(3, 15.5), extra: { climate: true } });
-  await go({ kind: "room", title: "Room check: 4 things to sort", note: "Lamp cable, Peace lily, Rug fringe, Wooden chair leg", at: at(2, 20), extra: { hazards: [
-    { label: "Lamp cable", kind: "cable", risk: "high", fix: "Run it through a cable protector or behind the sofa, out of reach." },
-    { label: "Peace lily", kind: "toxic", risk: "high", fix: "Toxic to rabbits. Move it to a shelf or another room." },
-    { label: "Rug fringe", kind: "swallow", risk: "medium", fix: "Loose threads can block his gut. Trim them or roll the rug up." },
-    { label: "Wooden chair leg", kind: "chew", risk: "low", fix: "Give him a willow stick nearby so he chews that instead." }] } });
-  const foods = [["Coriander", "safe", "A favourite, and good for him. How much: a small handful a day."], ["Strawberry", "caution", "High sugar can upset a sensitive gut. How much: half a small berry, now and then."], ["Chocolate", "toxic", "Theobromine is poisonous to rabbits. Call a vet if he ate any."], ["Romaine lettuce", "safe", "Fine as part of his greens. How much: a leaf or two."], ["Banana", "caution", "Very sugary. How much: a thin slice, once or twice a week."], ["Iceberg lettuce", "caution", "Mostly water and can cause loose droppings. Pick darker greens."]];
-  for (let i = 0; i < foods.length; i++) await go({ kind: "food", title: foods[i][0], verdict: foods[i][1], note: foods[i][2], at: at(DAYS - 1 - i * 2, 18) });
+  // real checks: openly licensed food photos (credited in public/demo/checks/CREDITS.md) and a frame of his own room,
+  // run once through the live food and room checks (Muse Spark + SAM 3.1); their answers and rings are replayed here
+  const checkPic = (f) => "data:image/jpeg;base64," + fs.readFileSync(path.join(__dirname, "../public/demo/checks", f)).toString("base64");
+  const rm = CHECKS.room;
+  await go({ kind: "room", title: `Room check: ${rm.hazards.length} things to sort${rm.good.length ? `, ${rm.good.length} good` : ""}`, note: rm.hazards.concat(rm.good).map((h) => h.label).join(", "), image: checkPic("room-checked.jpg"), at: at(2, 20),
+    extra: { hazards: rm.hazards, good: rm.good } });   // the picture already has its rings, as a real room check saves it
+  // a food check every day this week, two today (one safe, one not), so Wrapped's "you checked" slide has pictures
+  for (const [i, c] of CHECKS.foods.entries()) {
+    const d = [6, 5, 4, 3, 2, 0, 1, 0][i], h = d === 0 ? Math.max(0.2, hr - (i === 5 ? 2 : 1)) : 12 + (i % 3) * 3;
+    await go({ kind: "food", title: c.title, verdict: c.verdict, note: c.note, image: checkPic(c.file), at: at(d, h), extra: { marks: c.marks, caption: c.caption } });
+  }
   await go({ kind: "ask", title: `Is ${NAME} OK today?`, verdict: "safe", note: "He looks well. Eight tray visits so far and his weight is steady at about 1.1 kg. He flopped twice this afternoon, which is a happy, relaxed rabbit.", at: at(1, 20), extra: { steps: [
     { tool: "tray", label: "Checked the litter tray: 8 visits, 1098 g" }, { tool: "activity", label: "Checked his day: 2 flops, 3 h loafing" }, { tool: "cams", label: "Looked through the pet cams: resting in his bed" }, { tool: "answer", label: "Answered, checks passed", kind: "ok" }] } });
   await go({ kind: "ask", title: "Is it too hot for him?", verdict: "caution", note: "It's 26.4°C by his tray, warm for a rabbit. Close the curtains and give him a frozen water bottle wrapped in a towel to lean on.", at: at(3, 15.6), extra: { steps: [
