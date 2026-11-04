@@ -424,5 +424,10 @@ Answers: short and spoken, at most 45 words, no lists, no markdown, no em dashes
   const all = [...pictures.values()];
   // ...or, if it looked through a pet cam at all, the last picture it saw there (unless it looked and he wasn't in view)
   const snapshot = cited.find((x) => x.found) || cited[cited.length - 1] || [...all].reverse().find((x) => x.found) || [...all].reverse().find((x) => x.found !== false) || null;
-  return { question, answer: r.result.answer, about: r.result.about || "", box, marks: levelMarks.length ? levelMarks : undefined, verdict: r.result.verdict || "none", evidence: r.result.evidence, looked, steps: ordered, needs: null, snapshot, turns: r.turns, ms, asr_ms };
+  // cam ids are for citing; if one slips into the words, say the cam's name ("on cam1" -> "on the Free-roam cam")
+  const answer = String(r.result.answer || "").replace(/\b(?:on |in |from |through )?(?:the )?(cam\d)(?:z\d*)?\b/gi, (m, id) => {
+    const c = camById(id.toLowerCase());
+    return c ? `${/^(on|in|from|through) /i.test(m) ? m.split(" ")[0] + " " : ""}the ${camName(c.name)}` : m;
+  });
+  return { question, answer, about: r.result.about || "", box, marks: levelMarks.length ? levelMarks : undefined, verdict: r.result.verdict || "none", evidence: r.result.evidence, looked, steps: ordered, needs: null, snapshot, turns: r.turns, ms, asr_ms };
 });
