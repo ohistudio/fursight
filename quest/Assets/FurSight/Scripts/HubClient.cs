@@ -36,8 +36,8 @@ namespace FurSight
             {
                 var head = Camera.main.transform;
                 var card = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked",
-                    $"Looking after {pet.petName} together.", "<color=#9A98A6>To link another household, hold the left thumbstick for 3 seconds" + (Application.isEditor ? " (U)" : "") + ".</color>").TagAlong();
-                yield return new WaitForSeconds(4f);
+                    $"Looking after {pet.petName} together.\n<b>Menu: turn your left palm towards you</b> (or press X or Y).", "<color=#9A98A6>To link another household, hold the left thumbstick for 3 seconds" + (Application.isEditor ? " (U)" : "") + ".</color>").TagAlong();
+                yield return new WaitForSeconds(6f);
                 if (card != null) card.Dismiss();
             }
             if (Me != null) { yield return new WaitForSeconds(0.4f); Todos.Show(); }
@@ -115,8 +115,10 @@ namespace FurSight
                 _codeCard.Dismiss();
                 yield return Refresh();
                 var pet = PetProfile.Current;
-                var linked = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked", pet != null ? $"Looking after {pet.petName} together." : "This Quest is part of your household now.", null).TagAlong();
-                yield return new WaitForSeconds(4f);
+                // the one thing to know next: how to open the menu
+                var linked = VerdictCard.Verdict(head.position + head.forward * 0.6f, "Linked", "linked", (pet != null ? $"Looking after {pet.petName} together." : "This Quest is part of your household now.")
+                    + "\n<b>Menu: turn your left palm towards you</b> (or press X or Y). Poke a button to check food, check the room or ask about him.", null).TagAlong();
+                yield return new WaitForSeconds(8f);
                 if (linked != null) linked.Dismiss();
                 Todos.Show();
                 yield break;
