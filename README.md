@@ -2,6 +2,8 @@
 
 **Spoil them. Worry less.** One pet care assistant on Meta Quest, your phone, smart glasses (Meta Ray-Ban Display) and the web. **Muse Spark** is the agent, **SAM 3.1** is the finder, and **Muse Voice Transcribe** hears you, all through the Meta Model API.
 
+**More than a health app, it keeps an eye on him for you.** FurSight checks his room for hazards and pins a label on each one. It knows what he's doing: eating, grooming, tucked up in a loaf, or flopped on his side with his feet out. It turns his best moments into stickers and memories. When you're away, it lets you know, whether he's stretched out happy or chewing something he shouldn't. It never diagnoses: it notices, your vet decides.
+
 > **Try it now, no key or login:** open **[fursight-seven.vercel.app](https://fursight-seven.vercel.app)** and press **Try it with a demo rabbit**. Then tap **Ask** → "How is he today?" to watch Muse Spark find him on the pet cams with SAM 3.1. The Ray-Ban Display app runs in a browser too: [fursight-seven.vercel.app/glasses/](https://fursight-seven.vercel.app/glasses/) ([how](#on-meta-ray-ban-display)).
 
 ![FurSight on Quest, Ray-Ban Display and iPhone: a room check, the room remembering, a food check on the glasses, a meal check on the phone, his week](docs/demo.gif)
