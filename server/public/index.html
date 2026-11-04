@@ -1662,8 +1662,14 @@ async function askAbout(question) {
     const v = ["safe", "caution", "toxic", "vet"].includes(r.verdict) ? r.verdict : null;
     const steps = (r.steps || []).map((st) => `<li>${esc(st.label)}${st.detail ? ` <span class="muted">${esc(String(st.detail).slice(0, 80))}</span>` : ""}</li>`).join("");
     $o.innerHTML = `<div class="stack pop" style="gap:8px">${v ? `<span class="chip t-${v}" style="justify-self:start">${esc(vword({ kind: "ask", verdict: v }) || v)}</span>` : ""}
+      ${r.snapshot ? `<div id="askPic" class="center">${bean("thinking", 70)}</div>` : ""}
       <p style="font-size:17px;line-height:1.4">${esc(r.needs ? r.needs.ask : r.answer)}</p>
       ${steps ? `<details open><summary class="muted" style="font-size:13px">How it decided (${(r.steps || []).length} steps, ${((r.ms || 0) / 1000).toFixed(1)} s)</summary><ol style="font-size:13px;margin:6px 0 0 18px;line-height:1.5">${steps}</ol></details>` : ""}</div>`;
+    // what it saw through the pet cam: him cut out as a sticker if SAM finds him, else the picture itself
+    if (r.snapshot) {
+      const sticker = await makeSticker(r.snapshot.image, api).catch(() => null), $p = document.getElementById("askPic");
+      if ($p) $p.innerHTML = `<img alt="What FurSight saw" src="${sticker || r.snapshot.image}" style="${sticker ? "max-height:220px;max-width:100%" : "width:100%;max-height:260px;object-fit:cover;border-radius:14px"}">`;
+    }
   } catch (e) { $o.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
 }
 
