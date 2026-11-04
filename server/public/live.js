@@ -12,8 +12,8 @@
   const FRESH = 20 * 60e3, RECENT = 3 * 36e5;
 
   function state(me, entries, now = Date.now()) {
-    // recorded (demo) cams play on one shared clock: on the move on the free-roam cam for 30 s, then loafing in his cage
-    if (me && (me.cams || []).some((c) => c.clip)) return { state: (now / 1000) % 63 < 30 ? "active" : "loaf", at: now, sim: true };
+    // recorded (demo) cams: he's on the free-roam cam, sitting up by his bed, then washing his face (a 63 s loop)
+    if (me && (me.cams || []).some((c) => c.clip)) return { state: (now / 1000) % 63 < 33 ? "sitting" : "grooming", at: now, sim: true };
     if (me && me.live && now - me.live.at < FRESH) return { state: me.live.state, at: me.live.at, sim: !!me.live.sim };
     // the diary: a pose is logged when he gets up from it, so the newest one is what he did last
     const e = (entries || []).find((x) => (x.kind === "pose" || x.kind === "active") && x.extra && now - (x.extra.to || x.at) < RECENT);

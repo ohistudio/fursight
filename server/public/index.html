@@ -1725,7 +1725,7 @@ async function pooCheck(photo) {
 // Room check: Muse Spark lists what matters, SAM outlines each; numbered rings on the picture, a list below
 // Ask: the same agent as Quest and the glasses. Muse Spark picks its tools (his cams, finding him, the tray, hay,
 // his diary and the safety list), then answers; the steps it took are shown under the answer.
-// the demo cams are recordings on one shared clock (he's on the free-roam cam, then in his cage, never both),
+// the demo cams are recordings on one shared clock (he's on the free-roam cam, his cage stands empty),
 // so every viewer plays each one at the same point: the wall clock, modulo the loop
 function clipClock(v) {
   const sync = () => { if (!v.isConnected) return clearInterval(t); if (!v.duration) return; const want = (Date.now() / 1000) % v.duration; if (Math.abs(v.currentTime - want) > 0.6) v.currentTime = want; };
