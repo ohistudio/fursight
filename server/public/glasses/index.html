@@ -41,6 +41,7 @@
 
   #cam { position: absolute; left: 20px; top: 46px; width: 380px; height: 330px; border-radius: 22px; overflow: hidden; }
   #cam img, #cam video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #cam [hidden] { display: none; }   /* the picture or the video, whichever isn't in use, takes no room */
   #camMsg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #C9C7D2; padding: 30px; }
   .live { display: inline-block; width: 12px; height: 12px; border-radius: 6px; background: #4A4A52; margin-right: 8px; vertical-align: 2px; }
   .live.on { background: #FF6B78; }
