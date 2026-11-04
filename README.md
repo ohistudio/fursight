@@ -2,7 +2,7 @@
 
 **Spoil them. Worry less.** One pet care assistant on Meta Quest, your phone, smart glasses (Meta Ray-Ban Display) and the web. **Muse Spark** is the agent, **SAM 3.1** is the finder, and **Muse Voice Transcribe** hears you, all through the Meta Model API.
 
-> **Try it now, no key or login:** open **[fursight-seven.vercel.app](https://fursight-seven.vercel.app)** and press **Try it with a demo rabbit**. Then tap **Ask** → "How is he today?" to watch Muse Spark find him on the pet cams with SAM 3.1.
+> **Try it now, no key or login:** open **[fursight-seven.vercel.app](https://fursight-seven.vercel.app)** and press **Try it with a demo rabbit**. Then tap **Ask** → "How is he today?" to watch Muse Spark find him on the pet cams with SAM 3.1. The Ray-Ban Display app runs in a browser too: [fursight-seven.vercel.app/glasses/](https://fursight-seven.vercel.app/glasses/) ([how](#on-meta-ray-ban-display)).
 
 ![FurSight on Quest, Ray-Ban Display and iPhone: a room check, the room remembering, a food check on the glasses, a meal check on the phone, his week](docs/demo.gif)
 
@@ -80,6 +80,8 @@ Every device shares one household. Start on the web, then link each other device
 1. In the Meta AI app, turn on **Developer Mode** for your glasses.
 2. **Web app**: open [fursight-seven.vercel.app/glasses/](https://fursight-seven.vercel.app/glasses/) on the glasses and type the code it shows into **Devices**. Swipe left and right for **Today**, **Pet cam**, **Care**, **Note**, **Ask** and **Diary**; press to choose.
 3. **Glasses app** (food checks with the glasses camera, needs the iPhone app): in the iPhone app's **Glasses** tab, press **Connect to Meta AI**, then **Start glasses**. Look at food and press **Check**.
+
+> **No glasses? Try the glasses app in your browser** (often the easiest way): open [fursight-seven.vercel.app/glasses/](https://fursight-seven.vercel.app/glasses/) in a laptop browser. It's the same 600 × 600 page the glasses show. Type its 4-letter code into **Devices** in the demo (another tab), then use the **arrow keys** to swipe between pages, **Enter** to press, and **Up / Down** on **Pet cam** to switch cams.
 
 ## What it does, on every device
 
