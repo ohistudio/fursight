@@ -19,9 +19,48 @@ Watch: **[the 3-minute film on YouTube](https://youtu.be/5Krj1QjiIVM)** · [the 
 - **Bonus categories:** Best Agentic Use-Case · Best Creative Build
 - **Video:** [youtu.be/5Krj1QjiIVM](https://youtu.be/5Krj1QjiIVM) (2:57)
 - **Install on Quest:** [FurSight-Quest.apk](https://github.com/ohistudio/fursight/releases/latest) (sideload, then link it to the demo rabbit with a code)
-- **How to use it on each device:** [docs/how-to-use.md](docs/how-to-use.md) (web, Quest, iPhone, Ray-Ban Display glasses app and web app)
+- **How to use it on each device:** [Try it on your device](#try-it-on-your-device), with pictures; the full guide is [docs/how-to-use.md](docs/how-to-use.md)
 - **Try it with no key or login:** [fursight-seven.vercel.app](https://fursight-seven.vercel.app), press **Try it with a demo rabbit** (on an iPhone, open it in Safari: food, room and poo checks all work there). To run your own: [Quickstart](#quickstart).
 - **Proof:** [food safety benchmark](docs/benchmark.md), 135 foods, zero toxic foods called safe; tests and benchmark run in CI on every push.
+
+## Try it on your device
+
+Every device shares one household. Start on the web, then link each other device by typing the 4-letter code it shows into the web app's **Devices** tab. Full guide: [docs/how-to-use.md](docs/how-to-use.md).
+
+### On the web (start here, nothing to install)
+
+![The web app: his week in numbers, his day, the hay and bowls](docs/howto/web.jpg)
+
+1. Open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit**.
+2. **Today**: press **Can he eat this?** for a food check, **Check the room for dangers**, or the poo check.
+3. **Ask**: tap "How is he today?". Muse Spark finds him on the pet cams with SAM 3.1 and shows each step it took.
+4. **Pet cam**: watch his three cams. **Stats**: his week in numbers.
+
+### On your phone
+
+![On the phone: a food check, a room check with every hazard pinned, and Today](docs/howto/iphone.jpg)
+
+1. **Any phone:** open the web app in Safari or Chrome. Food, room and poo checks use the phone camera; nothing to install.
+2. **iPhone app** (build it with Xcode, see [Quickstart](#quickstart)): it shows a code, type it into **Devices**.
+3. **Check**: point at a plate, a food bag or a room. Each food gets a verdict; each hazard gets a numbered pin and how to fix it.
+4. **Ask**: type or speak a question.
+
+### On Meta Quest 3
+
+![On Quest: the room check pins every hazard, a food verdict card, his pet cam in a window](docs/howto/quest.jpg)
+
+1. Download [FurSight-Quest.apk](https://github.com/ohistudio/fursight/releases/latest) and sideload it (Developer Mode, then Meta Quest Developer Hub, SideQuest or `adb install`). It's in Library > Unknown Sources.
+2. Open it and type the code it shows into the web app's **Devices** tab.
+3. **Turn your left palm towards you** to open the menu; poke a button.
+4. **Check room**: look around and press. **Check food**: hold food up and press. **Ask**: press and speak. **Pet cam**: a window on his cams.
+
+### On Meta Ray-Ban Display
+
+![On Ray-Ban Display: Ask at the bowling alley, his pet cam at the traffic lights, a food check on a sunflower](docs/howto/rayban.jpg)
+
+1. In the Meta AI app, turn on **Developer Mode** for your glasses.
+2. **Web app**: open [fursight-seven.vercel.app/glasses/](https://fursight-seven.vercel.app/glasses/) on the glasses and type the code it shows into **Devices**. Swipe left and right for **Today**, **Pet cam**, **Care**, **Note**, **Ask** and **Diary**; press to choose.
+3. **Glasses app** (food checks with the glasses camera, needs the iPhone app): in the iPhone app's **Glasses** tab, press **Connect to Meta AI**, then **Start glasses**. Look at food and press **Check**.
 
 ## What it does, on every device
 

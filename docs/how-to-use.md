@@ -4,6 +4,8 @@ One pet, one household, every device. Start on the web (it makes the household),
 
 ## Web app (start here)
 
+![The web app](howto/web.jpg)
+
 [fursight-seven.vercel.app](https://fursight-seven.vercel.app), on a computer or phone browser. No key, no login. **On an iPhone, use this in Safari**: it does everything the iPhone app does (food check, room check, poo check, Ask, the diary) without installing anything.
 
 1. Press **Try it with a demo rabbit** for two weeks of a demo rabbit's life, a simulated pet cam and a simulated litter tray scale. Or press **Add your pet** and take a photo of yours: FurSight works out the species and breed and writes a care plan you can edit.
@@ -16,6 +18,8 @@ One pet, one household, every device. Start on the web (it makes the household),
    - **Devices**: link Quest, the glasses or the iPhone by typing the code they show; remove a device to unlink it.
 
 ## Meta Quest 3
+
+![FurSight on Quest](howto/quest.jpg)
 
 The app runs in passthrough mixed reality and uses hand tracking (controllers work too).
 
@@ -37,6 +41,8 @@ The app runs in passthrough mixed reality and uses hand tracking (controllers wo
 
 ## iPhone app
 
+![FurSight on the phone](howto/iphone.jpg)
+
 Built from source with Xcode for now (see the Quickstart); it isn't on the App Store. **No Mac? Use the web app in Safari on your iPhone instead**: same checks, same household.
 
 1. Open it. It shows a 4-letter code: type it into the web app's **Devices** tab.
@@ -49,6 +55,8 @@ Built from source with Xcode for now (see the Quickstart); it isn't on the App S
 3. Notifications: alerts like a missed meal, a toxic food check or a flop caught on the cam arrive as notifications.
 
 ## Ray-Ban Display: the glasses app (Device Access Toolkit)
+
+![FurSight on Ray-Ban Display](howto/rayban.jpg)
 
 For food checks with the glasses camera, shown on the display. Needs the iPhone app.
 
