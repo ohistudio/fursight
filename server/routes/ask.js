@@ -23,7 +23,8 @@ const { handler, image, text, bad, household } = require("../lib/http");
 const { pet: readPet, describe } = require("../lib/pet");
 const { context, camFrame: liveFrame, camView, recent, uploads, addDiary } = require("../lib/hub");
 // the demo household's cams play recorded loops (clip), not a live relay: Ask looks at a still from that loop, one
-// every 3 s, at the point every viewer is watching (the loops share the wall clock, so he's only ever on one cam)
+// every 3 s, at the point every viewer is watching (the loops share the wall clock, so he's only ever on one cam;
+// null while the free-roam cam is asleep, so it counts as off)
 const STILLS = require("../lib/demo-stills.json");
 const still = (clip) => { const a = STILLS[clip]; return a ? a[Math.floor(((Date.now() / 1000) % (a.length * 3)) / 3)] : null; };
 const FSCal = require("../public/calendar.js");
