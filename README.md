@@ -59,8 +59,19 @@ Every device shares one household. Start on the web, then link each other device
 
 1. Download [FurSight-Quest.apk](https://github.com/ohistudio/fursight/releases/latest) and sideload it (Developer Mode, then Meta Quest Developer Hub, SideQuest or `adb install`). It's in Library > Unknown Sources.
 2. Open it and type the code it shows into the web app's **Devices** tab (no household yet? Open [fursight-seven.vercel.app](https://fursight-seven.vercel.app) and press **Try it with a demo rabbit** first).
-3. **Turn your left palm towards you** to open the menu; poke a button.
-4. **Check room**: look around and press. **Check food**: hold food up and press. **Ask**: press and speak. **Pet cam**: a window on his cams.
+3. Allow the camera and space permissions when it asks (it needs them to see food and the room).
+4. **Turn your left palm towards you** to open the menu; poke a button with a fingertip.
+5. **Check room**: look around and press. **Check food**: hold food up and press. **Poo check**: pinch with both hands to frame the droppings. **Ask**: press and speak. **Pet cam**: a window on his cams. **His week**: Wrapped in the room.
+
+| Quest controls | Hands | Controllers |
+|---|---|---|
+| Open or close the menu | Turn your left palm towards you | **X** or **Y** |
+| Press a button | Poke it, or point and pinch | Point and pull the trigger |
+| Check food | Menu: **Check food** | **A** |
+| Ask (then speak) | Menu: **Ask** | **B** |
+| Photo or poo check | Pinch with both hands, pull apart to frame, let go | Takes the whole view |
+| Next or previous pet cam | | Right thumbstick right or left |
+| Link a different household | | Hold the left thumbstick in for 3 s |
 
 ### On Meta Ray-Ban Display
 
